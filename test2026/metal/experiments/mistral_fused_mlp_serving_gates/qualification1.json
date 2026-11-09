@@ -1,0 +1,137 @@
+{
+  "scope": "Frozen fused native MLP pressure and coding-output regression; no performance claim from these collections.",
+  "pressure": {
+    "protocol": {
+      "completed_requests": 9,
+      "survivor_witnesses": 5,
+      "survivor_hash_observations": 1950,
+      "maximum_native_rows": 4,
+      "cached_tokens": {
+        "A": 0,
+        "B": 0,
+        "C": 0,
+        "D": 0,
+        "E": 0,
+        "A-return": 0,
+        "append": 128,
+        "changed-tail": 128,
+        "changed-head": 0
+      },
+      "cache": {
+        "retention_enabled": true,
+        "entries": 2,
+        "accounted_host_bytes": 56434794,
+        "hits": 2,
+        "misses": 7,
+        "evictions": 14,
+        "replacements": 0,
+        "dense_capture_compared_bytes": 201326592,
+        "dense_capture_copied_bytes": 536870912,
+        "dense_capture_reused_blocks": 768,
+        "dense_capture_new_blocks": 2432,
+        "private_host_bytes": 55402,
+        "shared_resource_bytes": 56379392,
+        "shared_resource_count": 256,
+        "capture_policy": "prefill_only_v1",
+        "prefill_capture_skipped_mixed": 9
+      }
+    },
+    "maximum_observed_accounted_host_bytes": 68300676,
+    "evictions": 14,
+    "half_prefill_dispatches": 320,
+    "complete_target_state_digest_pairs": 1170,
+    "all_generated_ids_and_text_exact_to_uncached": true,
+    "passed": true,
+    "scope": "Audit fused MLP pressure coverage after the unchanged pressure invariants.",
+    "negative_controls_rejected": [
+      "budget_overrun",
+      "no_eviction",
+      "wrong_target_hidden",
+      "wrong_half_route",
+      "wrong_reuse",
+      "owner_leak"
+    ],
+    "configured_host_prefix_budget_bytes": 83886080,
+    "pressure_profile_tested": true,
+    "general_oom_or_all_failure_paths_proven": false,
+    "quality_qualified": false,
+    "serving_speed_claim": false,
+    "goal_complete": false,
+    "worker_stdout_sha256": "4bed3a55a079d258e1c8b627c0b9d6fa53f856fec4dd4b4f0f9b23c918f31fe4",
+    "baseline_uncached_worker_stdout_sha256": "ddc66cee6ff775b67dfc3fd2b2785648ddbc5f5d85ed1758f4340eb57f3fd5f2",
+    "fused_blocks": 160,
+    "fused_native_pressure_regression_passed": true,
+    "inherited_audit_sha256": "f7f3a02889ae3541348774472965f2610f580b6a90b765aa4fd847b9414f8076",
+    "additional_negative_controls_rejected": [
+      "wrong_fused_blocks",
+      "missing_fused_site",
+      "missing_private_arena"
+    ],
+    "inventory_sha256": "4ae75973926f8de600fd5cb602f2bb939287fae7cc05a007fcf8919e2aa67589"
+  },
+  "quality": {
+    "completed_requests": 8,
+    "generated_ids": 3052,
+    "all_generated_ids_and_text_exact_to_frozen_FP32": true,
+    "maximum_live_rows": 4,
+    "half_prefill_calls": 224,
+    "postclose_metal_bytes": 2424832,
+    "strict_passed": 0,
+    "strict_total": 8,
+    "diagnostic_single_fence_passed": 1,
+    "passed": true,
+    "scope": "Audit fused MLP coding regression; keep the strict coding failures visible.",
+    "negative_controls_rejected": [
+      "false_quality_pass",
+      "sandbox_failure",
+      "wrong_half_route",
+      "owner_leak",
+      "cached_control",
+      "truncated_output",
+      "changed_token"
+    ],
+    "quality_gate_passed": false,
+    "coding_model_qualified": false,
+    "no_reference_inference_rerun": true,
+    "no_performance_claim": true,
+    "goal_complete": false,
+    "fixture_sha256": "53b0d39078d019391162ee51fd05eb22f44c824fbc567d009b36caf54d61f5bb",
+    "suite_sha256": "675ea667c357f361ce39e3863b61193dc6b32f4a229eb7d29a17803b75408786",
+    "evaluator_sha256": "a73809aab308180338ab1df644afdd8c4970bc136d6b0bc93c049c8862ebcc7a",
+    "worker_stdout_sha256": "38227b7c4f657cc6912d8eb46ea9842d2716fd24be570018db4fe5696e537a73",
+    "strict_report_sha256": "83df8a0d45a1b4a1ad578a3b7c602151e5bf194c0623e300719af42834eebd32",
+    "diagnosis_sha256": "86a7afb553542afa1deea5ac2fffac5690259e8cf3bccc49bca6131c34eccea2",
+    "fused_blocks": 64,
+    "fused_native_coding_output_regression_passed": true,
+    "inherited_audit_sha256": "6d3ad481655184e8fd02c14cc95e9456ec81b18c15a7c168e29636948d69b6cb",
+    "additional_negative_controls_rejected": [
+      "wrong_fused_blocks",
+      "missing_fused_site",
+      "missing_private_arena"
+    ],
+    "inventory_sha256": "44180351181939bf0c7e8e80fe96447c3752f2a78e603126107a66a2c144f1e7"
+  },
+  "source_native_provenance_sha256": "b94f6e7ee34d17079439e88cd0d5e419ff9c11e8d2514fbe2dbd00f589917ebe",
+  "frozen_studies": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-prefix-pressure1": {
+      "provenance_sha256": "6ce2c8ea48493a08347e3e340716800e10ba8f099c482a4bd8864eb90f0066d2",
+      "files": 61
+    },
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-coding-quality1": {
+      "provenance_sha256": "6ac91f90b23d98f2bf82dacc3a99747e0f50f85f6a28cdbdb87a5eae1dee806f",
+      "files": 72
+    },
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-gates1": {
+      "provenance_sha256": "92b632a43517194cf96b6e401a205ea727e7dd858f99b75bc88747687a2d6932",
+      "files": 7
+    },
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-quality-replay-preparation1": {
+      "provenance_sha256": "1de98811baa4b70bb3fa2fc8474b2a4fcc07da75474175477c9028afabcefb5b",
+      "files": 20
+    }
+  },
+  "original_files_preserved": 11,
+  "production_runtime_integrated": false,
+  "quality_gate_passed": false,
+  "goal_complete": false
+}

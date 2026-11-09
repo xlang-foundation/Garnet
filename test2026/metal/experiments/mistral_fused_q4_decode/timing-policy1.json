@@ -1,0 +1,43 @@
+{
+  "cohorts": [
+    {
+      "name": "warm-a1",
+      "mode": "warm",
+      "order": 0
+    },
+    {
+      "name": "warm-b1",
+      "mode": "warm",
+      "order": 1
+    },
+    {
+      "name": "pressure-a1",
+      "mode": "pressure",
+      "order": 0
+    },
+    {
+      "name": "pressure-b1",
+      "mode": "pressure",
+      "order": 1
+    }
+  ],
+  "candidate_method": 2,
+  "control_method": -1,
+  "masks": [
+    1,
+    8,
+    15
+  ],
+  "physical_rows": 4,
+  "columns": 14336,
+  "inner": 4096,
+  "layer": 15,
+  "layout": "contiguous",
+  "warmups": 5,
+  "rounds": 20,
+  "pair_order": "Control then candidate in order0; candidate then control in order1. Fresh paired cohorts reverse order.",
+  "minimum_gpu_speedup": 1.0309278350515465,
+  "maximum_individual_regression": 0.02,
+  "only_occupancies_1_and_4_timed": true,
+  "no_comparator_execution": true
+}

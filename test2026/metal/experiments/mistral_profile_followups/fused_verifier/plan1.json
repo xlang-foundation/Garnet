@@ -1,0 +1,18 @@
+{
+  "scope": "Existing FP32 rows4 fused gate/up path plus current GQA16 QK/value verification; real causal helper, B1T4. No comparator reruns.",
+  "base_native": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-helper1",
+  "base_native_provenance_sha256": "57edce73e4d6ce74ed3ee83a9c4b657d840e8b7a897416adf7c57f8563d4a617",
+  "base_worker": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-value-native1/b1_worker1.py",
+  "base_worker_sha256": "281e6ad880114211e4ad5be3ed3a65425d905da404e0ec6dde3f5401b455880a",
+  "changed_source_files": [],
+  "compiled_option": "GARNET_METAL_FUSED_Q4_DECODE",
+  "control_library": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-helper1/build-on1",
+  "candidate_library": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/build-on1",
+  "input_sha256": "354848b3b21f4136b0346f169fa70b1f780b673f73a7edd32d922006384674f2",
+  "new_justification": "Earlier decision1 in mistral-fused-q4-decode-native1 left real learned-draft performance unmeasured. Current source explicitly admits B1/T4 and prepares fused profiles in PrepareVerification. Combine with subsequently qualified shared-QK/value kernels.",
+  "prior_decision_sha256": "c175a7ec30b8cb2ff76675841a1fe4d90d406b763105ca6255928eb16916586e",
+  "prefill_unchanged": true,
+  "xmodel_operator_changes": false,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

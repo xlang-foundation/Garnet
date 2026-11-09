@@ -1,0 +1,53 @@
+{
+  "scope": "FP32 Q4 gate/up/SiLU decode fusion only; down projection remains outside the measured span.",
+  "base_engine_provenance_sha256": "3dd125f8f9ed9bef0a944cdb14eca7ff0f7af3b0bc19f818fc884763d99a9411",
+  "trained_provenance_sha256": "191c7098368d3a1d2fdfdac3bafad93c3f897d8c8674cba96e8e4c83b843b04a",
+  "native_source_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_profile_shader.h": "dbaf2b94613564d2ac44f708307f7783970fd10652fbd5631321f154e8c9ffde",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_shader.h": "dc7298d270e8472c7373aa0ecff1209a088cd0b0bd6c7a29f59b1485812449ae",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_indexed_decode_shader.h": "69de156174806e4496c61f5392f3a64ce31066ca3dcfaf22897c7ff50dbd37e3",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_blocked_decode_shader.h": "be2541686a691294107d8db11ae2f1a9b58f627649ce38bed08c6d5ef3882521",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/metal_context.mm": "66b623403fba71d0d536b7b3371d3a3c9ec70d67508130f02f0240d3cf80a4a3"
+  },
+  "control": "Native strict MSL3.1 fastMathEnabled=NO scalar for occupancy1/2/3 and blocked4 only for occupancy4 K4096/N14336; original silu_mul uses nil/default compiler options.",
+  "candidates": [
+    "strict-dot/exp",
+    "strict-dot/fast::exp",
+    "nil-default/exp"
+  ],
+  "precision": "Original Q4 words/FP16 coefficients, FP32 input/dequantization/FMA/accumulation/product; no new quantization or half activation.",
+  "layers": [
+    0,
+    15,
+    31
+  ],
+  "source_rows": [
+    0,
+    127,
+    256,
+    511
+  ],
+  "columns": [
+    14336,
+    1,
+    7,
+    17,
+    33
+  ],
+  "layouts": [
+    "contiguous",
+    "padded"
+  ],
+  "masks": "ordinary1/2/3/4 plus all16 physical-row masks including zero",
+  "gates": [
+    "Complete FP32 product parents exact to original gate/up plus original SiLU; complete gate/up shadow parents exact.",
+    "No input/weight/guard writes. Independent FP64 gate/up checks at original2e-6+4e-6*sum_abs bound.",
+    "All pipeline profiles prepared before first sample; shadow and normal outputs agree.",
+    "Only candidates exact across all cells can enter four fresh serial balanced warm/pressure timing processes.",
+    "At least3% lower median GPU time in every process/occupancy and no individual regression over2%, before considering native integration."
+  ],
+  "no_comparator_execution": true,
+  "no_native_runtime_integration": true,
+  "serving_speed_claim": false,
+  "goal_complete": false
+}

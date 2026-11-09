@@ -50,8 +50,16 @@ namespace Garnet
         bool enablePreferredBoundaries = true;
         int preferredMinOperations = 32;
         int maxAtomicRegionsPerPartition = 0;
+        // Optional physical CUDA placement for the compiler's partitions.
+        // Empty keeps all partitions on the caller's current device.
+        std::vector<int> partitionDevices;
         unsigned long long builderWorkspaceBytes = 64ULL << 20;
         int builderOptimizationLevel = 3;
+        // Cached TensorRT engine preparation can overlap other model work.
+        // This changes loading, not compiled graph semantics or cache identity.
+        bool prepareAsync = false;
+        // Optional native dense projection; empty preserves existing lowering.
+        std::string linearKernelProvider;
     };
 
     bool IsCompiledGraphCaptureActive();

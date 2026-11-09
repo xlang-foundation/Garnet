@@ -60,6 +60,13 @@ kernel void affine_q4_blocked(device const float* a [[buffer(0)]],
             const float total=simd_sum(sums[row][column]);
             if(lane==0)out[physical[row]*p.oStride+first+column]=total;
         }
+#ifdef GARNET_INDEXED_DECODE_FUSED_CLEAR
+        uint mask=0;
+#pragma clang loop unroll(full)
+        for(uint row=0;row<4;++row)if(row<GARNET_BLOCKED_ROWS)mask|=1u<<uint(physical[row]);
+        if(lane==0)for(uint row=0;row<4;++row)
+            if((mask&(1u<<row))==0)out[AffineIndex(row)*p.oStride+first+column]=0.0f;
+#endif
     }
 }
 )METAL";

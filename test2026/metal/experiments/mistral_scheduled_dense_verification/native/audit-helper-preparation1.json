@@ -1,0 +1,10 @@
+{
+  "base": "out/research/mistral7b-local-coder/mistral-bounded-draft-long1/audit_bounded_common1.py",
+  "base_sha256": "6c95d7ac7d24e1ccdd859ec03c39f563f994eb59183d14a119f1481e827364b3",
+  "only_change": {
+    "before": "    else:require(step['submitted_ids']==[ids[committed-1]] and step['metrics'] is None,'fallback target input')",
+    "after": "    else:\n     require(step['submitted_ids']==[ids[committed-1],0,0,0],'scheduled single-token verification input')\n     metrics=step['metrics']\n     for key,wanted in [('target_attention_layout_dispatches',32),('target_attention_vector4_dispatches',32),('target_affine_dispatches',225),('target_affine_misses',0),('target_mpp_affine_dispatches',0),('target_kv_backups',64),('commit_kv_restores',0),('target_affine_decode_block_dispatches',1)]:\n      require(metrics[key]==wanted,'scheduled single-token verification route: '+key)"
+  },
+  "reason": "The managed path executes a native depth1 verification instead of unleased ordinary fallback; all prior causal/state/rollback assertions retained.",
+  "goal_complete": false
+}

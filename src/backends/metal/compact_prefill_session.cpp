@@ -28,14 +28,40 @@ X::Value Rows(X::Value value,X3PackageHost* host,const std::vector<int64_t>& sha
     return X::Tensor::Create(host,X3_TENSOR_FLOAT32,outputShape,static_cast<const float*>(info.data)+first*width,count*width*4);
 }
 }
+#ifdef GARNET_METAL_COMPACT_VERIFY_COEXISTENCE
+bool MetalDecoderSession::CompactVerificationPreparationSupported() const {
+    // Session lock is held by the preparation caller. Inspect only private
+    // session metadata here; graph owners are separately locked by each path.
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+    if(wideVerificationPreparationClosed_)return false;
+#endif
+    if(!gpu_||poisoned_||managedRows_||compactSealed_||compactRunning_||states_.size()!=32)return false;
+    const std::vector<int64_t> dense{4,8,4096,128};
+    for(const auto& state:states_)if(state.rows!=4||state.shape[0]!=dense||state.shape[1]!=dense)return false;
+    return !verification_||(verification_->batch==4&&(verification_->chunk==1
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+        ||verification_->chunk==4
+#endif
+        )&&verification_->width==4096&&verification_->vocab==32768);
+}
+#endif
 bool MetalDecoderSession::PrepareCompactPrefill(X::Value values,X::Value fallbackValues) {
     std::lock_guard<std::mutex> sessionLock(mutex_);
     if(!gpu_||poisoned_||states_.empty()||states_[0].rows!=4||managedRows_||compactSealed_||
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+       wideVerificationPreparationClosed_||
+#endif
        values.runtime()!=Host()->runtime||fallbackValues.runtime()!=Host()->runtime||!values.IsList()||!fallbackValues.IsList()||
        values.Size()!=states_.size()||fallbackValues.Size()!=states_.size())
         throw std::invalid_argument("Prepare full compact families before any execution or physical row claim");
 #ifdef GARNET_METAL_VERIFY_ATTENTION
-    if(verification_)throw std::invalid_argument("Compact prefill with speculative target workspaces is not qualified");
+    if(verification_) {
+#ifdef GARNET_METAL_COMPACT_VERIFY_COEXISTENCE
+        if(!CompactVerificationPreparationSupported())throw std::invalid_argument("Compact verification preparation exceeds the closed B4/T1 dense profile");
+#else
+        throw std::invalid_argument("Compact prefill with speculative target workspaces is not qualified");
+#endif
+    }
 #endif
     std::vector<MetalCompiledGraph*> graphs,fallback,base,ordered;
     for(size_t i=0;i<states_.size();++i) {

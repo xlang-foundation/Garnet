@@ -1,0 +1,42 @@
+{
+  "status": "operator_screen_complete_native_integration_pending",
+  "previous_goal_turn_classification": "progress: committed budget-clipped scheduler correctness and exact saved-timestamp analysis at5b604c85e.",
+  "eligible_math_methods": [
+    2
+  ],
+  "default_candidate_complete_parent_words": 27737280,
+  "independent_fp64_checks": 7560,
+  "full_operator_gain_gate_passed": false,
+  "same_declared_gate_by_actual_occupancy": {
+    "1": false,
+    "4": true
+  },
+  "observed_ratio_ranges_by_physical_mask": {
+    "1": [
+      1.0073327046206693,
+      1.2507504174752568
+    ],
+    "8": [
+      1.0041399776326976,
+      1.0286588209733634
+    ],
+    "15": [
+      1.05044515974246,
+      1.0580710947540506
+    ]
+  },
+  "decision": "Ordinary C1 remains unchanged. Screen a default-off native fusion only for four actual active Mistral gate/up rows, preserving the original scalar/blocked fallback and all graph observability/alias guards.",
+  "why_relevant_to_c1_goal": "Saved learned-coder-draft traces contain1121 fully blocked four-input verification frames per cohort. This is separate from ordinary one-row decode and does not establish an end-to-end gain.",
+  "census_correction": "First saved-data census assumed all1125 instrumented frames use161 blocked dispatches and rejected. Inspection found4 frames use only1. Corrected census retains both categories and excludes54 uninstrumented fallback rounds from GPU coverage; no inference rerun.",
+  "native_integration_required_gates": [
+    "Prove eligible gate/up/SiLU subgraph has no other readers or externally observable intermediate aliases.",
+    "Prepare pipelines before readiness with no new weight cache or runtime allocation; only actual active count4 can dispatch.",
+    "Complete trained native output/parent/guard/abort recovery and all16 active masks with ordinary C1/C2/C3 fallback.",
+    "Full model and native verification outputs, KV, hidden, accepted-prefix rollback and survivor leases exact frozen FP32 controls.",
+    "Serial new native serving/speculative admission against frozen controls; retain all baselines."
+  ],
+  "new_comparator_execution": false,
+  "no_native_runtime_integration": true,
+  "quality_gate_passed": false,
+  "goal_complete": false
+}

@@ -1,0 +1,13 @@
+{
+  "status": "terminal",
+  "returncode": 1,
+  "scope": "CPU replay only",
+  "error": "ImportError: cannot import name 'b1_check' from 'audit_qualification1'",
+  "resolved_module": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/audit_qualification1.py",
+  "cause": "Historical bounded auditor prepended its own directory during first qualification exec; subsequent measurement import selected that older module.",
+  "correction": "Prepend current native raw root before each auditor exec; use provenance2.json to preserve the prior index and replay1 unchanged.",
+  "gpu_results_changed": false,
+  "model_inference_repeated": false,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

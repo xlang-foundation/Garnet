@@ -3,6 +3,7 @@
 #include "../../src/runtime/scheduler/request_row_leases.h"
 #include "../../src/runtime/scheduler/packed_token_plan.h"
 #include "../../src/runtime/kv/paged_kv_pool.h"
+#include <algorithm>
 #include <iostream>
 #include <stdexcept>
 #include <type_traits>
@@ -43,7 +44,139 @@ public:
     int RestoredPrefixTokens(uint64_t id) const override {auto it=states_.find(id);return it==states_.end()?0:it->second.cached;}
     bool PrefixPredictionReady(uint64_t id) const override {auto it=states_.find(id);return it!=states_.end()&&it->second.ready;}
 };
+
+void CompletionPriorityChecks() {
+    ContinuousBatchSchedulerConfig config;config.decodeBuckets={1,2,4};config.maxPrefillBatch=4;
+    config.maxPrefillTokensPerTick=16;config.prefillChunkTokens=4;
+    GenerationRequest a;a.promptTokens=11;a.maxNewTokens=3;
+    GenerationRequest b=a;b.promptTokens=7;GenerationRequest c=a;c.promptTokens=3;
+    // Disabled policy retains the existing three-owner round-robin plan.
+    FixedRows oldRows;ContinuousBatchScheduler old(config);
+    old.Submit(a);old.Submit(b);old.Submit(c);
+    auto oldTick=old.Schedule(oldRows);Check(oldTick.batches.size()==1&&oldTick.batches[0].requests.size()==3);
+    FixedRows rows;ContinuousBatchScheduler policy(config);
+    Check(!policy.PrefillCompletionPriority()&&policy.SetPrefillCompletionPriority(true));
+    Check(policy.PrefillCompletionPriority()&&!policy.SetPrefillChunkTokens(0));
+    Check(!policy.SetPrefillGrouping(4,2,32));
+    auto ai=policy.Submit(a),bi=policy.Submit(b),ci=policy.Submit(c);
+    Check(ai&&bi&&ci&&!policy.SetPrefillCompletionPriority(false));
+    auto only=[&](const SchedulerTick& tick,RequestStage stage,uint64_t id,int offset,int count) {
+        const BatchPlan* selected=nullptr;
+        for(const auto& batch:tick.batches)if(batch.stage==stage){Check(selected==nullptr);selected=&batch;}
+        Check(selected&&selected->requests.size()==1);
+        const auto& r=selected->requests[0];Check(r.id==id&&r.prefillOffset==offset&&r.prefillTokens==count);
+        Check(r.requestRow==rows.Placement(id).requestRow&&r.rowEpoch==rows.Placement(id).rowEpoch);
+    };
+    auto tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,ai,0,4);
+    auto ap=rows.Placement(ai);Check(rows.LogicalLength(bi)==-1&&rows.LogicalLength(ci)==-1);
+    Check(!policy.CompletePrefillChunk(ai,3,rows)&&policy.CompletePrefillChunk(ai,4,rows));
+    tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,ai,4,4);
+    Check(rows.Placement(ai).rowEpoch==ap.rowEpoch&&policy.CompletePrefillChunk(ai,4,rows));
+    tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,ai,8,3);
+    Check(!policy.CompletePrefillChunk(ai,3,rows)&&policy.CompletePrefill(ai,41,rows));
+    tick=policy.Schedule(rows);Check(tick.batches.size()==2&&tick.batches[0].stage==RequestStage::Decode);
+    Check(tick.batches[0].requests[0].id==ai);only(tick,RequestStage::Prefill,bi,0,4);
+    auto bp=rows.Placement(bi);Check(bp.requestRow!=ap.requestRow);
+    Check(policy.CompleteDecode(ai,42,false,rows)&&policy.CompletePrefillChunk(bi,4,rows));
+    tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,bi,4,3);
+    Check(rows.Placement(bi).rowEpoch==bp.rowEpoch);
+    Check(policy.CompleteDecode(ai,43,false,rows)&&rows.LogicalLength(ai)==-1);
+    Check(policy.CompletePrefill(bi,51,rows));
+    tick=policy.Schedule(rows);Check(tick.batches[0].stage==RequestStage::Decode);
+    only(tick,RequestStage::Prefill,ci,0,3);auto cp=rows.Placement(ci);
+    Check(cp.requestRow==ap.requestRow&&cp.rowEpoch!=ap.rowEpoch);
+    Check(policy.CompleteDecode(bi,52,false,rows)&&policy.CompletePrefill(ci,61,rows));
+    tick=policy.Schedule(rows);Check(tick.batches.size()==1&&tick.batches[0].requests.size()==2);
+    Check(policy.Cancel(bi,rows)&&policy.Cancel(ci,rows));
+    Check(policy.ForgetFinished(ai)&&policy.ForgetFinished(bi)&&policy.ForgetFinished(ci));
+    Check(policy.SetPrefillCompletionPriority(false)&&!policy.PrefillCompletionPriority());
+    // Abandon/retry keeps the current owner; cancellation admits the next owner.
+    ai=policy.Submit(a);bi=policy.Submit(b);Check(policy.Cancel(ai,rows)&&policy.Cancel(bi,rows));
+    Check(policy.ForgetFinished(ai)&&policy.ForgetFinished(bi)&&policy.SetPrefillCompletionPriority(true));
+    ai=policy.Submit(a);bi=policy.Submit(b);
+    tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,ai,0,4);
+    Check(policy.AbandonPrefillChunk(ai));tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,ai,0,4);
+    Check(policy.Cancel(ai,rows)&&!policy.CompletePrefillChunk(ai,4,rows));
+    tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,bi,0,4);Check(policy.Cancel(bi,rows));
+    // A full prefix hit still schedules its zero-token prediction step.
+    FixedRows cached;ContinuousBatchScheduler hit(config);Check(hit.SetPrefillCompletionPriority(true));
+    auto hi=hit.Submit(c);cached.SeedPrefix(hi,3,true);tick=hit.Schedule(cached);
+    Check(tick.batches.size()==1&&tick.batches[0].requests[0].prefillTokens==0&&hit.CompletePrefill(hi,71,cached));
+    Check(hit.Cancel(hi,cached));
+    ContinuousBatchScheduler grouped(config);Check(grouped.SetPrefillGrouping(4,2,32)&&!grouped.SetPrefillCompletionPriority(true));
+    ContinuousBatchSchedulerConfig unbounded;ContinuousBatchScheduler whole(unbounded);Check(!whole.SetPrefillCompletionPriority(true));
+    unbounded.completePrefillFirst=true;bool rejected=false;
+    try{ContinuousBatchScheduler invalid(unbounded);}catch(const std::invalid_argument&){rejected=true;}Check(rejected);
+}
+
+void CompletionCohortChecks() {
+    size_t ticks=0,plans=0;
+    for(int owners:{1,2,4})for(bool cached:{false,true})for(bool cancelFirst:{false,true}) {
+        ContinuousBatchSchedulerConfig config;config.decodeBuckets={1,2,4};config.maxPrefillBatch=4;
+        config.maxPrefillTokensPerTick=512;config.prefillChunkTokens=128;
+        config.prefillChunkSelector=[](const BatchPlan& plan,int budget) {
+            int chunk=2;const int n=int(plan.requests.size());
+            if(!n||budget<2*n)return 0;
+            while(chunk<512&&2*chunk*n<=budget)chunk*=2;
+            return chunk;
+        };
+        FixedRows rows(4096);ContinuousBatchScheduler policy(config);
+        Check(policy.PrefillCompletionOwners()==1&&!policy.SetPrefillCompletionOwners(2));
+        Check(policy.SetPrefillCompletionPriority(true));
+        Check(!policy.SetPrefillCompletionOwners(-1)&&!policy.SetPrefillCompletionOwners(0)&&!policy.SetPrefillCompletionOwners(5));
+        Check(policy.SetPrefillCompletionOwners(owners)&&policy.PrefillCompletionOwners()==owners);
+        std::vector<uint64_t> ids;std::unordered_map<uint64_t,int> prompt,limit,generated,prefilled;
+        std::unordered_map<uint64_t,KVSequencePlacement> placement;
+        for(int i=0;i<5;++i) {
+            GenerationRequest request;request.promptTokens=i==4?96:2048+(i==1?3:i==3?1:0);request.maxNewTokens=i==4?3:8+i*4;
+            auto id=policy.Submit(request);Check(id!=0);ids.push_back(id);prompt[id]=request.promptTokens;limit[id]=request.maxNewTokens;
+        }
+        if(cached){rows.SeedPrefix(ids[0],2048,true);prefilled[ids[0]]=2048;}
+        Check(!policy.SetPrefillCompletionOwners(owners));
+        size_t finished=0,iteration=0;bool sawTwo=false,reused=false;
+        std::unordered_map<int,uint64_t> lastEpoch;
+        while(finished<ids.size()) {
+            auto tick=policy.Schedule(rows);Check(!tick.batches.empty()&&++iteration<256);++ticks;
+            int total=0;std::vector<uint64_t> selected;
+            for(size_t b=0;b<tick.batches.size();++b) {
+                const auto& plan=tick.batches[b];++plans;Check(!plan.requests.empty());total+=plan.scheduledTokens;
+                if(plan.stage==RequestStage::Decode)Check(b==0);
+                else {Check(plan.stage==RequestStage::Prefill&&int(plan.requests.size())<=owners);sawTwo|=plan.requests.size()==2;Check(plan.prefillChunkTokens>=2&&plan.prefillChunkTokens<=512);}
+                for(const auto& q:plan.requests) {
+                    Check(std::find(selected.begin(),selected.end(),q.id)==selected.end());selected.push_back(q.id);
+                    const auto actual=rows.Placement(q.id);Check(q.requestRow==actual.requestRow&&q.rowEpoch==actual.rowEpoch&&q.rowEpoch>0);
+                    if(!placement.count(q.id)) {
+                        if(lastEpoch.count(q.requestRow)){Check(lastEpoch[q.requestRow]!=q.rowEpoch);reused=true;}
+                        lastEpoch[q.requestRow]=q.rowEpoch;placement[q.id]=actual;
+                    }else Check(placement[q.id].requestRow==q.requestRow&&placement[q.id].rowEpoch==q.rowEpoch);
+                }
+            }
+            Check(total<=512);
+            for(const auto& plan:tick.batches)for(const auto& q:plan.requests) {
+                if(cancelFirst&&iteration==1&&q.id==ids[0]) {Check(policy.Cancel(q.id,rows)&&policy.ForgetFinished(q.id));++finished;continue;}
+                if(plan.stage==RequestStage::Prefill) {
+                    Check(q.prefillOffset==prefilled[q.id]&&q.prefillTokens>=0&&q.prefillTokens<=plan.prefillChunkTokens);
+                    prefilled[q.id]+=q.prefillTokens;Check(prefilled[q.id]<=prompt[q.id]);
+                    if(prefilled[q.id]==prompt[q.id]){Check(policy.CompletePrefill(q.id,100,rows));generated[q.id]=1;}
+                    else Check(policy.CompletePrefillChunk(q.id,q.prefillTokens,rows));
+                }else {
+                    Check(q.slotPosition==prompt[q.id]+generated[q.id]-1&&q.tokenId>=0);
+                    Check(policy.CompleteDecode(q.id,100+generated[q.id],false,rows));++generated[q.id];
+                    Check(generated[q.id]<=limit[q.id]);
+                }
+                if(policy.Stage(q.id)==RequestStage::Finished){Check(generated[q.id]==limit[q.id]&&prefilled[q.id]==prompt[q.id]);Check(policy.ForgetFinished(q.id));++finished;}
+            }
+        }
+        Check(reused&&policy.TrackedRequestCount()==0&&policy.ActiveRequestCount()==0);
+        if(owners==2)Check(sawTwo);
+        Check(policy.SetPrefillCompletionOwners(owners)&&policy.SetPrefillCompletionPriority(false)&&!policy.SetPrefillCompletionOwners(owners));
+    }
+    std::cout<<"Native completion cohort PASS variants=12 ticks="<<ticks<<" plans="<<plans<<" owners=1,2,4 budget=512 cached_hit_cancel_reuse=true CPU_only=true\n";
+}
+
 int main() {
+    CompletionCohortChecks();
+    CompletionPriorityChecks();
     FixedRows storage;
     ContinuousBatchSchedulerConfig config;config.decodeBuckets={1,2,4};config.maxPrefillBatch=4;
     ContinuousBatchScheduler scheduler(config);

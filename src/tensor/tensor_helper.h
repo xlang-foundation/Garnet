@@ -52,6 +52,7 @@ public:
     static X::Tensor WrapBorrowedGPU(X3PackageHost* host, X3TensorInfo info,
         std::shared_ptr<void> owner);
     static X::Tensor CopyToCPU(const X::Tensor& tensor);
+    static X::Tensor CopyToDevice(const X::Tensor& tensor, int destination);
     static X::Tensor CopyToGPU(const X::Tensor& tensor);
     static void* GetGPUMemory(const X::Tensor& tensor);
     static std::string GetDeviceName(const X::Tensor& tensor);

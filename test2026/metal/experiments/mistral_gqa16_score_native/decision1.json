@@ -1,0 +1,70 @@
+{
+  "decision": "qualify_experimental_native_gqa16_score_route_for_recorded_profile",
+  "default_option_on": false,
+  "native_source": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/source1",
+  "native_libraries": {
+    "on": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/build-on1/libgarnet.dylib",
+    "off": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/build-default-off1/libgarnet.dylib"
+  },
+  "native_stage_gate_passed": true,
+  "median_native_decode_tps": {
+    "on": 32.03012132821602,
+    "off": 24.805291211550113
+  },
+  "paired_decode_ratios": [
+    {
+      "cohort": 1,
+      "decode_ratio": 1.2817315696238447,
+      "off_decode_tps": 25.065164291571907,
+      "on_decode_tps": 32.12681237031601,
+      "off_prefill_seconds": 3.3605422920081764,
+      "on_prefill_seconds": 3.367340249940753
+    },
+    {
+      "cohort": 2,
+      "decode_ratio": 1.300993534312536,
+      "off_decode_tps": 24.545418131528315,
+      "on_decode_tps": 31.93343028611603,
+      "off_prefill_seconds": 3.4480959998909384,
+      "on_prefill_seconds": 3.408003124874085
+    }
+  ],
+  "qualified_full_state_digest_pairs": 5460,
+  "rejected_call_state_digest_pairs": 1040,
+  "ordinary_output_ids_preserved": true,
+  "causal_helper_history_preserved": true,
+  "profile": {
+    "batch": [
+      1,
+      4
+    ],
+    "verification_tokens": 4,
+    "query_heads": 32,
+    "kv_heads": 8,
+    "head_dim": 128,
+    "capacity": 4096,
+    "ungated": true,
+    "minimum_maximum_visible_prefix": 512,
+    "compiled_actual_selected_counts_up_to": 16,
+    "kv_and_decode": "fp32",
+    "prefill": "fp16",
+    "quantization": "affine4bit_group64_fp16_coefficients",
+    "new_global_gpu_workspace_bytes": 0,
+    "new_weight_copies": 0
+  },
+  "new_serving_metrics": false,
+  "serving_ttft_measured": false,
+  "matched_maximum_concurrency_profile": false,
+  "learned_helper_batch4_qualified": false,
+  "coding_quality_qualified": false,
+  "no_comparator_execution": true,
+  "goal_status": "active",
+  "goal_complete": false,
+  "next_actions": [
+    "Keep this option opt-in until matched HTTP serving and coding-quality gates pass. Current C4 lifecycle test uses zero proposals and is correctness-only. Real learned helper is qualified only for batch1.",
+    "Screen shared-value tiles across4GQA heads and4query tokens. Candidate tile64keys*32dims V8KiB plus16queries*64 probabilities4KiB,128threads=16queries*8 float4 dimension lanes. Preserve strictly ascending key FMA order and FP32 probability boundary; inactive queries must not multiply NaN values. Also consider tile32 variants if occupancy/barrier costs demand it. No numerical or speed claim until full-parent/native/full-model qualification.",
+    "Connect real causal C4 drafting or a bounded native prompt/history n-gram draft source to the native scheduled verifier. No future generated output oracle may enter performance or serving proposals.",
+    "Measure matched maximum-concurrency4 C1/C4 HTTP serving against fixed valid reference cohorts. Investigate larger prepared up-to2048 prefill families and total token budget to reduce C4 TTFT. Keep frozen vLLM and SGLang unchanged and GPU/model processes serial.",
+    "The2x decode/throughput, halfTTFT, coding quality, ANE/Gemma and return-to27B goals remain open."
+  ]
+}

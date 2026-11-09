@@ -1,0 +1,75 @@
+--- a/local_coder_batch_worker.py
++++ b/local_coder_batch_worker.py
+@@ -269,7 +269,7 @@
+             raise ValueError('Mistral serving study requires its explicit FP16 coefficient/operand profile')
+     width=text_config['hidden_size'];vocab=text_config['vocab_size']
+     incoming=queue.Queue(maxsize=16);shutdown=threading.Event();input_failure=[]
+-    decoder=None;policy=None;jobs={};keys=set()
++    decoder=None;policy=None;jobs={};keys=set();observed_leases={}
+     def read():
+         pending=b''
+         try:
+@@ -608,6 +608,15 @@
+                 emit(dict(event='native_indexed_decode',stage='head',affine_dispatches=count,active_rows=valid,physical_rows=batch))
+                 if count!=expected:raise ValueError('Active FP32 head projection coverage '+str(count)+' differs from expected '+str(expected))
+             return result
++        def capture_target_state(request,phase):
++            row=request['row'];epoch=request['epoch'];kv=[]
++            for layer in range(32):
++                pair=decoder.session.snapshot(layer)
++                kv.append([decoder.io.verification_f32_sha256(decoder.io.rows(value,row,1)) for value in pair])
++            hidden=decoder.session.diagnostic_final_hidden()
++            row_hidden=decoder.io.rows(hidden,row,1)
++            state=dict(kv=kv,hidden=decoder.io.verification_f32_sha256(row_hidden),hidden_values=row_hidden.tolist(),consumed_tokens=request['context_length'])
++            emit(dict(event='native_request_state_witness',id=jobs[request['id']]['id'],native_request=request['id'],row=row,epoch=epoch,phase=phase,state=state))
+         def deliver(request,token,stage):
+             delivery_began=time.monotonic() if trace_stages else 0
+             identity=request['id'];job=jobs[identity]
+@@ -623,6 +632,8 @@
+                     sampled_tokens=len(job['generated']),began_monotonic=delivery_began,ended_monotonic=sent,
+                     run_wall_ms=(sent-delivery_began)*1000))
+             finished=token in stops or len(job['generated'])>=job['limit']
++            if stage=='prefill':capture_target_state(request,'prefill')
++            if finished:capture_target_state(request,'final')
+             fn=policy.complete_prefill if stage=='prefill' else policy.complete_decode
+             completion_began=time.monotonic() if trace_stages else 0
+             result=fn(identity,token,finished)
+@@ -640,6 +651,20 @@
+                     native_request=identity,native_row=request['row'],native_epoch=request['epoch'],
+                     request_window_seconds=time.monotonic()-job['began'],memory=json.loads(garnet.memory_stats_json())))
+                 keys.remove(job['id']);del jobs[identity]
++        def survivor_state():
++            current={identity:lease for identity,lease in observed_leases.items() if identity in jobs}
++            result={str(identity):dict(row=lease[0],epoch=lease[1],kv=[],hidden=None) for identity,lease in current.items()}
++            for layer in range(32):
++                pair=decoder.session.snapshot(layer)
++                for identity,lease in current.items():
++                    result[str(identity)]['kv'].append([decoder.io.verification_f32_sha256(decoder.io.rows(v,lease[0],1)) for v in pair])
++            hidden=decoder.session.diagnostic_final_hidden()
++            for identity,lease in current.items():
++                result[str(identity)]['hidden']=decoder.io.verification_f32_sha256(decoder.io.rows(hidden,lease[0],1))
++                if tracked_rows:
++                    result[str(identity)]['tokens']=decoder.session.diagnostic_tracked_token_count(lease[0],lease[1])
++                    result[str(identity)]['prefill_tokens']=decoder.session.tracked_prefill_prefix_tokens(lease[0],lease[1])
++            return result
+         while not shutdown.is_set():
+             if not jobs:
+                 try:admit(incoming.get(timeout=.1))
+@@ -653,7 +678,17 @@
+             while not incoming.empty():admit(incoming.get_nowait())
+             if not jobs:continue
+             started=time.monotonic() if trace_stages else 0
++            live={identity:lease for identity,lease in observed_leases.items() if identity in jobs}
++            pending=[identity for identity in jobs if identity not in observed_leases]
++            observe=bool(live) and len(live)<batch and bool(pending)
++            before=survivor_state() if observe else None
+             tick=json.loads(policy.next_json());plans=tick['batches']
++            if observe:
++                after=survivor_state()
++                if before!=after:raise ValueError('New lease/restore changed a live native survivor')
++                emit(dict(event='native_survivor_restore_witness',pending_requests=pending,before=before,after=after))
++            for plan in plans:
++                for request in plan['requests']:observed_leases[request['id']]=(request['row'],request['epoch'])
+             if wide_owner:emit(dict(event='native_profile_tick',batches=plans,token_count=tick['packed']['token_count']))
+             if trace_stages:
+                 ended=time.monotonic()

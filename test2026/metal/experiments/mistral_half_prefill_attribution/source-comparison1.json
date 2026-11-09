@@ -1,0 +1,219 @@
+{
+  "passed": true,
+  "scope": "Primary source comparison and prior negative-result inventory; no inference or new kernel qualification.",
+  "vllm_commit": "a44be48731005932a24dd30b55c21e992dc90b9a",
+  "mlx_reference_manifest_sha256": "267b25a4b87867b7aa2ac7b49250a8e5d5cdbafe388e25d1afd7de4618bc09b9",
+  "mlx_reference": {
+    "scope": "Installed pinned MLX0.32.4 primary source for per-SIMD relaxed tensor descriptor; not a performance or quality assertion",
+    "files": {
+      "steel/gemm/nax.h": {
+        "original": "/Users/shawn/CantorAI/out/research/qwen-local-coder/comparators/vllm-metal/.venv-vllm-metal/lib/python3.12/site-packages/mlx/include/mlx/backend/metal/kernels/steel/gemm/nax.h",
+        "sha256": "fb10bcae44095e9fed5c81213d03527dd5fe5ac11be11ec7784bd357c6f317ec"
+      },
+      "quantized_nax.h": {
+        "original": "/Users/shawn/CantorAI/out/research/qwen-local-coder/comparators/vllm-metal/.venv-vllm-metal/lib/python3.12/site-packages/mlx/include/mlx/backend/metal/kernels/quantized_nax.h",
+        "sha256": "1af9bdcee1bf2e199f9846d4b7817ca6f1d4dc2286c654d6eef144c5b7aba2b9"
+      }
+    }
+  },
+  "native_packed_shader_sha256": "cc3227e67d52d0d5e441fcaceaca0cabc4dd9d3478d06237e555d5c117b0f8d4",
+  "observed_difference": "Native packed half-A/half-B/float-accumulator MPP descriptors hardcode relaxed_precision=false; pinned MLX NAX fragment descriptors use true. Both contain threadgroup weight staging. This is a candidate for isolated qualification, not an established cause of the serving gap.",
+  "next_required": "Check actual cooperative maps and complete guarded operator outputs for an isolated relaxed-descriptor packed projection candidate, retaining the same half operands/float accumulation and fixed numerical gate. Compare only if correctness passes; qualify native model/cache lineage separately before serving.",
+  "prior_results_to_avoid_repeating_unchanged": [
+    {
+      "study": "mistral-packed64-native1",
+      "audit_sha256": "dab344f58b4ebb940669b87f701fa0fd86450e259c526376eb6c0eddd90e34b2",
+      "cells": [
+        {
+          "rows": 512,
+          "outputs": 14336,
+          "inner": 4096,
+          "dense": false,
+          "control_over_candidates": [
+            0.8830453504916609
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 14336,
+          "inner": 4096,
+          "dense": true,
+          "control_over_candidates": [
+            0.8840565917122326
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 14336,
+          "dense": false,
+          "control_over_candidates": [
+            0.8425172070954524
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 14336,
+          "dense": true,
+          "control_over_candidates": [
+            0.8490025579467271
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 4096,
+          "dense": false,
+          "control_over_candidates": [
+            0.9109464995107709
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 4096,
+          "dense": true,
+          "control_over_candidates": [
+            0.9358931838181019
+          ]
+        }
+      ]
+    },
+    {
+      "study": "mistral-packed-fulltile-native1",
+      "audit_sha256": "6bf5e50ed4ce78f48426f0ed1e1332f0d9001e997c5fd46bfafc1826ed450d7c",
+      "cells": [
+        {
+          "rows": 512,
+          "outputs": 14336,
+          "inner": 4096,
+          "dense": false,
+          "control_over_candidates": [
+            0.994845964902009
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 14336,
+          "inner": 4096,
+          "dense": true,
+          "control_over_candidates": [
+            0.9934017473858646
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 14336,
+          "dense": false,
+          "control_over_candidates": [
+            0.9808476206946841
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 14336,
+          "dense": true,
+          "control_over_candidates": [
+            0.9413911888120622
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 4096,
+          "dense": false,
+          "control_over_candidates": [
+            1.0203326725275847
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 4096,
+          "dense": true,
+          "control_over_candidates": [
+            0.986139378708237
+          ]
+        }
+      ]
+    },
+    {
+      "study": "mistral-packed-loop-control-native1",
+      "audit_sha256": "8b2abe28ac2e378f4a50971e8aff5f598576f59f617b3dcd4d580fb4e0610998",
+      "cells": [
+        {
+          "rows": 512,
+          "outputs": 14336,
+          "inner": 4096,
+          "dense": false,
+          "control_over_candidates": [
+            1.0108917510609914,
+            1.0083152978098335,
+            1.0029961637141556
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 14336,
+          "inner": 4096,
+          "dense": true,
+          "control_over_candidates": [
+            0.9995663795423892,
+            1.000595831453375,
+            0.9942486794624923
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 14336,
+          "dense": false,
+          "control_over_candidates": [
+            0.9642815077512547,
+            0.9580358249442178,
+            0.9739683023398285
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 14336,
+          "dense": true,
+          "control_over_candidates": [
+            0.9510238196359484,
+            0.9663848059783978,
+            0.9852669343773209
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 4096,
+          "dense": false,
+          "control_over_candidates": [
+            0.9377090707549579,
+            0.9728816604329696,
+            0.9866740075746023
+          ]
+        },
+        {
+          "rows": 512,
+          "outputs": 4096,
+          "inner": 4096,
+          "dense": true,
+          "control_over_candidates": [
+            1.0842073039920146,
+            1.058431013054866,
+            1.0122838455415712
+          ]
+        }
+      ]
+    }
+  ],
+  "actual_baseline_per_operator_kernel_selection_proven": false,
+  "serving_speed_claim": false,
+  "goal_complete": false
+}

@@ -153,6 +153,7 @@ def main():
     later_helpers = {
         'xModel.qwen3.vl_2b_instruct.debug_vision_pooler',
         'xModel.qwen3.vl_2b_instruct.qwen_text_decode_batch',
+        'xModel.qwen3.hidden_states',
     }
     assert later_helpers.issubset(set(imported)), str(imported)
     assert len(imported) == 27 + len(later_helpers), str(imported)

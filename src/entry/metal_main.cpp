@@ -2,6 +2,7 @@
 #include "xlang3/xlang3.h"
 #include "garnet_tensor.h"
 #include "../backends/metal/compiled_graph.h"
+#include "../backends/metal/token_prefix_profile.h"
 #include "../backends/metal/decoder_session.h"
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
 #include "../backends/metal/continuous_scheduler.h"
@@ -11,6 +12,11 @@
 #ifdef GARNET_APPLE_COREML
 #include "../backends/coreml/coreml_api.h"
 #endif
+#include "../backends/common/tensor_views.h"
+#include "../backends/common/tensor_pixels.h"
+#include "../backends/common/generation_noise.h"
+#include "../media/media_api.h"
+#include "../model/generation_api.h"
 #include "../image/native_image.h"
 #include "nlohmann/json.hpp"
 #include <filesystem>
@@ -127,6 +133,24 @@ public:
     }
     std::string BackendInfo() const {
         auto info="Garnet Metal/MPS "+MetalContext::AvailableDeviceName();
+#ifdef GARNET_METAL_SILU_PROFILE32
+        info+="; silu_profile32_optional; silu_profile32_max_rows=512; silu_profile32_threads=128";
+#endif
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+        info+="; paired_packed_prefill_optional";
+#endif
+#ifdef GARNET_METAL_VALUE_PROFILE32
+        info+="; value_profile32_optional; value_profile32_threads=128";
+#endif
+#ifdef GARNET_METAL_SPLIT_DECODE_SCORES
+        info+="; split_decode_scores_optional; split_decode_scores_chunk=128; split_decode_scores_min_visible=512";
+#ifdef GARNET_METAL_SPLIT_SCORE_PROFILE32
+        info+="; split_score_profile32_optional";
+#endif
+#endif
+#ifdef GARNET_METAL_AFFINE_WEIGHT_RESIDENCY
+        info+="; native_bounded_affine_residency";
+#endif
 #ifdef GARNET_METAL_FLOAT_DENSE_KEY_PREFILL
         info+="; dense_key_split_k";
 #endif
@@ -201,18 +225,45 @@ public:
 #ifdef GARNET_METAL_INDEXED_TOKEN_PROJECTIONS
     info+="; indexed_token_projections";
 #endif
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+    info+="; prediction_confidence_top2_v1";
+#endif
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+    info+="; mistral_packed_prefill_optional; packed_prefill_min_rows=128; packed_prefill_scratch_bytes=14680064";
+#endif
+#ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+    info+="; mistral_streamed_prefill_optional; streamed_prefill_min_rows=512; streamed_prefill_scratch_bytes=161480704";
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
     info+="; mpp_affine_reuse64_optional; mpp_affine_reuse64_min_outputs="+std::to_string(int(GARNET_METAL_REUSE64_MIN_OUTPUTS));
     info+="; mpp_affine_reuse64_relaxed="+std::to_string(int(GARNET_METAL_REUSE64_RELAXED_VALUE));
 #endif
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+    info+="; mpp_affine_reuse128_optional; mpp_affine_reuse128_min_rows=128; mpp_affine_reuse128_threads=256; mpp_affine_reuse128_even64_tiles=1";
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    info+="; verification_affine_route_control";
+#endif
+#endif
 #ifdef GARNET_METAL_INDEXED_DECODE
     info+="; indexed_fp32_decode_primitive";
+#ifdef GARNET_METAL_INDEXED_DECODE_FUSED_CLEAR
+    info+="; native_indexed_decode_fused_clear_optional_v1";
+#endif
 #endif
 #ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
     info+="; active_decode_projections";
 #endif
+#ifdef GARNET_METAL_TARGET_JACOBI
+    info+="; native_target_shifted_jacobi_optional_v1";
+#endif
 #ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
     info+="; mistral_decode_reuse_four_rows";
+#ifdef GARNET_METAL_MISTRAL_GROUPED_VALUE_CONTEXT
+    info+="; mistral_grouped_value_context_two_heads";
+#endif
+#ifdef GARNET_METAL_MISTRAL_THREE_ROW_REUSE
+    info+="; mistral_decode_reuse_three_rows";
+#endif
 #endif
 #ifdef GARNET_METAL_AFFINE_PROFILE
     info+="; bounded_affine_kernel_profiles; affine_profile_index_bits="+std::to_string(MetalContext::AffineProfileIndexBits());
@@ -227,6 +278,24 @@ public:
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
     info+="; chunk_attention_index32";
+#endif
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+    info+="; fp16_prefill_all_p16_gpupack_v1";
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+    info+="; native_half_resident_only_preparation_optional_v1";
+#endif
+#ifdef GARNET_METAL_CHUNK_HALF_WIDE
+        info+="; half_attention_maximum_chunk=512";
+#endif
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+    info+="; fused_mistral_mlp_prefill_fast_v1";
+#endif
+#endif
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+    info+="; committed_kv_mps_fp32_v1";
+#endif
+#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+    info+="; chunk_kv_commit_hoist";
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     info+="; chunk_attention_mps";
@@ -283,11 +352,29 @@ public:
 #ifdef GARNET_METAL_REQUEST_ROWS
         info+="; request_row_reset";
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
-        info+="; native_request_row_leases; native_continuous_scheduler; chunked_prefill_scheduler; packed_token_plan";
+        info+="; native_request_row_leases; native_continuous_scheduler; chunked_prefill_scheduler; packed_token_plan; native_prefill_completion_priority_optional";
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
         info+="; row_final_hidden";
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
         info+="; native_hybrid_token_prefix; native_cached_prefill_scheduler";
+#ifdef GARNET_METAL_PREFIX_PREFILL_ONLY
+        info+="; native_prefix_prefill_only_v1";
+#endif
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+        info+="; native_leased_bulk_prefill_scheduler; native_tracking_only_rows";
+#endif
+        info+="; native_prefix_host_limit_bytes="+std::to_string(kTokenPrefixHostLimitBytes);
+#if GARNET_METAL_TOKEN_PREFIX_HOST_MIB > 512
+        info+="; native_prefix_completion_recency";
+#ifdef GARNET_METAL_PREFIX_SHARED_BLOCKS
+        info+="; native_shared_prefix_blocks; native_prefix_block_tokens=64; native_prefix_chunk_checkpoints";
+#ifdef GARNET_METAL_PREFIX_DIRECT_CAPTURE
+        info+="; native_prefix_direct_capture";
+#endif
+#else
+        info+="; native_prefix_checkpoint_min_tail=64";
+#endif
+#endif
 #endif
 #endif
 #endif
@@ -300,7 +387,7 @@ public:
 #ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
         info+="; compact_owner_prefill";
 #ifdef GARNET_METAL_WIDE_OWNER_PREFILL
-    info+="; wide_owner_prefill";
+    info+="; wide_owner_prefill; native_prefill_completion_owner_limit_v1";
 #endif
 #endif
 #ifdef GARNET_METAL_LAYOUT_VECTOR4
@@ -343,6 +430,12 @@ public:
 #endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         info+="; verification_attention_fp32";
+#ifdef GARNET_METAL_MISTRAL_VERIFY_VECTOR4
+        info+="; mistral_verification_value_vector4; verification_value_route_control";
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_LAYOUT
+        info+="; mistral_verification_layout_b1t4_c4096_h32_kv8_d128; verification_layout_route_control";
+#endif
         info+="; verification_recurrent_checkpoint";
         info+="; verification_kv_span_checkpoint";
 #if defined(GARNET_METAL_MLX_AFFINE_INT4)&&defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)&&defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)&&defined(GARNET_METAL_INDEXED_DECODE)&&defined(GARNET_METAL_AFFINE_PROFILE)
@@ -411,15 +504,46 @@ public:
 #ifdef GARNET_APPLE_COREML
         info+="; coreml_stateful_optional";
 #endif
-        return info;
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+    info+="; native_dense_verify_b4t4_optional_v1; native_wide_verify_preparation_lifetime_v1";
+#endif
+#ifdef GARNET_METAL_COMPACT_VERIFY_COEXISTENCE
+    info+="; native_compact_verify_b4t1_optional_v1";
+#endif
+#ifdef GARNET_METAL_DENSE_VERIFY_SCHEDULER
+    info+="; native_scheduled_dense_verify_v1";
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_SPLIT_SCORES
+    info+="; native_mistral_verification_split_scores128_default_v1";
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_VALUES
+    info+="; native_mistral_verification_gqa16_values64_32_optional_v1";
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_SCORES
+    info+="; native_mistral_verification_gqa16_scores32_optional_v1";
+#endif
+    #ifdef GARNET_METAL_FUSED_Q4_DECODE
+    info+="; native_fused_q4_decode_rows4_default_v1";
+#ifdef GARNET_METAL_FUSED_Q4_WIDE_SELECTION
+    info+="; native_fused_q4_wide_selection_optional_v1";
+#endif
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+    info+="; native_AR_DAG_lookahead_session_optional_v1";
+#endif
+    return info;
     }
     // Graphs own synchronous queues and release them through close(). There
     // is no package-global executor to drain, unlike asynchronous backends.
     bool Shutdown() const {return true;}
+    X::Value Generate(const X::ARGS& args,const X::KWARGS& options){return GenerateMedia(Host(),args,options);}
+    X::Value GaussianNoise(const X::ARGS& args,const X::KWARGS& options){return GenerationGaussianNoise(Host(),args,options);}
     BEGIN_PACKAGE(GarnetMetalAPI)
 #ifdef GARNET_APPLE_COREML
         APISET().AddClass<0,CoreMLAPI>("coreml_session");
 #endif
+        APISET().AddVarFunc("generate",&GarnetMetalAPI::Generate);
+        APISET().AddVarFunc("gaussian_noise",&GarnetMetalAPI::GaussianNoise);
         APISET().AddClass<0,GarnetTensor>("tensor");
         APISET().AddClass<0,MetalCompiledGraph>("compiled_graph");
         APISET().AddClass<0,MetalDecoderSession>("decoder_session");
@@ -428,6 +552,11 @@ public:
 #endif
         APISET().AddClass<0,ModelTensorIO>("tensor_io");
         APISET().AddClass<0,CPUTokenizer>("tokenizer");
+        APISET().AddClass<0,TensorViews>("tensor_views");
+        APISET().AddClass<0,TensorPixels>("tensor_pixels");
+        APISET().AddClass<0,NativeMediaAPI>("media");
+        APISET().AddClass<1,NativeVideoWriter>("video_writer");
+        APISET().AddClass<1,NativeVideoAssembler>("video_assembler");
         APISET().AddFunc<2>("prepare_image",&GarnetMetalAPI::PrepareImage);
         APISET().AddFunc<2>("memory_inventory_json",&GarnetMetalAPI::MemoryInventoryJson);
         APISET().AddFunc<0>("primary_storage_stats_json",&GarnetMetalAPI::PrimaryStatsJson);

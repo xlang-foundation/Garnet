@@ -1,0 +1,318 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -756,0 +757,7 @@
++option(GARNET_METAL_WIDE_DENSE_VERIFICATION "Opt-in prepared B4/T4 dense verification with strict FP32 selected projections" OFF)
++if(GARNET_METAL_WIDE_DENSE_VERIFICATION)
++    if(NOT GARNET_METAL_DENSE_VERIFY_SCHEDULER OR NOT GARNET_METAL_VERIFY_ATTENTION OR NOT GARNET_METAL_AFFINE_PROFILE_INDEX32 OR NOT GARNET_METAL_AFFINE_FP16_COEFFICIENTS OR NOT GARNET_METAL_MISTRAL_DECODE_REUSE OR NOT GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)
++        message(FATAL_ERROR "Wide dense verification requires scheduled verification and bounded strict FP32 affine profiles")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_WIDE_DENSE_VERIFICATION=1)
++endif()
+@@ -888,0 +896,6 @@
++    if(GARNET_METAL_WIDE_DENSE_VERIFICATION)
++        add_executable(garnet_wide_verification_affine_test test2026/metal/wide_verification_affine_test.cpp)
++        target_link_libraries(garnet_wide_verification_affine_test PRIVATE garnet_metal)
++        add_test(NAME metal_wide_verification_affine_fp32 COMMAND garnet_wide_verification_affine_test)
++        set_tests_properties(metal_wide_verification_affine_fp32 PROPERTIES TIMEOUT 240)
++    endif()
+--- /dev/null
++++ b/src/backends/metal/affine_int4_wide_decode_shader.h
+@@ -0,0 +1,80 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++namespace Garnet {
++// Four selected rows per tile; count, dimensions and strides are prepared.
++// Retains ordinary decode dequantization, FMA and SIMD reduction order.
++inline constexpr const char* kAffineInt4WideDecodeShader=R"METAL(
++using namespace metal;
++#define GARNET_BLOCKED_COLUMNS 4
++#define GARNET_BLOCKED_INDEXED 1
++
++struct BlockedQ4Params {ulong rows,inner,columns,aStride,oStride;};
++constant uint wide_selected_rows [[function_constant(0)]];
++kernel void affine_q4_wide(device const float* a [[buffer(0)]],
++ device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
++ device const ushort* biases [[buffer(3)]],device float* out [[buffer(4)]],
++ constant BlockedQ4Params& runtime [[buffer(5)]],
++ constant uint& selectedCount [[buffer(7)]],
++#ifdef GARNET_BLOCKED_INDEXED
++ constant uint* indices [[buffer(6)]],
++#endif
++ uint group [[threadgroup_position_in_grid]],uint lane [[thread_index_in_simdgroup]],
++ uint simd [[simdgroup_index_in_threadgroup]]) {
++    GARNET_AFFINE_PARAMETERS(BlockedQ4Params);
++    const uint tiles=(wide_selected_rows+3)/4;
++#ifdef GARNET_WIDE_ROW_MAJOR
++    const uint columns=(p.columns+4*GARNET_BLOCKED_COLUMNS-1)/(4*GARNET_BLOCKED_COLUMNS);
++    const uint rowTile=group/columns,columnTile=group%columns;
++#else
++    const uint rowTile=group%tiles,columnTile=group/tiles;
++#endif
++    const uint selectedBase=rowTile*4,live=(rowTile+1==tiles)?(wide_selected_rows-4*(tiles-1)):4;
++    const AffineIndex first=(AffineIndex(columnTile)*4+simd)*GARNET_BLOCKED_COLUMNS;
++    if(first>=p.columns)return;
++    AffineIndex physical[4];float sums[4][GARNET_BLOCKED_COLUMNS];
++#pragma clang loop unroll(full)
++    for(uint row=0;row<4;++row) {
++#ifdef GARNET_BLOCKED_INDEXED
++        physical[row]=row<live?indices[selectedBase+row]:0;
++#else
++        physical[row]=row;
++#endif
++#pragma clang loop unroll(full)
++        for(uint column=0;column<GARNET_BLOCKED_COLUMNS;++column)sums[row][column]=0;
++    }
++    for(AffineIndex word=lane;word<p.inner/8;word+=32) {
++        float4 low[4],high[4];
++#pragma clang loop unroll(full)
++        for(uint row=0;row<4;++row)if(row<live) {
++            const AffineIndex base=physical[row]*p.aStride+word*8;
++            // packed_float4 has scalar alignment, including row-padded views.
++            low[row]=float4(*reinterpret_cast<device const packed_float4*>(a+base));
++            high[row]=float4(*reinterpret_cast<device const packed_float4*>(a+base+4));
++        }
++#pragma clang loop unroll(full)
++        for(uint column=0;column<GARNET_BLOCKED_COLUMNS;++column)if(first+column<p.columns) {
++            const AffineIndex n=first+column,coefficient=n*(p.inner/64)+word/8;
++            const uint values=packed[n*(p.inner/8)+word];
++            const float scale=garnet_affine_coefficient(scales[coefficient]);
++            const float bias=garnet_affine_coefficient(biases[coefficient]);
++#pragma clang loop unroll(full)
++            for(uint j=0;j<8;++j) {
++                const float weight=fma(float((values>>(4*j))&15u),scale,bias);
++#pragma clang loop unroll(full)
++                for(uint row=0;row<4;++row)if(row<live)
++                    sums[row][column]=fma(j<4?low[row][j]:high[row][j-4],weight,sums[row][column]);
++            }
++        }
++    }
++#pragma clang loop unroll(full)
++    for(uint column=0;column<GARNET_BLOCKED_COLUMNS;++column)if(first+column<p.columns) {
++#pragma clang loop unroll(full)
++        for(uint row=0;row<4;++row)if(row<live) {
++            const float total=simd_sum(sums[row][column]);
++            if(lane==0)out[physical[row]*p.oStride+first+column]=total;
++        }
++    }
++}
++
++)METAL";
++}
+--- a/src/backends/metal/compact_prefill_session.cpp
++++ b/src/backends/metal/compact_prefill_session.cpp
+@@ -38 +38,5 @@
+-    return !verification_||(verification_->batch==4&&verification_->chunk==1&&verification_->width==4096&&verification_->vocab==32768);
++    return !verification_||(verification_->batch==4&&(verification_->chunk==1
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++        ||verification_->chunk==4
++#endif
++        )&&verification_->width==4096&&verification_->vocab==32768);
+--- a/src/backends/metal/compiled_graph.cpp
++++ b/src/backends/metal/compiled_graph.cpp
+@@ -494 +494,7 @@
+-            if(info.rank!=3||info.shape[0]<1||info.shape[0]>4||info.shape[1]<1||info.shape[1]>4/info.shape[0])
++            if(info.rank!=3||info.shape[0]<1||info.shape[0]>4||info.shape[1]<1||
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++               (info.shape[1]>4/info.shape[0]&&!(info.shape[0]==4&&info.shape[1]==4&&info.shape[2]==4096))
++#else
++               info.shape[1]>4/info.shape[0]
++#endif
++               )
+@@ -747 +753,7 @@
+-                if(verificationTokens_&&(chunk!=verificationTokens_||rows>4||capacity>4096))
++                if(verificationTokens_&&(chunk!=verificationTokens_||capacity>4096||
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++                   (rows>4&&!(batch==4&&chunk==4&&width==4096&&heads==32&&kv==8&&dim==128&&capacity==4096))
++#else
++                   rows>4
++#endif
++                   ))
+@@ -1116 +1128,5 @@
+-            if(rows&&rows<=4&&(head||activeId!=SIZE_MAX)) {
++            if(rows&&(rows<=4
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++               ||(head&&rows==16&&inputShapes_[0][1]==4096)
++#endif
++               )&&(head||activeId!=SIZE_MAX)) {
+@@ -1809 +1825,5 @@
+-                if(selectedTokenRows&&op.indexedDecodeProjection&&selectedTokenRows->size()<slots_[op.a].rows)
++                if(selectedTokenRows&&op.indexedDecodeProjection&&(selectedTokenRows->size()<slots_[op.a].rows
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++                   ||slots_[op.a].rows>4
++#endif
++                   ))
+--- a/src/backends/metal/continuous_scheduler.cpp
++++ b/src/backends/metal/continuous_scheduler.cpp
+@@ -412 +412,7 @@
+-    if(geometry[0]!=rows_||!chunk||chunk>4||rows_*chunk>4)
++    if(geometry[0]!=rows_||!chunk||chunk>4||
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++       (rows_*chunk>4&&!(rows_==4&&chunk==4))
++#else
++       rows_*chunk>4
++#endif
++       )
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -106,0 +107,3 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++#include "affine_int4_wide_decode_shader.h"
++#endif
+@@ -360 +363 @@
+-enum class AffineProfileRoute:size_t {Decode,MPP,IndexedDecode,Indexed,Reuse64,Reuse128};
++enum class AffineProfileRoute:size_t {Decode,MPP,IndexedDecode,Indexed,Reuse64,Reuse128,WideIndexedDecode};
+@@ -400 +403 @@
+-    std::array<id<MTLLibrary>,6> affineProfileLibraries{};
++    std::array<id<MTLLibrary>,7> affineProfileLibraries{};
+@@ -2099,0 +2103,6 @@
++#endif
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++        {auto source=affineSourceWithProfile([NSString stringWithUTF8String:kAffineInt4WideDecodeShader]);
++         auto library=[impl_->device newLibraryWithSource:[affineProfileDefines stringByAppendingString:source] options:affineOptions error:&error];
++         if(!library)throw std::runtime_error("Cannot compile strict FP32 wide verification library: "+std::string(error.localizedDescription.UTF8String));
++         impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::WideIndexedDecode)]=library;}
+@@ -2578 +2587,4 @@
+-            std::array<NSString*,6> names{@"affine_q4_decode",@"affine_q4_mpp",@"affine_q4_indexed_decode",@"affine_q4_indexed",@"affine_q4_reuse64",@"affine_q4_reuse128"};
++            std::array<NSString*,7> names{@"affine_q4_decode",@"affine_q4_mpp",@"affine_q4_indexed_decode",@"affine_q4_indexed",@"affine_q4_reuse64",@"affine_q4_reuse128",@"affine_q4_wide"};
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++            if(route==AffineProfileRoute::WideIndexedDecode)decodeColumns=4;
++#endif
+@@ -2609,0 +2622,4 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++        if(a.rows>4&&a.rows<=16)for(size_t rows=5;rows<=std::min(size_t(16),maximumRows);++rows)
++            prepare(AffineProfileRoute::WideIndexedDecode,rows);
++#endif
+@@ -3273 +3289,7 @@
+-           !a.rows||a.rows>4||a.columns!=w->columns||o.rows!=a.rows||o.columns!=w->rows||
++           !a.rows||a.rows>
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++           16
++#else
++           4
++#endif
++           ||a.columns!=w->columns||o.rows!=a.rows||o.columns!=w->rows||
+@@ -3280 +3302 @@
+-        std::vector<uint32_t> indices;indices.reserve(selectedRows.size());std::array<bool,4> unique{};
++        std::vector<uint32_t> indices;indices.reserve(selectedRows.size());std::array<bool,16> unique{};
+@@ -3289,0 +3312,7 @@
++        id<MTLComputePipelineState> preparedWide=nil;size_t wideColumns=1;
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++        if(indices.size()>4)preparedWide=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::WideIndexedDecode,
++            a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,indices.size(),nil,
++            impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads,&wideColumns,true);
++#endif
++        // The strict wide profile is resolved before any output is modified.
+@@ -3300,2 +3329,2 @@
+-            auto pipeline=impl_->kernels->indexedDecodeAffine[indices.size()-1];
+-            size_t decodeColumns=1;
++            auto pipeline=preparedWide?preparedWide:impl_->kernels->indexedDecodeAffine[indices.size()-1];
++            size_t decodeColumns=preparedWide?wideColumns:1;
+@@ -3303 +3332 @@
+-            pipeline=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::IndexedDecode,
++            if(!preparedWide)pipeline=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::IndexedDecode,
+@@ -3313,2 +3342,3 @@
+-            const size_t decodeOutputs=4*decodeColumns;
+-            [encoder dispatchThreadgroups:MTLSizeMake((o.columns+decodeOutputs-1)/decodeOutputs,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
++            if(preparedWide){uint32_t count=uint32_t(indices.size());[encoder setBytes:&count length:sizeof(count) atIndex:7];}
++            const size_t decodeOutputs=4*decodeColumns,rowTiles=preparedWide?(indices.size()+3)/4:1;
++            [encoder dispatchThreadgroups:MTLSizeMake(((o.columns+decodeOutputs-1)/decodeOutputs)*rowTiles,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+@@ -5490 +5520,7 @@
+-    if(!batch||batch>4||rows>4||c.columns!=Elements(width,capacity)||b.rows!=rows||b.columns!=width||
++    if(!batch||batch>4||
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++       (rows>4&&!(batch==4&&chunk==4))
++#else
++       rows>4
++#endif
++       ||c.columns!=Elements(width,capacity)||b.rows!=rows||b.columns!=width||
+--- a/src/backends/metal/verification_session.cpp
++++ b/src/backends/metal/verification_session.cpp
+@@ -70 +70,7 @@
+-    if(!b||b>4||!t||r>4||staged->head->inputShapes_!=std::vector<std::vector<int64_t>>{{int64_t(r),int64_t(w)}}||
++    if(!b||b>4||!t||
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++       (r>4&&!(b==4&&t==4&&w==4096&&states_.size()==32))||
++#else
++       r>4||
++#endif
++       staged->head->inputShapes_!=std::vector<std::vector<int64_t>>{{int64_t(r),int64_t(w)}}||
+@@ -78 +84,7 @@
+-    if(!compactFamilies_.empty()&&(b!=4||t!=1||w!=4096||staged->vocab!=32768))
++    if(!compactFamilies_.empty()&&(b!=4||
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++       (t!=1&&t!=4)||
++#else
++       t!=1||
++#endif
++       w!=4096||staged->vocab!=32768))
+@@ -79,0 +92,6 @@
++#endif
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++    if(r>4){const std::vector<int64_t> shape{4,8,4096,128};
++        if(staged->vocab!=32768)throw std::invalid_argument("Wide verification requires Mistral vocabulary");
++        for(const auto& state:states_)if(state.shape[0]!=shape||state.shape[1]!=shape)
++            throw std::invalid_argument("Wide verification requires dense Mistral cache banks");}
+@@ -181,0 +200,4 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++    std::vector<size_t> selected;for(size_t i=0;i<run.active.size();++i)if(run.active[i]!=0)selected.push_back(i);
++    try{p.head->EncodeGreedy(*gpu_,p.predictions,&selected);}catch(...){slot.matrix=saved;throw;}slot.matrix=saved;
++#else
+@@ -182,0 +205 @@
++#endif
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -492,0 +493,3 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++    info+="; native_dense_verify_b4t4_optional_v1";
++#endif
+--- a/test2026/metal/verification_kv_span_test.cpp
++++ b/test2026/metal/verification_kv_span_test.cpp
+@@ -180,0 +181,6 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++        for(size_t mode=0;mode<7;++mode)for(size_t keep=0;keep<=4;++keep)
++            Case(gpu,Job(4,4,1,7,8,4,mode),keep,(mode+keep)%4);
++        for(size_t mode:{0,3,5,6})for(size_t keep=0;keep<=4;++keep)
++            Case(gpu,Job(4,4,8,128,4096,4092,mode),keep,(mode+keep)%4);
++#endif
+--- /dev/null
++++ b/test2026/metal/wide_verification_affine_test.cpp
+@@ -0,0 +1,33 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "metal_context.h"
++#include "../../src/model/affine_int4_codec.h"
++#include <algorithm>
++#include <cstring>
++#include <iostream>
++#include <numeric>
++#include <stdexcept>
++#include <vector>
++using namespace Garnet;
++namespace {
++size_t pairs=0,cases=0,rejections=0;
++void Need(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
++void Same(const std::vector<float>& actual,const std::vector<float>& expected){Need(actual.size()==expected.size(),"Output size");Need(!std::memcmp(actual.data(),expected.data(),actual.size()*4),"Wide output differs from ordinary FP32 decode");pairs+=actual.size();++cases;}
++void Case(MetalContext& gpu,size_t n,size_t k){
++ const auto layout=AffineInt4Layout::Create(n,k,AffineInt4CoefficientType::FP16);std::vector<uint32_t> packed(layout.weightBytes/4);for(size_t i=0;i<packed.size();++i)packed[i]=uint32_t(i)*2654435761u+131u;
++ std::vector<uint16_t> scales(layout.coefficientBytes/2),biases(scales.size());for(size_t i=0;i<scales.size();++i){scales[i]=uint16_t(0x2980+i%8);biases[i]=uint16_t(0xa900+i%7);}
++ auto weight=gpu.UploadAffineInt4(packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,n,k,true);
++ std::vector<float> input(16*k),reference(16*n);uint32_t seed=37;for(auto& v:input){seed=1664525u*seed+1013904223u;v=float(int((seed>>8)%65521)-32760)*.000004f;}
++ for(size_t row=0;row<16;++row){auto x=gpu.Upload(std::vector<float>(input.begin()+row*k,input.begin()+(row+1)*k),1,k),y=gpu.Allocate(1,n);Need(gpu.PrepareAffineInt4Profile(x,weight,y,4),"Control profile");gpu.Begin();gpu.EncodeAffineInt4MatMul(x,weight,y);gpu.SubmitAndWait();Need(gpu.LastMPPAffineDispatches()==0&&gpu.LastAffineProfileMisses()==0,"Control route");auto v=gpu.Download(y);std::copy(v.begin(),v.end(),reference.begin()+row*n);}
++ auto source=gpu.Upload(input,16,k),output=gpu.Allocate(16,n);Need(gpu.PrepareAffineInt4Profile(source,weight,output,16),"Wide profile");const auto prepared=gpu.AffineProfilePipelineCount();
++ std::vector<size_t> all(16);std::iota(all.begin(),all.end(),0);std::vector<std::vector<size_t>> masks;for(size_t count=0;count<=16;++count)masks.emplace_back(all.begin(),all.begin()+count);masks.push_back({15,0,7,3,12,5,10,1,14});std::reverse(all.begin(),all.end());masks.push_back(all);masks.push_back({15});masks.push_back({0,15});masks.push_back({3,7,11,15});
++ for(const auto& selected:masks){std::vector<float> expected(16*n,0);for(auto row:selected)std::copy_n(reference.data()+row*n,n,expected.data()+row*n);gpu.Update(output,std::vector<float>(16*n,-99));gpu.Begin();gpu.EncodeAffineInt4IndexedDecode(source,weight,output,selected);gpu.SubmitAndWait();Need(gpu.LastMPPAffineDispatches()==0&&gpu.LastAffineProfileMisses()==0&&gpu.LastIndexedDecodeAffineDispatches()==size_t(!selected.empty()),"Wide route used MPP or missed prepared profile");Need(gpu.AffineProfilePipelineCount()==prepared,"Request-time compilation");Same(gpu.Download(output),expected);}
++ for(const auto& invalid:std::vector<std::vector<size_t>>{{0,0},{16},{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}}){gpu.Update(output,std::vector<float>(16*n,-99));gpu.Begin();bool rejected=false;try{gpu.EncodeAffineInt4IndexedDecode(source,weight,output,invalid);}catch(const std::invalid_argument&){rejected=true;}Need(rejected,"Invalid selected rows accepted");gpu.SubmitAndWait();Same(gpu.Download(output),std::vector<float>(16*n,-99));++rejections;}
++ Same(gpu.Download(source),input);std::cout<<"wide affine PASS K="<<k<<" N="<<n<<" physical=16 selected=0..16 sparse_permuted=true no_mpp=true\n"<<std::flush;
++}
++}
++int main(){try{
++ {MetalContext gpu;for(auto shape:std::vector<std::pair<size_t,size_t>>{{17,64},{33,128},{1024,4096},{4096,4096},{14336,4096},{4096,14336},{32768,4096}})Case(gpu,shape.first,shape.second);}
++ // A distinct unprepared shape must fail before even zeroing inactive output.
++ {MetalContext gpu;const size_t k=192,n=17;auto layout=AffineInt4Layout::Create(n,k,AffineInt4CoefficientType::FP16);std::vector<uint32_t> packed(layout.weightBytes/4,0x76543210);std::vector<uint16_t> coeff(layout.coefficientBytes/2,0x2980);auto w=gpu.UploadAffineInt4(packed.data(),layout.weightBytes,coeff.data(),layout.coefficientBytes,coeff.data(),layout.coefficientBytes,n,k,true);auto x=gpu.Upload(std::vector<float>(16*k,.125f),16,k),y=gpu.Upload(std::vector<float>(16*n,-99),16,n);gpu.Begin();bool rejected=false;try{gpu.EncodeAffineInt4IndexedDecode(x,w,y,{0,1,2,3,15});}catch(const std::logic_error&){rejected=true;}Need(rejected,"Unprepared wide profile accepted");gpu.SubmitAndWait();Same(gpu.Download(y),std::vector<float>(16*n,-99));++rejections;}
++ auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Wide owners retained");std::cout<<"wide verification affine PASS cases="<<cases<<" fp32_word_pairs="<<pairs<<" rejections="<<rejections<<" owners=0\n";return 0;
++}catch(const std::exception& e){std::cerr<<"wide verification affine FAILED: "<<e.what()<<'\n';return 1;}}
+--- a/xModel/mistral/text_7b/metal_decoder.py
++++ b/xModel/mistral/text_7b/metal_decoder.py
+@@ -117 +117,2 @@
+-        if type(tokens) is not int or tokens<1 or self.batch*tokens>4:
++        wide=self.batch==4 and tokens==4 and 'native_dense_verify_b4t4_optional_v1' in garnet.backend_info()
++        if type(tokens) is not int or tokens<1 or (self.batch*tokens>4 and not wide):

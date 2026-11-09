@@ -1,0 +1,230 @@
+{
+  "passed": true,
+  "preparation": {
+    "fresh_engines": 7,
+    "native_preparation_rejections": 23,
+    "unchanged_state_digest_pairs": 5828,
+    "reset_does_not_reopen_preparation": true,
+    "reset_existing_profile_replay_exact": true,
+    "late_adapter_compilation_rejected": true
+  },
+  "primary": {
+    "native_decode_calls": 45,
+    "active_decode_occupancies": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "mixed_ticks": 17,
+    "full_four_row_state_digest_pairs": 2600,
+    "rejected_call_state_digest_pairs": 520,
+    "exact_output_ids": 110
+  },
+  "reverse": {
+    "native_decode_calls": 45,
+    "active_decode_occupancies": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "mixed_ticks": 17,
+    "full_four_row_state_digest_pairs": 2600,
+    "rejected_call_state_digest_pairs": 520,
+    "exact_output_ids": 110
+  },
+  "probe": {
+    "output_ids": 12,
+    "full_four_row_state_digest_pairs": 780,
+    "rejected_call_state_digest_pairs": 520,
+    "native_verification_calls": 8,
+    "b2_mixed_ticks": 7,
+    "actual_routes": [
+      [
+        128,
+        0,
+        4
+      ],
+      [
+        128,
+        2,
+        1
+      ],
+      [
+        256,
+        2,
+        1
+      ]
+    ]
+  },
+  "spans": {
+    "ordinary": {
+      "native_calls": 0,
+      "submitted_physical_counts": [],
+      "submitted_depths": [],
+      "actual_prefill_chunks": [
+        4,
+        128,
+        256,
+        512
+      ],
+      "submitted_positions": 0,
+      "kv_restore_dispatches": 0
+    },
+    "verify": {
+      "native_calls": 45,
+      "submitted_physical_counts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "submitted_depths": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "actual_prefill_chunks": [
+        4,
+        128,
+        256,
+        512
+      ],
+      "submitted_positions": 379,
+      "kv_restore_dispatches": 2752
+    },
+    "reverse": {
+      "native_calls": 45,
+      "submitted_physical_counts": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "submitted_depths": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "actual_prefill_chunks": [
+        4,
+        128,
+        256,
+        512
+      ],
+      "submitted_positions": 379,
+      "kv_restore_dispatches": 2752
+    },
+    "ordinary-probe": {
+      "native_calls": 0,
+      "submitted_physical_counts": [],
+      "submitted_depths": [],
+      "actual_prefill_chunks": [
+        128,
+        256
+      ],
+      "submitted_positions": 0,
+      "kv_restore_dispatches": 0
+    },
+    "verify-probe": {
+      "native_calls": 8,
+      "submitted_physical_counts": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "submitted_depths": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "actual_prefill_chunks": [
+        128,
+        256
+      ],
+      "submitted_positions": 24,
+      "kv_restore_dispatches": 384
+    }
+  },
+  "full_state_digest_pairs": 5980,
+  "invalid_call_state_digest_pairs": 1560,
+  "wide_cancel_refill_survivors_qualified": true,
+  "b2_compact_interleave_qualified": true,
+  "closed_preparation_lifetime_qualified": true,
+  "independent_native_budgets_epochs_qualified": true,
+  "all_owned_engines_terminal": true,
+  "default_option_on": false,
+  "prefix_retention_qualified": false,
+  "learned_helper_batching_qualified": false,
+  "performance_measured": false,
+  "selected_full_serving_comparison_promoted": false,
+  "no_comparator_execution": true,
+  "goal_complete": false,
+  "negative_controls_rejected": [
+    "missing_reset_guard",
+    "reset_pipeline_mutation",
+    "wrong_survivor_hidden",
+    "wrong_reused_row_epoch",
+    "wrong_native_budget",
+    "false_submitted_depth",
+    "missing_rollback_bank",
+    "hidden_oracle_proposal",
+    "inactive_submitted_position",
+    "wrong_b2_span",
+    "wrong_b2_survivor_state",
+    "missing_native_epoch_rejection"
+  ],
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/audit_all2.py": "343bb50ecbf7b4f550aea80b27771d3740c001d00d773e71e1ece995787da1d7",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/audit_owner2.py": "d11806c748a0c9cf26f32be3d0b97ca0d5aac247097cb71c0bcc18fc9fa09de1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/audit_probe_core1.py": "a844e7d0a8eb437ee24b1ddbec3a5cf21f85e6e6a49dba6a6cfca8a2ba084433",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/run2-preflight.json": "895ca88dce348636d64398ff531dfb1cc3e82f9988e0972912c37af9a791aefa",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/run2-postflight.json": "83d64d6aff608e679937557395edff716a4b2786d500be6cd5d00cb047a60c5c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/build-audit1.json": "fa2a8cae3adfec803565e7ef65bfc7549a11155b856169fcbb0e68c4b7f6848d",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/plan2.json": "78417e7310611d816e55cb5fbd70a75a844eb1d059e74d933a66836087dc7645",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/guard-off-result1.json": "0fb5278986cef71cda12fad8e9125b658cd3217bb1b810f3f19c2f2a4dd926c1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/guard-on-claim-result1.json": "8c9e66a1f59670a8e1e26a45498ba9bb5c366ffc2977060e7e716a0f7262fc06",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/guard-on-run-result1.json": "cabec53970c5cc6260731e0917fbab11bc2da87819459462f8aa8f874d8f5b0c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/guard-on-adapter-late-result1.json": "54a32aad5dd633286bd782fad12168611dc99b26081a22bf5faaafec83de06d6",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/guard-on-compact-result1.json": "f212b9dc55a7cd6f84ce5027983549279211230d06cafc706777a500e62bcd50",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/guard-on-capacity-result1.json": "f04c3465bd65ffad0c66f7c8d01bc606afc93d40bf54fa842a406ff010a72de1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/guard-on-batch-result1.json": "77ac20654c61f76eebe23190900ba7a1d585424478fe3922199a65bf95efee6e",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/ordinary-result1.json": "0901d8008b0dacbc03cc6cd5552068cce0c6f0cd90885645778a9db944caa8c3",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/verify-result1.json": "543786c1db02ee9b8e29f8feaa6f9987e470b43a12ead5020415a175c168432b",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/reverse-result1.json": "550924ae5fc25c90f24d29d73577a276c4c127bde99685e73b9b61b318e5b0bf",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/probe-ordinary-result1.json": "f1cdafef3e857a1f0465feb6d6dad09578e02d5ba530e60af5afadcf3b194e51",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/probe-verify-result1.json": "2a60bbf9e705ee2d9fc8efe31bb293d1186dba47c42f9df2f008e17bec51d893",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/ordinary-result2.json": "4c65822ce2f944ef6daf3d4523aa98c5bc51c52f528de793b2cf402fd1dd39e4",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/verify-result2.json": "7835cbeecb8f9f07cc4e51293fbee7bad46440bc19d7c8a961c5afae4e5e2d6b",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/reverse-result2.json": "0b9204a1ba46b2b2bbad7185cab82ea32773d0d25fe94ca53addfb862e6caed5"
+  }
+}

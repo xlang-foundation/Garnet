@@ -1,0 +1,41 @@
+{
+  "passed": true,
+  "decision": "Retain as an experimental qualified B4 helper path; do not enable unconditional helper drafting as a production default.",
+  "reason": "Native decode improved modestly, but paired aggregate ratios disagree and do not establish a consistent throughput benefit.",
+  "native_warm_medians": {
+    "ordinary": {
+      "native_first_prediction_seconds": 14.417361375235487,
+      "decode_tokens_per_second_per_request": 9.472778135974991,
+      "native_aggregate_tokens_per_second": 18.376401436848468
+    },
+    "productive": {
+      "native_first_prediction_seconds": 14.726068374526221,
+      "decode_tokens_per_second_per_request": 10.324898722636476,
+      "native_aggregate_tokens_per_second": 18.825544510565663
+    }
+  },
+  "paired_ratios": [
+    {
+      "control_engine": 1,
+      "productive_engine": 2,
+      "decode": 1.0507950336133693,
+      "aggregate": 0.9890864508444384,
+      "first_prediction_control_over_productive": 0.946105311022064
+    },
+    {
+      "control_engine": 4,
+      "productive_engine": 3,
+      "decode": 1.126833600365952,
+      "aggregate": 1.0530708796539139,
+      "first_prediction_control_over_productive": 1.0005513984922816
+    }
+  ],
+  "fixed_vllm_sglang_results_unchanged": true,
+  "matched_http_admitted": false,
+  "two_times_target_met": false,
+  "tokenizer_or_xmodel_operator_changes": false,
+  "ane_used": false,
+  "quality_suite_passed": false,
+  "next_work": "Screen lower-cost causal proposals and inspect compiled prefill/memory/kernel profiles before another serving measurement.",
+  "goal_complete": false
+}

@@ -1,0 +1,92 @@
+{
+  "scope": "CPU-only draft input admission; never open target output/control files.",
+  "passed": true,
+  "rows": [
+    {
+      "case": "p2048-c1-o128",
+      "request": 0,
+      "full_draft_prompt_tokens": 1664,
+      "full_prompt_admitted_by_existing_profile": false,
+      "bounded_draft_prompt_tokens": 221,
+      "bounded_initial_admission": true,
+      "draft_capacity": 512,
+      "maximum_draft_tokens": 8,
+      "target_output_limit": 128,
+      "original_messages_sha256": "ec1b9b40748d73b4bd60c8a65a2f17b5e9ef7525bb046223a69452c47883d12b",
+      "draft_prompt_sha256": "37080c63a98485b862c5425284c0f270c88480ba4d52c7ca3615eb445a137e7f",
+      "bounded_draft_prompt_sha256": "bbfef18dc0915bcf7cb1844db2c861cb5c72c8a8a073207a8c571c942e1dfb50"
+    },
+    {
+      "case": "p2048-c4-o128",
+      "request": 0,
+      "full_draft_prompt_tokens": 1664,
+      "full_prompt_admitted_by_existing_profile": false,
+      "bounded_draft_prompt_tokens": 221,
+      "bounded_initial_admission": true,
+      "draft_capacity": 512,
+      "maximum_draft_tokens": 8,
+      "target_output_limit": 128,
+      "original_messages_sha256": "ec1b9b40748d73b4bd60c8a65a2f17b5e9ef7525bb046223a69452c47883d12b",
+      "draft_prompt_sha256": "37080c63a98485b862c5425284c0f270c88480ba4d52c7ca3615eb445a137e7f",
+      "bounded_draft_prompt_sha256": "bbfef18dc0915bcf7cb1844db2c861cb5c72c8a8a073207a8c571c942e1dfb50"
+    },
+    {
+      "case": "p2048-c4-o128",
+      "request": 1,
+      "full_draft_prompt_tokens": 1667,
+      "full_prompt_admitted_by_existing_profile": false,
+      "bounded_draft_prompt_tokens": 221,
+      "bounded_initial_admission": true,
+      "draft_capacity": 512,
+      "maximum_draft_tokens": 8,
+      "target_output_limit": 128,
+      "original_messages_sha256": "565992415b5948f433c8202d6751d27448be73e45dbef1576a5ecf82604be3da",
+      "draft_prompt_sha256": "62c645f1d0e385a767853473c4a88582f6f26042ffd3a30d1f71638f42a6544d",
+      "bounded_draft_prompt_sha256": "e8423b42c83dca495921e20906f115f7d37789fdf3afa195c1aa3a5467102c5a"
+    },
+    {
+      "case": "p2048-c4-o128",
+      "request": 2,
+      "full_draft_prompt_tokens": 1666,
+      "full_prompt_admitted_by_existing_profile": false,
+      "bounded_draft_prompt_tokens": 221,
+      "bounded_initial_admission": true,
+      "draft_capacity": 512,
+      "maximum_draft_tokens": 8,
+      "target_output_limit": 128,
+      "original_messages_sha256": "d3fd2f9dac5f6a526143f27663a793d4922494a0f0678c51ef913eecfa90034d",
+      "draft_prompt_sha256": "a824b9b086eb34133dc5868de593c303e395ae9003bb7845d2673aad13c796e9",
+      "bounded_draft_prompt_sha256": "70fcebc4e68db35dd1a42d94911600b0fbb13069b01b096b24463ee8d355ac5a"
+    },
+    {
+      "case": "p2048-c4-o128",
+      "request": 3,
+      "full_draft_prompt_tokens": 1666,
+      "full_prompt_admitted_by_existing_profile": false,
+      "bounded_draft_prompt_tokens": 221,
+      "bounded_initial_admission": true,
+      "draft_capacity": 512,
+      "maximum_draft_tokens": 8,
+      "target_output_limit": 128,
+      "original_messages_sha256": "471a3e55f19e865f0dba212b161ca1ae848b5ffcc7d32a393f1f0d28b11b8946",
+      "draft_prompt_sha256": "745ce8865f12fe4e9a7ec6ed2a00e4d36407b490198933e666f8d40c890d5414",
+      "bounded_draft_prompt_sha256": "ae6368624216a1108db3290d5cb9f251481f2f0639f6ebbd396ba985413b89d2"
+    }
+  ],
+  "existing_full_prompt_initially_admitted": 0,
+  "bounded_initially_admitted": 5,
+  "proposed_next_experiment": "Keep the complete target prompt/context unchanged. Use a fixed192-token tail of draft user content with intact draft chat framing, append only the already-generated target prefix, retain resident reconciliation and the512-token guard. Exact target state and matched2K C1 serving required before speed claim.",
+  "bounded_draft_policy_measured": false,
+  "no_target_context_change": true,
+  "no_model_execution": true,
+  "no_target_future_outputs_opened": true,
+  "model_tokenizer_sha256": "a8506e7111b80c6d8635951a02eab0f4e1a8e4e5772da83846579e97b16f61bf",
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-coder1/input1.json": "e254d5b5877e6b23b8f1c959b0275b4b8690d9afed20ceda0a6b306de2de3cd4",
+    "/Users/shawn/CantorAI/out/models/Qwen2.5-Coder-0.5B-Instruct-MLX-4bit/tokenizer.json": "a8506e7111b80c6d8635951a02eab0f4e1a8e4e5772da83846579e97b16f61bf",
+    "/Users/shawn/CantorAI/out/models/Qwen2.5-Coder-0.5B-Instruct-MLX-4bit/tokenizer_config.json": "7e88129d9769a0b14b1587a7d5e829fe93ac0e1511636471fdfc0811951418e6",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-serving1/cases1/p2048-c1-o128.json": "6dfec0c946929e49faeed4070ce08567e7397a532289c6b2f29ca8faf8499a34",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-serving1/cases1/p2048-c4-o128.json": "8f95b92f1a70dbd9b6cb657d1f458abae9e2fee7e73073ccf5cbbb9de9c421cd"
+  },
+  "goal_complete": false
+}

@@ -1,0 +1,76 @@
+{
+  "passed": true,
+  "scope": "Audit native split verification in a full2K target against current ordinary.",
+  "target_prompt_tokens": 2048,
+  "output_tokens_per_mode": 128,
+  "records": 4,
+  "full_current_ordinary_state_digest_pairs": 260,
+  "on_split_verification_frames": 46,
+  "on_split_layer_dispatches": 1472,
+  "off_split_layer_dispatches": 0,
+  "all_output_ids_full_kv_hidden_exact_current_ordinary": true,
+  "proposals_commits_and_helper_history_exact_on_off": true,
+  "summary": [
+    {
+      "mode": "on",
+      "summary": [
+        {
+          "case_id": "p2048-c1-o128",
+          "mode": "base",
+          "base_tps": 24.089092084097317,
+          "candidate_tps": 24.089092084097317,
+          "ratio": 1.0,
+          "accepted": 80,
+          "proposed": 138,
+          "target_calls": 47,
+          "draft_steps": 76,
+          "early_margin_stops": 0,
+          "draft_seconds": 1.0472810384817421,
+          "target_seconds": 4.222290750360116
+        }
+      ]
+    },
+    {
+      "mode": "off",
+      "summary": [
+        {
+          "case_id": "p2048-c1-o128",
+          "mode": "base",
+          "base_tps": 20.88416039185367,
+          "candidate_tps": 20.88416039185367,
+          "ratio": 1.0,
+          "accepted": 80,
+          "proposed": 138,
+          "target_calls": 47,
+          "draft_steps": 76,
+          "early_margin_stops": 0,
+          "draft_seconds": 1.0247857077047229,
+          "target_seconds": 5.053959871409461
+        }
+      ]
+    }
+  ],
+  "negative_controls_rejected": [
+    "wrong_output",
+    "wrong_kv",
+    "wrong_hidden",
+    "false_split_dispatch",
+    "false_compiled_feature",
+    "wrong_library",
+    "future_prefix",
+    "missing_rollback",
+    "false_resident_lcp",
+    "live_owner"
+  ],
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-native1/audit_qualification1.py": "1c1e12000d47c6168ceff94ce0a71d28ae4e406c33be4157199c0bd9cada18e1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-native1/qualification-on1-result.json": "5686f837cd4e221ab7789483b760188e480b653438e9fcd5220163508868f20b",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-native1/qualification-off1-result.json": "aae33322d807e05bc44892fc40a39691e49096c87c612abf30c80a251fea8f68",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-native1/qualification1-preflight.json": "4a2223e99a18e5397456b62400b9683e365552036acc9bf0690a9d13753eba16",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-native1/stage-plan1.json": "5073f1422ac4d74ad87a0c9cb0f9783cf40b200f053dd8f48f5c471617ec16db"
+  },
+  "qualification_order_not_performance_admission": true,
+  "matched_http_speedup_admitted": false,
+  "coding_quality_qualified": false,
+  "goal_complete": false
+}

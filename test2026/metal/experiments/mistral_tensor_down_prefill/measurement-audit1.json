@@ -1,0 +1,86 @@
+{
+  "passed": true,
+  "scope": "CPU audit of serial same-library prefill diagnostics, with order-balanced ON/OFF contrasts.",
+  "cohorts": [
+    {
+      "order": "forward",
+      "disabled": {
+        "native_first_prediction_seconds": 14.248899614671245,
+        "burst_seconds": 14.336255874834023
+      },
+      "enabled": {
+        "native_first_prediction_seconds": 14.135397916950751,
+        "burst_seconds": 14.215891917003319
+      },
+      "paired_blocks": [
+        {
+          "block": 4,
+          "disabled_over_enabled": 1.009446970233752
+        },
+        {
+          "block": 8,
+          "disabled_over_enabled": 1.0130221819077347
+        }
+      ]
+    },
+    {
+      "order": "reverse",
+      "disabled": {
+        "native_first_prediction_seconds": 14.785966447729152,
+        "burst_seconds": 14.871901916456409
+      },
+      "enabled": {
+        "native_first_prediction_seconds": 14.577477510320023,
+        "burst_seconds": 14.66019637498539
+      },
+      "paired_blocks": [
+        {
+          "block": 4,
+          "disabled_over_enabled": 1.0154857721170636
+        },
+        {
+          "block": 8,
+          "disabled_over_enabled": 1.0123298448992153
+        }
+      ]
+    }
+  ],
+  "warm_measured_bursts": 16,
+  "warmup_bursts": 8,
+  "exact_first_prediction_ids": 96,
+  "negative_controls_rejected": [
+    "wrong warm flag",
+    "wrong order",
+    "wrong elapsed duration",
+    "nonfinite first prediction",
+    "wrong output token",
+    "wrong prefill work",
+    "false enabled route",
+    "false disabled route",
+    "wrong library",
+    "native owner leak"
+  ],
+  "includes_all_native_prefill_and_first_prediction_work": true,
+  "source_or_fixture_hashes_during_timed_rounds": false,
+  "no_http_decode_or_comparator_claim": true,
+  "no_comparator_execution": true,
+  "two_x_target_met": false,
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/audit_measurement1.py": "0e8df253e8b2e95f80ceac733123bc2199e10a727a435a03f8999f7b34d73085",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/prefill_measure_worker1.py": "b9e949948f90c7065a984ba767d5182ba53a2e931ff771fa1d383a7e25f59423",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/prefill-measure-input1.json": "6fb2fa35653716a7a18d3a1d654f9cb3a3b8f701f14094fc14871216aa5a7e78",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/run_measurement1.py": "e535c4366e259f3607c3fb42aa1432afb5465e39b1f99e0eba7af0e43f5de492",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/measurement1-preflight.json": "ba574bd58e913242656727b36bc33a9f2f21f5793ebbe0aabc9cea11ab2e0411",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/measurement1-postflight.json": "967b3648b8bea6b22e7b77c8793f5c70f1491c3b7693660ddc65e922050d4def",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/qualification-audit1.json": "e5ac2ef5d77c1f09c73849dc8c6b73fe5fbdc3322582d3a32a5740e0cf9dc915",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/measure-forward-result1.json": "2cfc6282a33f22377cdf31c5728341b658c89ddaf0ae65dda81e24a6ef32f0f8",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/measure-forward-command1.json": "79adbb376f2c1f9b01a847c0b4197b570748cb54387562df5901517588fc0d7c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/measure-forward-status1.json": "5dabc974ef37ff835c06406f8e97e56f860ed90dee208ad81525f801bbe68cd8",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/measure-forward-pid1.json": "d7eab8f2f486ac26f0599173d57e0065bbe3ea756962747ce7a4edb5dd2b3dd7",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/measure-reverse-result1.json": "b6574f1572457f1ac116b2d53a57e902c2cbdc42a7ce9fbe0970bc193bea1c27",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/measure-reverse-command1.json": "27d517445bca758f7415b358c132109a0def22163c189c6b5130b350ca4ccc22",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/measure-reverse-status1.json": "f61f8385467a8d9c4d8c15115024ddbb099fccc7cd01c95671780f5f6b366b85",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/measure-reverse-pid1.json": "2ff016a5c3a954c7b82061b4099eed3bae8f3f127c148877e78c01581bab3c49"
+  }
+}

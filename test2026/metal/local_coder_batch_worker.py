@@ -37,12 +37,47 @@ def main():
         raise ValueError('Native cached chunks require an explicit Mistral token-prefix/chunked profile')
     if cached_chunks and 'native_cached_prefill_scheduler' not in garnet.backend_info():
         raise ValueError('Native cached-progress scheduler extension required')
+    residency_budget=profile.get('affine_weight_residency_budget_bytes',0)
+    if type(residency_budget) is not int or residency_budget<0:raise ValueError('Affine residency requires an explicit nonnegative byte budget')
+    if residency_budget and 'native_bounded_affine_residency' not in garnet.backend_info():raise ValueError('Compiled affine residency extension required')
+    silu_profile32=profile.get('silu_profile32',False)
+    if type(silu_profile32) is not bool:raise ValueError('SiLU32 requires an explicit boolean profile policy')
+    silu_profile32_capable='silu_profile32_optional' in garnet.backend_info()
+    if silu_profile32 and not silu_profile32_capable:raise ValueError('Compiled SiLU32 extension required')
+    paired_prefill=profile.get('paired_prefill',False)
+    if type(paired_prefill) is not bool:raise ValueError('Paired prefill requires an explicit boolean policy')
+    paired_prefill_capable='paired_packed_prefill_optional' in garnet.backend_info()
+    if paired_prefill and not paired_prefill_capable:raise ValueError('Compiled paired-prefill extension required')
+    value_profile32=profile.get('value_profile32',False)
+    if type(value_profile32) is not bool:raise ValueError('Value profile requires an explicit boolean policy')
+    value_profile32_capable='value_profile32_optional' in garnet.backend_info()
+    if value_profile32 and not value_profile32_capable:raise ValueError('Compiled value-profile extension required')
+    profile32_scores=profile.get('split_score_profile32',False)
+    if type(profile32_scores) is not bool:raise ValueError('Profile32 scores require an explicit boolean policy')
+    profile32_capable='split_score_profile32_optional' in garnet.backend_info()
+    if profile32_scores and not profile32_capable:raise ValueError('Compiled profile32-score extension required')
+    split_scores=profile.get('split_decode_scores',False)
+    if type(split_scores) is not bool:raise ValueError('Split decode scores require an explicit boolean policy')
+    split_capable='split_decode_scores_optional' in garnet.backend_info()
+    if split_scores and not split_capable:raise ValueError('Compiled split-score extension required')
     active_chunk=profile.get('linear_chunk_active_only',False)
     backend=garnet.backend_info()
     if type(active_chunk) is not bool or active_chunk!=('linear_chunk_active_only' in backend):
         raise ValueError('Frozen profile requires its explicit native active-only chunk policy')
     if active_chunk and (not chunked or any(tag not in backend for tag in ('linear_chunk_conv','linear_chunk_delta'))):
         raise ValueError('Active-only chunk profile requires native chunked convolution/delta')
+    grouped=profile.get('mistral_grouped_value_context',False)
+    if type(grouped) is not bool or grouped!=('mistral_grouped_value_context_two_heads' in {v.strip() for v in backend.split(';')}):
+        raise ValueError('Frozen profile requires explicit grouped value context policy')
+    shared=profile.get('prefix_shared_blocks',False)
+    if type(shared) is not bool or shared!=('native_shared_prefix_blocks' in {v.strip() for v in backend.split(';')}):
+        raise ValueError('Frozen profile requires explicit shared prefix storage policy')
+    direct=profile.get('prefix_direct_capture',False)
+    if type(direct) is not bool or direct!=('native_prefix_direct_capture' in {v.strip() for v in backend.split(';')}):
+        raise ValueError('Frozen profile requires explicit direct prefix capture policy')
+    hidden_pool=profile.get('prefill_hidden_pool',False)
+    if type(hidden_pool) is not bool or hidden_pool!=('native_prefill_hidden_pool' in backend):
+        raise ValueError('Frozen profile requires its explicit native hidden pool policy')
     alias_groups=profile.get('prefill_alias_groups',False)
     if type(alias_groups) is not bool or alias_groups!=('prefill_alias_groups' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit native prefill alias policy')
@@ -129,6 +164,11 @@ def main():
     if type(large) is not bool or large!=('qwen38_large_prefill' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit large prefill policy')
     reuse64=profile.get('require_reuse64',False)
+    reuse128=profile.get('require_reuse128',False)
+    if (type(reuse128) is not bool or reuse128!=('mpp_affine_reuse128_optional' in backend) or
+        (reuse128 and (not reuse64 or profile.get('reuse128_min_rows')!=128 or
+         profile.get('reuse128_threadgroup_threads')!=256 or profile.get('reuse128_even64_tiles') is not True))):
+        raise ValueError('Frozen profile requires its explicit native128-row projection policy')
     if type(reuse64) is not bool or reuse64!=('mpp_affine_reuse64_optional' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit cooperative64 projection policy')
     reuse64_min_outputs=profile.get('reuse64_min_outputs')
@@ -152,6 +192,13 @@ def main():
         if type(close_limit) is not int or not 0<close_limit<=4*1024*1024:raise ValueError('Compiled engine requires its frozen bounded post-close driver allocation limit')
         for key in ('expected_body_affine_projections','expected_head_affine_projections'):
             if type(profile.get(key)) is not int or profile[key]<=0:raise ValueError('Compiled kernel profile requires explicit projection coverage')
+    packed=profile.get('mistral_packed_prefill',False)
+    if (type(packed) is not bool or packed!=('mistral_packed_prefill_optional' in backend) or
+        (packed and (family!='mistral_7b' or not reuse128 or not indexed or not kernel_profiles or
+         profile.get('packed_prefill_min_rows')!=128 or profile.get('packed_prefill_plans')!=3 or
+         profile.get('packed_prefill_scratch_bytes')!=14680064 or 'mistral_streamed_prefill_optional' in backend or
+         'packed_prefill_min_rows=128' not in backend or 'packed_prefill_scratch_bytes=14680064' not in backend))):
+        raise ValueError('Frozen profile requires explicit strict packed-input prefill policy')
     retire_prefill_inputs=profile.get('retire_prefill_hidden_inputs',False)
     if type(retire_prefill_inputs) is not bool or retire_prefill_inputs!=('retired_prefill_hidden_inputs' in garnet.backend_info()):
         raise ValueError('Frozen profile requires its explicit prefill hidden input retirement policy')
@@ -249,6 +296,27 @@ def main():
             descriptors+=[dict(tag='prefill-'+str(i),object=graph) for i,graph in enumerate(graphs)]
             descriptors.append(dict(tag='head',object=decoder.head))
             with open(path,'x') as stream:stream.write(garnet.memory_inventory_json(descriptors,decoder.session))
+        if residency_budget:
+            decoder.session.prepare_affine_residency(residency_budget)
+            residency=json.loads(decoder.session.affine_residency_stats_json())
+            if not residency['enabled'] or not 0<residency['payload_bytes']<=residency['committed_charge_bytes']<=residency_budget:
+                raise ValueError('Affine residency preparation did not satisfy the profile envelope')
+            emit(dict(event='native_affine_residency_prepared',stats=residency))
+        if silu_profile32_capable:
+            decoder.session.silu_profile32_set_enabled(silu_profile32)
+            emit(dict(event='native_silu_profile32_prepared',enabled=silu_profile32,maximum_rows=512,columns=[4096,14336],threads=128))
+        if paired_prefill_capable:
+            decoder.session.paired_prefill_set_enabled(paired_prefill)
+            emit(dict(event='native_paired_prefill_prepared',enabled=paired_prefill,maximum_rows=512,threads=256))
+        if value_profile32_capable:
+            decoder.session.value_profile32_set_enabled(value_profile32)
+            emit(dict(event='native_value_profile32_prepared',enabled=value_profile32,capacity=4096,heads=32,kv_heads=8,dim=128,threads=128))
+        if profile32_capable:
+            decoder.session.split_score_profile32_set_enabled(profile32_scores)
+            emit(dict(event='native_profile32_score_prepared',enabled=profile32_scores,capacity=4096,heads=32,kv_heads=8,dim=128))
+        if split_capable:
+            decoder.session.split_score_set_enabled(split_scores)
+            emit(dict(event='native_split_score_prepared',enabled=split_scores,chunk=128,minimum_visible=512))
         policy=garnet.continuous_scheduler();policy.initialize(decoder.session,16)
         if family=='mistral_7b':
             native_maximum=512 if wide_owner else dense_limit//batch
@@ -273,8 +341,23 @@ def main():
                 buckets=decoder.session.chunk_attention_mps_bucket_count
                 if buckets!=profile.get('expected_attention_mps_bucket_count'):raise ValueError('Compiled context-bucket coverage differs')
                 emit(dict(event='native_chunk_attention_buckets_prepared',bucket_count=buckets))
+        if packed:
+            decoder.session.prefill_set_packed_affine(True)
+            inv=json.loads(garnet.memory_inventory_json([],decoder.session))
+            refs=[x for x in inv['references'] if x['role']=='packed_prefill_half_input']
+            packed_bytes=sum(inv['buffers'][x['buffer_id']]['length_bytes'] for x in refs)
+            if decoder.session.packed_prefill_plans!=3 or len(refs)!=1 or packed_bytes!=14680064:
+                raise ValueError('Packed prefill plans/workspace differ from the prepared profile')
+            emit(dict(event='native_packed_prefill_prepared',plans=3,scratch_buffers=1,scratch_bytes=packed_bytes))
         emit(dict(event='ready',backend=garnet.backend_info(),profile=profile,active_requests=batch,capacity=capacity,
             prefill_chunk=chunk,prefix_cache=prefix,multimodal=False,memory=json.loads(garnet.memory_stats_json())))
+        complete_chunk=policy.complete_prefill_chunk
+        if trace_stages:
+            def complete_chunk(identity,count):
+                began=time.monotonic();result=policy.complete_prefill_chunk(identity,count);ended=time.monotonic()
+                emit(dict(event='native_stage_trace',stage='prefill_commit',native_request=identity,
+                    tokens=count,began_monotonic=began,ended_monotonic=ended,run_wall_ms=(ended-began)*1000))
+                return result
         def admit(request):
             key=request.get('id') if isinstance(request,dict) else None
             if not isinstance(key,str) or not key or len(key)>128:raise ValueError('Native batch request identity invalid')
@@ -283,14 +366,24 @@ def main():
                 body=request['body'];limit=body['max_tokens'];prompt=body['rendered_prompt']
                 if not isinstance(prompt,str) or type(limit) is not int or not 2<=limit<=1024:
                     raise ValueError('Native batch request contract invalid')
+                admission_began=time.monotonic() if trace_stages else 0
                 ids=list(tokenizer.encode(prompt))
                 if not ids or len(ids)+limit>capacity:raise ValueError('Request exceeds the frozen native context profile')
                 identity=policy.submit_tokens(ids,limit,0) if cached_chunks else policy.submit(len(ids),limit,0)
                 if identity<=0:raise ValueError('Native scheduler queue or context profile full')
                 jobs[identity]=dict(id=key,prompt=ids,limit=limit,generated=[],text_ids=[],cached_tokens=0,began=time.monotonic())
                 keys.add(key)
+                if trace_stages:
+                    ended=time.monotonic()
+                    emit(dict(event='native_stage_trace',stage='admit',id=key,native_request=identity,
+                        began_monotonic=admission_began,ended_monotonic=ended,run_wall_ms=(ended-admission_began)*1000))
             except Exception as error:emit(dict(event='error',id=key,error=str(error),fatal=False))
         def record_kernel_profile(stage,physical,valid):
+            if silu_profile32_capable:emit(dict(event='native_silu_profile32_dispatch',stage=stage,enabled=silu_profile32,dispatches=decoder.session.silu_profile32_dispatches))
+            if paired_prefill_capable:emit(dict(event='native_paired_prefill_dispatch',stage=stage,enabled=paired_prefill,dispatches=decoder.session.paired_prefill_dispatches))
+            if value_profile32_capable:emit(dict(event='native_value_profile32_dispatch',stage=stage,enabled=value_profile32,dispatches=decoder.session.value_profile32_dispatches))
+            if profile32_capable:emit(dict(event='native_profile32_score_dispatch',stage=stage,enabled=profile32_scores,dispatches=decoder.session.split_score_profile32_dispatches))
+            if split_capable:emit(dict(event='native_split_score_dispatch',stage=stage,enabled=split_scores,dispatches=decoder.session.split_score_dispatches))
             if not kernel_profiles:return
             count=decoder.session.affine_profile_dispatches;misses=decoder.session.affine_profile_misses
             pipelines=decoder.session.affine_profile_pipeline_count;max_threads=decoder.session.affine_profile_max_threads
@@ -307,20 +400,22 @@ def main():
                 mistral_decode_reuse_dispatches=reuse_dispatches))
             if count!=expected or misses!=0 or not 0<pipelines<=512 or (thread_limit==128 and max_threads!=128) or decoder.session.affine_profile_index_bits!=index_bits:
                 raise ValueError('Bounded kernel profile '+stage+' projection coverage or fallback differs')
-        embedding_ms=[0.0]
+        embedding_ms=[0.0];embedding_span=[0.0,0.0]
         def embedding(ids,packed):
             started=time.monotonic() if trace_stages else 0
             if packed:
                 input_chunk=len(ids)//batch
                 result=decoder.io.stack_tokens([decoder.io.embedding([ids[row*input_chunk+t] for row in range(batch)]) for t in range(input_chunk)])
             else:result=decoder.io.embedding(ids)
-            if trace_stages:embedding_ms[0]=(time.monotonic()-started)*1000
+            if trace_stages:
+                ended=time.monotonic();embedding_span[:]=[started,ended];embedding_ms[0]=(ended-started)*1000
             return result
         def execute(graphs,hidden,positions,slots,active,prediction,epochs,ids):
             started=time.monotonic() if trace_stages else 0
             if prefix:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
             else:result=decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
-            elapsed=(time.monotonic()-started)*1000 if trace_stages else 0
+            ended=time.monotonic() if trace_stages else 0
+            elapsed=(ended-started)*1000 if trace_stages else 0
             attention_valid=sum(1 for flag in active.tolist() if flag!=0) if attention_buckets else None
             compact_rows=decoder.session.compact_prefill_last_rows if compact_owner else 0
             physical_batch=compact_rows if compact_rows else batch
@@ -382,6 +477,9 @@ def main():
             if trace_stages:
                 emit(dict(event='native_stage_trace',stage='prefill' if len(ids)>batch else 'decode',
                     embedding_wall_ms=embedding_ms[0],run_wall_ms=elapsed,
+                    began_monotonic=started,ended_monotonic=ended,
+                    embedding_began_monotonic=embedding_span[0],embedding_ended_monotonic=embedding_span[1],
+                    partial_submissions=decoder.session.prefill_partial_submissions,
                     prepare_ms=decoder.session.prepare_ms,encode_ms=decoder.session.encode_ms,
                     wait_ms=decoder.session.wait_ms,gpu_ms=decoder.session.gpu_ms,
                     native_inference_ms=decoder.session.last_inference_ms,
@@ -389,6 +487,10 @@ def main():
             if kernel_profiles:
                 stage='prefill' if len(ids)>batch else ('decode' if prediction>=0 else 'body')
                 record_kernel_profile(stage,physical_tokens,sum(1 for flag in active.tolist() if flag!=0))
+            if hidden_pool:
+                count=decoder.session.prefill_hidden_pool_bindings;expected=text_config['num_hidden_layers'] if len(ids)>batch else 0
+                emit(dict(event='native_prefill_pool',stage='prefill' if len(ids)>batch else 'decode',bindings=count))
+                if count!=expected:raise ValueError('Native hidden pool binding coverage differs from compiled profile')
             if kv_scatter:
                 count=decoder.session.chunk_kv_scatter_dispatches
                 expected=profile['expected_chunk_kv_scatter_dispatches'] if len(ids)>batch else 0
@@ -401,8 +503,11 @@ def main():
                 if count!=expected:raise ValueError('Native vector layout coverage differs from frozen profile')
             if profile.get('require_mpp',False) and len(ids)>batch:
                 count=decoder.session.mpp_affine_dispatches
-                if count<1:raise ValueError('Required MPP prefill route was not exercised')
-                emit(dict(event='native_mpp',affine_dispatches=count))
+                packed_count=decoder.session.packed_prefill_dispatches if packed else 0
+                if count+packed_count<1:raise ValueError('Required MPP prefill route was not exercised')
+                event=dict(event='native_mpp',affine_dispatches=count+packed_count)
+                if packed:event.update(legacy_mpp_dispatches=count,packed_prefill_dispatches=packed_count)
+                emit(event)
             if indexed and len(ids)>batch:
                 count=decoder.session.indexed_affine_dispatches
                 valid=sum(1 for flag in active.tolist() if flag!=0)
@@ -411,9 +516,22 @@ def main():
             if reuse64 and len(ids)>batch:
                 valid=sum(1 for flag in active.tolist() if flag!=0)
                 logical=valid if indexed else physical_tokens;count=decoder.session.mpp_reuse64_dispatches
-                if (logical>=64 and count<1) or (logical<64 and count!=0):
-                    raise ValueError('Cooperative64 route disagrees with native token count')
-                emit(dict(event='native_reuse64',affine_dispatches=count,logical_rows=logical,physical_rows=physical_tokens))
+                if reuse128:
+                    new=decoder.session.mpp_reuse128_dispatches
+                    total=profile['expected_body_reuse64_projections'] if logical>=64 else 0
+                    packed_count=decoder.session.packed_prefill_dispatches if packed else 0
+                    packed_wanted=total if packed and logical>=128 else 0
+                    wanted=total-packed_wanted if logical>=128 and ((logical+63)//64)%2==0 else 0
+                    if count+new+packed_count!=total or new!=wanted or packed_count!=packed_wanted:
+                        raise ValueError('Cooperative/packed projection tiles disagree with native token count')
+                    event=dict(event='native_cooperative_affine',affine_dispatches=count+new+packed_count,reuse64_dispatches=count,
+                        reuse128_dispatches=new,reuse128_threads=256,logical_rows=logical,physical_rows=physical_tokens)
+                    if packed:event.update(packed_dispatches=packed_count)
+                    emit(event)
+                else:
+                    if (logical>=64 and count<1) or (logical<64 and count!=0):
+                        raise ValueError('Cooperative64 route disagrees with native token count')
+                    emit(dict(event='native_reuse64',affine_dispatches=count,logical_rows=logical,physical_rows=physical_tokens))
             if active_decode and len(ids)==batch:
                 valid=sum(1 for flag in active.tolist() if flag!=0);count=decoder.session.indexed_decode_affine_dispatches
                 stage='decode' if prediction>=0 else 'body'
@@ -425,7 +543,10 @@ def main():
         def predict_rows(epochs):
             started=time.monotonic() if trace_stages else 0
             result=decoder.session.predict_rows(epochs)
-            if trace_stages:emit(dict(event='native_stage_trace',stage='head',run_wall_ms=(time.monotonic()-started)*1000))
+            if trace_stages:
+                ended=time.monotonic()
+                emit(dict(event='native_stage_trace',stage='head',run_wall_ms=(ended-started)*1000,
+                    began_monotonic=started,ended_monotonic=ended,gpu_ms=decoder.session.gpu_ms))
             record_kernel_profile('head',batch,sum(1 for epoch in epochs if epoch!=0))
             if active_decode:
                 valid=sum(1 for epoch in epochs if epoch!=0);count=decoder.session.indexed_decode_affine_dispatches
@@ -434,6 +555,7 @@ def main():
                 if count!=expected:raise ValueError('Active FP32 head projection coverage '+str(count)+' differs from expected '+str(expected))
             return result
         def deliver(request,token,stage):
+            delivery_began=time.monotonic() if trace_stages else 0
             identity=request['id'];job=jobs[identity]
             if token<0 or token>=vocab:raise ValueError('Native batch output outside vocabulary')
             job['generated'].append(token)
@@ -441,9 +563,19 @@ def main():
             text=(tokenizer.decode_ex(job['text_ids'],True) if family=='mistral_7b' else tokenizer.decode(job['text_ids'])).encode('utf8').decode('utf8','replace')
             emit(dict(event='token',id=job['id'],token_id=token,sampled_tokens=len(job['generated']),
                 prompt_tokens=len(job['prompt']),cached_tokens=job['cached_tokens'],text=text))
+            if trace_stages:
+                sent=time.monotonic()
+                emit(dict(event='native_stage_trace',stage='delivery',id=job['id'],native_request=identity,
+                    sampled_tokens=len(job['generated']),began_monotonic=delivery_began,ended_monotonic=sent,
+                    run_wall_ms=(sent-delivery_began)*1000))
             finished=token in stops or len(job['generated'])>=job['limit']
             fn=policy.complete_prefill if stage=='prefill' else policy.complete_decode
+            completion_began=time.monotonic() if trace_stages else 0
             result=fn(identity,token,finished)
+            if trace_stages:
+                ended=time.monotonic()
+                emit(dict(event='native_stage_trace',stage=stage+'_complete',native_request=identity,finished=finished,
+                    began_monotonic=completion_began,ended_monotonic=ended,run_wall_ms=(ended-completion_began)*1000))
             if result!=(3 if finished else 2):raise ValueError('Native scheduler completion disagrees with output budget')
             if cached_chunks and (finished or stage=='prefill'):
                 emit(dict(event='native_prefix_stats',native_request=identity,stats=json.loads(decoder.session.token_prefix_stats_json())))
@@ -469,8 +601,10 @@ def main():
             started=time.monotonic() if trace_stages else 0
             tick=json.loads(policy.next_json());plans=tick['batches']
             if wide_owner:emit(dict(event='native_profile_tick',batches=plans,token_count=tick['packed']['token_count']))
-            if trace_stages:emit(dict(event='native_stage_trace',stage='schedule',run_wall_ms=(time.monotonic()-started)*1000,
-                plan_stages=[plan['stage'] for plan in plans]))
+            if trace_stages:
+                ended=time.monotonic()
+                emit(dict(event='native_stage_trace',stage='schedule',run_wall_ms=(ended-started)*1000,
+                    began_monotonic=started,ended_monotonic=ended,plan_stages=[plan['stage'] for plan in plans]))
             if not plans:raise ValueError('Native scheduler has live jobs but made no progress')
             if mixed and len(plans)==2 and {plan['stage'] for plan in plans}=={'decode','prefill'}:
                 # One existing masked chunk graph executes all physical rows.
@@ -508,7 +642,7 @@ def main():
                     projection_rows=batch*chunk,scope='One masked chunk forward; projections retain padding'))
                 for row,(stage,request) in rows.items():
                     if final_epochs[row]:deliver(request,predicted[row],stage)
-                    elif not policy.complete_prefill_chunk(request['id'],request['prefill_tokens']):
+                    elif not complete_chunk(request['id'],request['prefill_tokens']):
                         raise ValueError('Native mixed prefill completion rejected')
                     if stage=='prefill':
                         emit(dict(event='native_prefill_chunk',native_request=request['id'],row=row,epoch=request['epoch'],
@@ -545,7 +679,7 @@ def main():
                     for request in plan['requests']:
                         final=final_epochs[request['row']]!=0
                         if final:deliver(request,predicted[request['row']],'prefill')
-                        elif not policy.complete_prefill_chunk(request['id'],request['prefill_tokens']):raise ValueError('Native prefill chunk completion rejected')
+                        elif not complete_chunk(request['id'],request['prefill_tokens']):raise ValueError('Native prefill chunk completion rejected')
                         emit(dict(event='native_prefill_chunk',native_request=request['id'],row=request['row'],epoch=request['epoch'],
                             offset=request['prefill_offset'],tokens=request['prefill_tokens'],final=final))
                     continue
@@ -593,7 +727,9 @@ def main():
             if policy is not None:policy.close()
         finally:
             try:
-                if decoder is not None:decoder.close()
+                if decoder is not None:
+                    if residency_budget:emit(dict(event='native_affine_residency_final',stats=json.loads(decoder.session.affine_residency_stats_json())))
+                    decoder.close()
                 emit(dict(event='closed',memory=json.loads(garnet.memory_stats_json())))
             finally:garnet.shutdown()
 

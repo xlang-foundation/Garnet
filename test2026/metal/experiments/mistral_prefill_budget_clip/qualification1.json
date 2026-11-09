@@ -1,0 +1,95 @@
+{
+  "scope": "Optional native prepared-extent/actual-quantum split. Experimental source overlay only; no runtime default promotion or speed claim.",
+  "native_study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-budget-clip1",
+  "base_engine_provenance_sha256": "3dd125f8f9ed9bef0a944cdb14eca7ff0f7af3b0bc19f818fc884763d99a9411",
+  "base_source_binding_sha256": "55e0e4ab22321f54860254aaa7d1e117980c157648aa7cedec430917db5c0c61",
+  "native_source_content_sha256": "3d29278f75b4ce35e42b1063d7d8d947b23eb7d4eb95f495b589256266f61eb6",
+  "source_binding_sha256": "3c2f47d252405ee0defb539ae810ca63ea9c40f86052dcb664f26c72b6b69b3d",
+  "native_source_changes_sha256": {
+    "cmake/GarnetMetal.cmake": "80f9eca8c101f65c84c82a0d35cffc63f1240145dcf87c99155c68491628c16d",
+    "src/backends/metal/compact_prefill_session.cpp": "6be917433a63e23c3224652e4d5a13aa8ed926033ff3885350e5cff5836c4359",
+    "src/backends/metal/continuous_scheduler.cpp": "18d3da8c4d2c51d287c752f15ba8e792eb409eee8bccedff51b1765f70927fc8",
+    "src/backends/metal/continuous_scheduler.h": "c55fbae1375f4b33f0e5f37fbac2502a6159410174d840eaa4b2fc8f18b9a8d4",
+    "src/backends/metal/decoder_session.h": "504675cb19b0a9301eef3638546e0989c418b85c02c1d804580d98783f7f6dbe",
+    "src/backends/metal/prefill_profile_policy.h": "589f62e6576b6a47d60e7b8c00785328a8a6dd7f21e42c15ff7661bf153b9849",
+    "src/entry/metal_main.cpp": "9ea214f88975261105f7d183ccbde7647a0bb8dbffdf64a62200b2f4d3c93688",
+    "src/runtime/scheduler/continuous_batch_scheduler.cpp": "49b3c601855dcf49ef330c0ddf63259b94c1e5dde56c1de4e7e7c02841616d09",
+    "src/runtime/scheduler/continuous_batch_scheduler.h": "a81680443072c2f67135ef95dfead5221de2b95075d6291df7413a7677932111",
+    "test2026/metal/half_chunk_attention_test.cpp": "ef469bfd1a7061b8ce971dba14a8e7d7d3d87b1d6f15eed80d22de7171d017a0",
+    "test2026/native/prefill_budget_clip_test.cpp": "0688d5225e949ed77c4c5b41192c03a4ec97b21e7c5588616f3d6bed5889a917"
+  },
+  "new_native_files": [
+    "test2026/native/prefill_budget_clip_test.cpp"
+  ],
+  "build_audit_sha256": "e0aa1c62be7fcb494ccb8c35320c31be2dc81d0ae880c71eb46bb08af191b98a",
+  "library_sha256": "e9a4ad827d8439f54baad1ffda47ec42888c7efc66768f2c08c242a56f98de25",
+  "model_audit_sha256": "af090009831555636b204ceeee1af04bafdeba6556ec3739ae44c41405dcb4a1",
+  "admission_audit_sha256": "d9628aefed72f390a6d46c7a02dfcf434ac7f9abbd0be70d831921fc6984813c",
+  "stream_windows_sha256": "7e8634907de3b341bb49b3c75955a327e375993ec3a2cbf09ba0971379a8e6e4",
+  "decision": {
+    "status": "qualified_native_correctness_not_promoted",
+    "previous_goal_turn_classification": "no progress: answered a metrics question without changing authoritative state; this continuation implemented and tested the next safe native change.",
+    "native_actual_budget": 512,
+    "maximum_prepared_extent": 512,
+    "base_excludes_n4_cache": true,
+    "tests_option_on": 53,
+    "tests_option_off": 53,
+    "portable_checks": 7877,
+    "model_output_ids_exact": 128,
+    "model_state_digests_exact": 520,
+    "hidden_values_exact": 32768,
+    "model_negative_controls": 14,
+    "http_output_ids_exact": 1536,
+    "http_negative_controls": 12,
+    "wide_prefill_invocations": 90,
+    "clipped_prefill_invocations": 57,
+    "diagnostic_warm_metrics": {
+      "warm1": {
+        "ttft_median_seconds": 9.265889854053967,
+        "decode_median_tps": 8.576539796918716,
+        "aggregate_tps": 20.671896039200597,
+        "ranked_ttft_seconds": [
+          3.447144332807511,
+          7.310118416091427,
+          11.221661292016506,
+          15.23888137517497
+        ],
+        "worst_request_ttft_seconds": 15.23888137517497,
+        "observed_token_delivery_gap_p95_seconds": 0.18403095798566937,
+        "observed_token_delivery_gap_max_seconds": 0.9859610830899328
+      },
+      "warm2": {
+        "ttft_median_seconds": 9.592580812401138,
+        "decode_median_tps": 8.390941613043733,
+        "aggregate_tps": 20.130802313120604,
+        "ranked_ttft_seconds": [
+          3.609084083000198,
+          7.586417749989778,
+          11.598743874812499,
+          15.683811415918171
+        ],
+        "worst_request_ttft_seconds": 15.683811415918171,
+        "observed_token_delivery_gap_p95_seconds": 0.18768695811741054,
+        "observed_token_delivery_gap_max_seconds": 1.005265458021313
+      }
+    },
+    "decision": "Keep optional budget clipping disabled. Fewer prefill invocations did not establish a throughput gain and produced longer observed mixed-stage delivery gaps. No production or2x claim.",
+    "timing_limitations": [
+      "One new process/two warm waves, OS/thermal conditions uncontrolled.",
+      "Frozen reference baselines retain different FP16 state policy.",
+      "Common streaming window is HTTP delivery after all first tokens and before first final token, not isolated GPU timing."
+    ],
+    "prefix_cache_lineage_qualified_for_new_engine": false,
+    "reason_prefix_campaign_deferred": "No performance promotion justified; preserve existing qualified prefix engine and avoid treating portable prefix tests as full native cache qualification.",
+    "strict_coding": "0/8 unchanged",
+    "goal_complete": false,
+    "next_action": "Use measured stage costs and decode-latency constraints rather than filling the token budget alone; investigate sharing work between concurrent decode and prefill while preserving the distinct FP32 decode policy."
+  },
+  "goal_complete": false,
+  "saved_study_provenance_sha256": "7f58c1ef4be4081b145b9509e5f5932c4ef5d38e9fe5c84474d95942d8ba7d0d",
+  "source_replay_provenance_sha256": "8e9d785f0e4bf8ab4793baaab69ac8e9a10d34649be5d4336cb3f7c9bdba77a6",
+  "audit_replay_provenance_sha256": "c4b4506dab21a08d5dda58fc8ee380eed2974dc14aa8ad1b660cc6f43ca96f04",
+  "checkpoint_proof_sha256": "59a51abfb5e850003a44234da2573bbc953b480ddbf3c6faa26084c73bb68f8f",
+  "review_patch_format": "zero-context unified diff; reproduction uses guarded native-edits1.json",
+  "review_patch_sha256": "9c588b2e7f30c4f6dcd83899f167a797223477ca31a6ddc68b539f0ba47234a1"
+}

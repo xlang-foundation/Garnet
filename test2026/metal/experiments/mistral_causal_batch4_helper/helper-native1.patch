@@ -1,0 +1,15 @@
+--- a/xModel/qwen/metal_dense/decoder.py
++++ b/xModel/qwen/metal_dense/decoder.py
+@@ -59 +59,4 @@
+-    def _profile_batches(self):return (1,2)
++    def _profile_batches(self):
++        # The native dense profile bounds physical prefill rows and cache spans.
++        # Four request rows require that compiled extension; operators stay shared.
++        return (1,2,4) if self.dense_prefill_limit else (1,2)
+--- a/src/backends/metal/decoder_session.cpp
++++ b/src/backends/metal/decoder_session.cpp
+@@ -1166,2 +1166,2 @@
+- if(!gpu_||poisoned_||!rowFinalHidden_.Valid()||rowFinalWidth_!=4096)throw std::logic_error("No completed diagnostic row-hidden bank");
+- return TensorValue(Host(),*gpu_,rowFinalHidden_,{4,4096});
++ if(!gpu_||poisoned_||!rowFinalHidden_.Valid()||states_.empty()||!rowFinalWidth_)throw std::logic_error("No completed diagnostic row-hidden bank");
++ return TensorValue(Host(),*gpu_,rowFinalHidden_,{int64_t(states_[0].rows),int64_t(rowFinalWidth_)});

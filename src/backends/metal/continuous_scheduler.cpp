@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "continuous_scheduler.h"
+#include "lowering_context.h"
+#include <atomic>
+#include "token_prefix_profile.h"
 #include "../../runtime/scheduler/packed_token_plan.h"
 #include "nlohmann/json.hpp"
 #include <algorithm>
 #include <limits>
 #include <climits>
+#include <cmath>
 namespace Garnet {
 #ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
 static constexpr size_t kSchedulerPrefillChunkLimit=GARNET_METAL_DENSE_PREFILL_MAX_TOKENS;
@@ -89,6 +93,10 @@ public:
     void Track(uint64_t id,X::Value tokens) {
         if(!pendingTokens_.emplace(id,std::move(tokens)).second)throw std::logic_error("Duplicate tracked request identity");
     }
+    int64_t PromptToken(uint64_t id,int position) const {
+        auto found=sequences_.find(id);if(found==sequences_.end()||!found->second.prompt.IsList()||position<0||uint64_t(position)>=found->second.prompt.Size())throw std::invalid_argument("Grouped prefill token is outside its immutable native request");
+        return found->second.prompt.Get(uint64_t(position)).ToInt64();
+    }
     bool Tracked(uint64_t id) const {
         auto found=sequences_.find(id);return found!=sequences_.end()&&found->second.prompt.IsList();
     }
@@ -100,10 +108,24 @@ public:
     void Capture(uint64_t id,int expected,bool intermediate=false) {
         if(!Tracked(id))return;
         const auto& sequence=sequences_.at(id);
-        if(expected==sequence.cached)return; // Exact head-only hit retains the owning checkpoint.
+#ifndef GARNET_METAL_PREFIX_SHARED_BLOCKS
         if(intermediate&&(expected<64||(expected&(expected-1))))return;
-        // Budget rejection is a miss policy, not a generation failure.
-        session_->CacheTokenPrefix(sequence.row,sequence.epoch);
+#endif
+#if GARNET_METAL_TOKEN_PREFIX_HOST_MIB > 512
+#ifndef GARNET_METAL_PREFIX_SHARED_BLOCKS
+        if(intermediate&&!TokenPrefixIntermediateUseful(size_t(expected),size_t(sequence.prompt.Size())))return;
+#endif
+        // Protect the original prompt before a decoded snapshot can evict it,
+        // then leave it recent for a returning request. Other live rows retain
+        // their own device KV; this only adjusts the bounded host-cache LRU.
+        if(!intermediate)session_->TouchTokenPrefix(sequence.row,sequence.epoch,sequence.prompt);
+#endif
+        // Exact head-only hits retain their checkpoint. Budget rejection is a
+        // miss policy, not a generation failure.
+        if(expected!=sequence.cached)session_->CacheTokenPrefix(sequence.row,sequence.epoch);
+#if GARNET_METAL_TOKEN_PREFIX_HOST_MIB > 512
+        if(!intermediate)session_->TouchTokenPrefix(sequence.row,sequence.epoch,sequence.prompt);
+#endif
     }
 #endif
     bool Clear() noexcept {
@@ -166,6 +188,51 @@ bool MetalContinuousScheduler::Initialize(X::Value value,int64_t pending) {
 #endif
     scheduler_=std::move(policy);allocator_=std::move(allocator);failed_=false;return true;
 }
+#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
+namespace {
+std::atomic<uint64_t> nextBulkTicket{1};
+uint64_t BulkTicket(){auto n=nextBulkTicket.load();for(;;){if(n>=uint64_t(INT64_MAX))throw std::overflow_error("Native grouped plan tickets exhausted");if(nextBulkTicket.compare_exchange_weak(n,n+1))return n;}}
+}
+bool MetalContinuousScheduler::GroupedRequest(uint64_t id) const {return std::any_of(groupedRequests_.begin(),groupedRequests_.end(),[&](const auto& r){return r.id==id;});}
+void MetalContinuousScheduler::EraseGroupedRequest(uint64_t id) {groupedRequests_.erase(std::remove_if(groupedRequests_.begin(),groupedRequests_.end(),[&](const auto& r){return r.id==id;}),groupedRequests_.end());if(groupedRequests_.empty()){groupedChunks_=0;groupedTicket_=0;groupedExecuted_=false;}}
+bool MetalContinuousScheduler::SetBulkPrefill(int64_t chunks) {
+    std::lock_guard<std::mutex> lock(mutex_);Ready();
+    auto session=sessionOwner_.NativeData<MetalDecoderSession>();
+    if(rows_!=4||chunks<2||chunks>16||chunks>session->DiagnosticBulkChunkBound()||!inflight_.empty()||scheduler_->TrackedRequestCount())return false;
+    if(!scheduler_->SetPrefillGrouping(128,int(chunks),int(rows_*128*size_t(chunks))))return false;
+    maximumGroupedChunks_=int(chunks);return true;
+}
+X::Value MetalContinuousScheduler::RunBulkPrefill(X::Value hiddenChunks,int64_t ticket) {
+    std::lock_guard<std::mutex> lock(mutex_);Ready();
+    if(ticket<=0||uint64_t(ticket)!=groupedTicket_||groupedExecuted_||groupedChunks_<2||groupedRequests_.size()!=rows_||
+       hiddenChunks.runtime()!=Host()->runtime||!hiddenChunks.IsList()||hiddenChunks.Size()!=uint64_t(groupedChunks_))throw std::invalid_argument("Run only the current native grouped prefill ticket once");
+    for(uint64_t c=0;c<hiddenChunks.Size();++c){auto value=hiddenChunks.Get(c);if(value.runtime()!=Host()->runtime)throw std::invalid_argument("Grouped hidden runtime differs");X::Tensor t(value);auto lease=t.Acquire();auto info=t.Info();std::vector<int64_t> shape{4,128,4096};if(info.dtype!=X3_TENSOR_FLOAT32||info.symbolic||info.device_type||!info.data||info.rank!=3||!std::equal(shape.begin(),shape.end(),info.shape)||info.byte_size!=4*128*4096*4||!IsContiguousTensor(t))throw std::invalid_argument("Grouped prefill hidden profile differs");}
+    std::vector<const ScheduledRequest*> byRow(rows_,nullptr);auto epochs=X::Value::List(Host());
+    for(const auto& request:groupedRequests_){auto found=inflight_.find(request.id);auto placement=allocator_->Placement(request.id);
+        if(request.requestRow<0||size_t(request.requestRow)>=rows_||byRow[size_t(request.requestRow)]||found==inflight_.end()||found->second!=RequestStage::Prefill||!allocator_->Tracked(request.id)||placement.requestRow!=request.requestRow||placement.rowEpoch!=request.rowEpoch||allocator_->LogicalLength(request.id)!=request.prefillOffset||request.prefillTokens!=groupedChunks_*128||trackedExpected_.at(request.id)!=request.contextLength)throw std::logic_error("Current grouped native request/lease/progress differs");byRow[size_t(request.requestRow)]=&request;
+    }
+    for(size_t row=0;row<rows_;++row){if(!byRow[row])throw std::logic_error("Grouped native physical row missing");epochs.Append(X::Value(int64_t(byRow[row]->rowEpoch)));}
+    auto controls=X::Value::List(Host()),tokens=X::Value::List(Host());
+    for(int c=0;c<groupedChunks_;++c){std::vector<float> positions,slots,active(512,1.f);positions.reserve(1536);slots.reserve(512);auto ids=X::Value::List(Host());
+        for(size_t row=0;row<rows_;++row)for(int t=0;t<128;++t){int position=byRow[row]->prefillOffset+c*128+t;slots.push_back(float(position));for(int axis=0;axis<3;++axis)positions.push_back(float(position));ids.Append(X::Value(allocator_->PromptToken(byRow[row]->id,position)));}
+        auto bank=X::Value::List(Host());bank.Append(X::Tensor::Create(Host(),X3_TENSOR_FLOAT32,{4,128,3},positions.data(),positions.size()*4));bank.Append(X::Tensor::Create(Host(),X3_TENSOR_FLOAT32,{4,128},slots.data(),slots.size()*4));bank.Append(X::Tensor::Create(Host(),X3_TENSOR_FLOAT32,{4,128},active.data(),active.size()*4));controls.Append(bank);tokens.Append(ids);
+    }
+    try {auto result=sessionOwner_.NativeData<MetalDecoderSession>()->RunDiagnosticLeasedBulk(hiddenChunks,controls,epochs,tokens,true);groupedExecuted_=true;return result;}
+    catch(...){failed_=true;throw;}
+}
+#endif
+bool MetalContinuousScheduler::SetPrefillCompletionPriority(bool enabled) {
+    std::lock_guard<std::mutex> lock(mutex_);Ready();
+    if(!inflight_.empty())return false;
+    return scheduler_->SetPrefillCompletionPriority(enabled);
+}
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+bool MetalContinuousScheduler::SetPrefillCompletionOwners(int64_t owners) {
+    std::lock_guard<std::mutex> lock(mutex_);Ready();
+    if(!inflight_.empty()||!adaptiveProfiles_||rows_!=4||(owners!=1&&owners!=2&&owners!=4))return false;
+    return scheduler_->SetPrefillCompletionOwners(int(owners));
+}
+#endif
 bool MetalContinuousScheduler::SetPrefillChunk(int64_t tokens) {
     std::lock_guard<std::mutex> lock(mutex_);Ready();
     if(tokens<0||uint64_t(tokens)>kSchedulerPrefillChunkLimit||uint64_t(tokens)>capacity_||!inflight_.empty())return false;
@@ -188,7 +255,11 @@ bool MetalContinuousScheduler::SetPrefillChunk(int64_t tokens) {
 bool MetalContinuousScheduler::CompletePrefillChunk(int64_t id,int64_t tokens) {
     std::lock_guard<std::mutex> lock(mutex_);Ready();
     auto found=inflight_.find(uint64_t(id));
-    if(id<=0||tokens<1||uint64_t(tokens)>kSchedulerPrefillChunkLimit||found==inflight_.end()||found->second!=RequestStage::Prefill)return false;
+    bool tokenBound=tokens>0&&uint64_t(tokens)<=kSchedulerPrefillChunkLimit;
+#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
+    if(GroupedRequest(uint64_t(id)))tokenBound=groupedExecuted_&&tokens==groupedChunks_*128;
+#endif
+    if(id<=0||!tokenBound||found==inflight_.end()||found->second!=RequestStage::Prefill)return false;
     try {
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
         const auto expected=trackedExpected_.find(uint64_t(id));
@@ -198,7 +269,11 @@ bool MetalContinuousScheduler::CompletePrefillChunk(int64_t id,int64_t tokens) {
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
         if(expected!=trackedExpected_.end()){allocator_->Capture(uint64_t(id),expected->second,true);trackedExpected_.erase(expected);}
 #endif
-        inflight_.erase(found);return true;
+        inflight_.erase(found);
+#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
+        EraseGroupedRequest(uint64_t(id));
+#endif
+        return true;
     }catch(...){failed_=true;throw;}
 }
 int64_t MetalContinuousScheduler::Submit(int64_t prompt,int64_t output,int64_t priority) {
@@ -267,6 +342,14 @@ std::string MetalContinuousScheduler::NextJson() {
             nlohmann::json body={{"stage",batch.stage==RequestStage::Prefill?"prefill":"decode"},
                 {"bucket_size",rows_},{"active_rows",mask},{"epochs",epochs},{"requests",requests}};
             if(batch.prefillChunkTokens)body["prefill_chunk"]=batch.prefillChunkTokens;
+#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
+            if(batch.prefillGroupChunks>1){
+                if(batch.stage!=RequestStage::Prefill||maximumGroupedChunks_<batch.prefillGroupChunks||batch.requests.size()!=rows_||!groupedRequests_.empty())throw std::logic_error("Invalid native grouped scheduler plan");
+                for(const auto& r:batch.requests)if(!allocator_->Tracked(r.id))throw std::logic_error("Grouped scheduler requests must use native tracked token admission");
+                groupedRequests_=batch.requests;groupedChunks_=batch.prefillGroupChunks;groupedExecuted_=false;groupedTicket_=BulkTicket();
+                body["prefill_group_chunks"]=groupedChunks_;body["bulk_ticket"]=groupedTicket_;body["execution"]="native_leased_bulk";
+            }
+#endif
             batches.push_back(std::move(body));
         }
         return nlohmann::json{{"batches",batches},
@@ -278,6 +361,9 @@ int64_t MetalContinuousScheduler::CompletePrefill(int64_t id,int64_t token,bool 
     std::lock_guard<std::mutex> lock(mutex_);Ready();
     auto found=inflight_.find(uint64_t(id));
     if(id<=0||token<0||token>INT_MAX||found==inflight_.end()||found->second!=RequestStage::Prefill)return -1;
+#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
+    if(GroupedRequest(uint64_t(id))&&!groupedExecuted_)return -1;
+#endif
     try {
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
         const auto expected=trackedExpected_.find(uint64_t(id));
@@ -291,6 +377,9 @@ int64_t MetalContinuousScheduler::CompletePrefill(int64_t id,int64_t token,bool 
         trackedExpected_.erase(uint64_t(id));
 #endif
         const auto stage=scheduler_->Stage(uint64_t(id));inflight_.erase(found);
+#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
+        EraseGroupedRequest(uint64_t(id));
+#endif
         if(stage==RequestStage::Finished)scheduler_->ForgetFinished(uint64_t(id));
         return int64_t(stage);
     }catch(...){failed_=true;throw;}
@@ -314,10 +403,141 @@ int64_t MetalContinuousScheduler::CompleteDecode(int64_t id,int64_t token,bool f
         trackedExpected_.erase(uint64_t(id));
 #endif
         const auto stage=scheduler_->Stage(uint64_t(id));inflight_.erase(found);
+#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
+        EraseGroupedRequest(uint64_t(id));
+#endif
         if(stage==RequestStage::Finished)scheduler_->ForgetFinished(uint64_t(id));
         return int64_t(stage);
     }catch(...){failed_=true;throw;}
 }
+
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+std::string MetalContinuousScheduler::GenerateLookahead(X::Value stops) {
+    std::lock_guard<std::mutex> lock(mutex_);Ready();
+    auto session=sessionOwner_.NativeData<MetalDecoderSession>();
+    struct Item {uint64_t id;size_t row;uint64_t epoch;int known,budget,slot;std::vector<int> emitted;bool eos=false;};
+    std::vector<Item> items;
+    std::vector<int64_t> roots(rows_,0),budgets(rows_,0),leases(rows_,0),positions(rows_,0);
+    for(const auto& entry:inflight_)if(entry.second==RequestStage::Decode) {
+        int known=0,budget=0;
+        if(!scheduler_->DecodeProgress(entry.first,known,budget))throw std::logic_error("Lookahead scheduled decode progress invalid");
+        const auto placement=allocator_->Placement(entry.first);
+        const auto expected=trackedExpected_.find(entry.first);
+        const int slot=allocator_->LogicalLength(entry.first);
+        if(!allocator_->Tracked(entry.first)||expected==trackedExpected_.end()||expected->second!=slot+1||
+           slot<0||placement.requestRow<0||size_t(placement.requestRow)>=rows_||!placement.rowEpoch||
+           placement.rowEpoch>uint64_t(INT64_MAX)||leases[size_t(placement.requestRow)])
+            throw std::logic_error("Lookahead requires unique native tracked row placement");
+        const size_t row=size_t(placement.requestRow);
+        roots[row]=known;budgets[row]=budget;leases[row]=int64_t(placement.rowEpoch);positions[row]=slot;
+        items.push_back({entry.first,row,placement.rowEpoch,known,budget,slot,{}});
+        items.back().emitted.reserve(4);
+    }
+    if(items.empty())throw std::invalid_argument("Schedule a native lookahead decode batch first");
+    auto list=[&](const std::vector<int64_t>& values){auto out=X::Value::List(Host());for(auto v:values)out.Append(X::Value(v));return out;};
+    auto known=list(roots),slots=list(positions),remaining=list(budgets),epochs=list(leases);
+    try {
+        const auto result=session->LookaheadGenerate(known,slots,remaining,stops,epochs);
+        const auto statistics=nlohmann::json::parse(session->LookaheadStatsJson());
+        if(!result.IsList()||result.Size()!=rows_)throw std::logic_error("Lookahead result batch differs");
+        // Validate every native accepted span before publishing scheduler progress
+        // or releasing a terminal physical row for the next request.
+        for(auto& item:items) {
+            auto row=result.Get(uint64_t(item.row));
+            if(!row.IsList()||row.Size()!=3)throw std::logic_error("Lookahead result tuple differs");
+            auto ids=row.Get(uint64_t(0)),countValue=row.Get(uint64_t(1)),eos=row.Get(uint64_t(2));
+            if(!countValue.IsInt64())throw std::logic_error("Lookahead consumed count is not integral");
+            const auto count=countValue.ToInt64();
+            if(!ids.IsList()||count<1||count>4||count>item.budget||uint64_t(count)!=ids.Size()||eos.raw().tag!=X3_TAG_BOOL)
+                throw std::logic_error("Lookahead accepted span exceeds native budget");
+            for(uint64_t i=0;i<ids.Size();++i){auto v=ids.Get(i);if(!v.IsInt64()||v.ToInt64()<0||v.ToInt64()>INT_MAX)throw std::logic_error("Lookahead emitted invalid token");item.emitted.push_back(int(v.ToInt64()));}
+            item.eos=eos.ToInt64()!=0;
+            if(!allocator_->ProgressValid(item.id,item.slot+int(count)))throw std::logic_error("Lookahead committed ledger differs from accepted span");
+        }
+        nlohmann::json completed=nlohmann::json::array();
+        for(const auto& item:items) {
+            if(item.eos||item.emitted.size()==size_t(item.budget))allocator_->Capture(item.id,item.slot+int(item.emitted.size()));
+            if(!scheduler_->CompleteDecodeTokens(item.id,item.emitted,item.eos,*allocator_))throw std::logic_error("Lookahead scheduler span commit failed");
+            const auto stage=scheduler_->Stage(item.id);inflight_.erase(item.id);trackedExpected_.erase(item.id);
+            completed.push_back({{"id",item.id},{"row",item.row},{"epoch",item.epoch},{"known",item.known},{"slot_before",item.slot},{"remaining_before",item.budget},{"emitted",item.emitted},{"consumed",item.emitted.size()},{"eos",item.eos},{"finished",stage==RequestStage::Finished}});
+            if(stage==RequestStage::Finished)scheduler_->ForgetFinished(item.id);
+        }
+        return nlohmann::json{{"requests",completed},{"lookahead",statistics},{"scope","Native leased lookahead DAG and scheduler span commit; no speed admission"}}.dump();
+    }catch(...){failed_=true;throw;}
+}
+#endif
+
+#ifdef GARNET_METAL_DENSE_VERIFY_SCHEDULER
+std::string MetalContinuousScheduler::VerifyDecode(X::Value hidden,X::Value positions,X::Value slots,X::Value active,X::Value tokens,X::Value stops) {
+    std::lock_guard<std::mutex> lock(mutex_);Ready();
+    auto session=sessionOwner_.NativeData<MetalDecoderSession>();
+    const auto geometry=session->VerificationGeometry();const size_t chunk=geometry[1];
+    if(geometry[0]!=rows_||!chunk||chunk>4||
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+       (rows_*chunk>4&&!(rows_==4&&chunk==4))
+#else
+       rows_*chunk>4
+#endif
+       )
+        throw std::invalid_argument("Scheduled verification exceeds prepared physical token rows");
+    // Own immutable control snapshots before validating the native schedule.
+    auto control=[&](X::Value source,const std::vector<int64_t>& shape,std::vector<float>& values){
+        if(source.runtime()!=Host()->runtime)throw std::invalid_argument("Scheduled control runtime differs");
+        X::Tensor tensor(source);auto lease=tensor.Acquire();const auto info=tensor.Info();size_t count=1;for(auto dim:shape)count*=size_t(dim);
+        if(info.symbolic||info.device_type||info.dtype!=X3_TENSOR_FLOAT32||info.rank!=shape.size()||!std::equal(shape.begin(),shape.end(),info.shape)||!info.data||info.byte_size<count*4||!IsContiguousTensor(tensor))
+            throw std::invalid_argument("Scheduled verification control shape/storage differs");
+        const auto data=static_cast<const float*>(info.data);values.assign(data,data+count);
+        return X::Tensor::Create(Host(),X3_TENSOR_FLOAT32,shape,values.data(),count*4);
+    };
+    std::vector<float> positionValues,slotValues,flags;
+    positions=control(positions,{int64_t(rows_),int64_t(chunk),3},positionValues);
+    slots=control(slots,{int64_t(rows_),int64_t(chunk)},slotValues);
+    active=control(active,{int64_t(rows_),int64_t(chunk)},flags);
+    if(tokens.runtime()!=Host()->runtime||!tokens.IsList()||tokens.Size()!=rows_*chunk)
+        throw std::invalid_argument("Scheduled verification token count/runtime differs");
+    auto immutableTokens=X::Value::List(Host());std::vector<int64_t> tokenValues;
+    for(uint64_t i=0;i<tokens.Size();++i){auto value=tokens.Get(i);if(!value.IsInt64()||value.ToInt64()<0||value.ToInt64()>INT_MAX)throw std::invalid_argument("Scheduled verification tokens must be bounded integers");tokenValues.push_back(value.ToInt64());immutableTokens.Append(X::Value(value.ToInt64()));}
+    struct Item{uint64_t id;size_t row;uint64_t epoch;int known,budget,slot,depth;std::vector<int> emitted;bool eos=false;};
+    std::vector<Item> items;std::vector<int> budgets(rows_,0);std::vector<uint64_t> leases(rows_,0);
+    for(const auto& entry:inflight_)if(entry.second==RequestStage::Decode){
+        int known=0,budget=0;if(!scheduler_->DecodeProgress(entry.first,known,budget))throw std::logic_error("Scheduled verification decode progress invalid");
+        const auto placement=allocator_->Placement(entry.first);const auto expected=trackedExpected_.find(entry.first);const int slot=allocator_->LogicalLength(entry.first);
+        if(!allocator_->Tracked(entry.first)||expected==trackedExpected_.end()||expected->second!=slot+1||slot<0||placement.requestRow<0||size_t(placement.requestRow)>=rows_||!placement.rowEpoch||leases[size_t(placement.requestRow)])
+            throw std::logic_error("Scheduled verification requires native tracked row placement");
+        const auto row=size_t(placement.requestRow);bool ended=false;int depth=0;
+        for(size_t t=0;t<chunk;++t){const auto i=row*chunk+t;const float flag=flags[i];if(flag!=0.0f&&flag!=1.0f)throw std::invalid_argument("Scheduled verification masks must be binary");if(!flag){ended=true;continue;}
+            if(ended||slotValues[i]!=float(slot+int(t))||slot+int(t)>=int(capacity_))throw std::invalid_argument("Scheduled verification mask/slot differs from native request");
+            for(size_t axis=0;axis<3;++axis)if(positionValues[i*3+axis]!=float(slot+int(t)))throw std::invalid_argument("Scheduled text verification position differs from zero-based native slot");++depth;
+        }
+        if(depth<1||depth>budget||tokenValues[row*chunk]!=known)throw std::invalid_argument("Scheduled verification known token or depth exceeds native output budget");
+        budgets[row]=budget;leases[row]=placement.rowEpoch;items.push_back({entry.first,row,placement.rowEpoch,known,budget,slot,depth,{}});
+    }
+    if(items.empty())throw std::invalid_argument("Schedule a native dense decode batch first");
+    for(size_t row=0;row<rows_;++row)if(!leases[row])for(size_t t=0;t<chunk;++t)if(flags[row*chunk+t]!=0.0f)throw std::invalid_argument("Unscheduled verification row is active");
+    auto remaining=X::Value::List(Host()),epochs=X::Value::List(Host());for(size_t row=0;row<rows_;++row){remaining.Append(X::Value(int64_t(budgets[row])));epochs.Append(X::Value(int64_t(leases[row])));}
+    try {
+        auto result=session->VerifyGreedy(hidden,positions,slots,active,immutableTokens,stops,remaining,epochs);
+        const auto statistics=nlohmann::json::parse(session->VerificationStatsJson());
+        // Prove every accepted target span and token-ledger length before any
+        // scheduler state is published or a terminal request lease released.
+        for(auto& item:items){auto row=result.Get(uint64_t(item.row)),ids=row.Get(uint64_t(0));const auto count=row.Get(uint64_t(1)).ToInt64();auto eos=row.Get(uint64_t(2));
+            if(!ids.IsList()||count<1||count>item.depth||count>item.budget||uint64_t(count)!=ids.Size()||eos.raw().tag!=X3_TAG_BOOL)throw std::logic_error("Scheduled target result exceeds accepted budget");
+            for(uint64_t i=0;i<ids.Size();++i){auto value=ids.Get(i);if(!value.IsInt64()||value.ToInt64()<0||value.ToInt64()>INT_MAX)throw std::logic_error("Scheduled target result token invalid");item.emitted.push_back(int(value.ToInt64()));}item.eos=eos.ToInt64()!=0;
+            if(!allocator_->ProgressValid(item.id,item.slot+int(count)))throw std::logic_error("Scheduled verification accepted token ledger differs");
+        }
+        nlohmann::json completed=nlohmann::json::array();
+        for(const auto& item:items){
+            if(item.eos||item.emitted.size()==size_t(item.budget))allocator_->Capture(item.id,item.slot+int(item.emitted.size()));
+            if(!scheduler_->CompleteDecodeTokens(item.id,item.emitted,item.eos,*allocator_))throw std::logic_error("Scheduled dense target span commit failed");
+            const auto stage=scheduler_->Stage(item.id);inflight_.erase(item.id);trackedExpected_.erase(item.id);
+            completed.push_back({{"id",item.id},{"row",item.row},{"epoch",item.epoch},{"known",item.known},{"slot_before",item.slot},{"remaining_before",item.budget},{"submitted",item.depth},{"emitted",item.emitted},{"consumed",item.emitted.size()},{"eos",item.eos},{"finished",stage==RequestStage::Finished}});
+            if(stage==RequestStage::Finished)scheduler_->ForgetFinished(item.id);
+        }
+        return nlohmann::json{{"requests",completed},{"verification",statistics},{"scope","Native leased dense target verification and exact scheduler span commit; no serving speed admission"}}.dump();
+    }catch(...){failed_=true;throw;}
+}
+#endif
+
 #ifdef GARNET_METAL_MTP_BRIDGE
 std::string MetalContinuousScheduler::GenerateMTP(X::Value stops) {
     std::lock_guard<std::mutex> lock(mutex_);Ready();
@@ -364,21 +584,36 @@ std::string MetalContinuousScheduler::GenerateMTP(X::Value stops) {
 bool MetalContinuousScheduler::Cancel(int64_t id) {
     std::lock_guard<std::mutex> lock(mutex_);Ready();if(id<=0)return false;
     try {
+#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
+        const bool abandon=GroupedRequest(uint64_t(id))&&!groupedExecuted_;
+#endif
         if(!scheduler_->Cancel(uint64_t(id),*allocator_))return false;
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
         trackedExpected_.erase(uint64_t(id));
 #endif
-        inflight_.erase(uint64_t(id));scheduler_->ForgetFinished(uint64_t(id));return true;
+        inflight_.erase(uint64_t(id));scheduler_->ForgetFinished(uint64_t(id));
+#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
+        if(abandon){for(const auto& r:groupedRequests_)if(r.id!=uint64_t(id)){if(!scheduler_->AbandonPrefillChunk(r.id))throw std::logic_error("Cannot abandon an unexecuted grouped survivor");inflight_.erase(r.id);trackedExpected_.erase(r.id);}groupedRequests_.clear();groupedChunks_=0;groupedTicket_=0;groupedExecuted_=false;}
+        else EraseGroupedRequest(uint64_t(id));
+#endif
+        return true;
     }catch(...){failed_=true;throw;}
 }
 std::string MetalContinuousScheduler::StatusJson() {
     std::lock_guard<std::mutex> lock(mutex_);Ready();
-    return nlohmann::json{{"active",scheduler_->ActiveRequestCount()},{"queued",scheduler_->QueuedRequestCount()},
-        {"tracked",scheduler_->TrackedRequestCount()},{"inflight",inflight_.size()},{"rows",rows_},{"capacity",capacity_}}.dump();
+    auto status=nlohmann::json{{"active",scheduler_->ActiveRequestCount()},{"queued",scheduler_->QueuedRequestCount()},
+        {"tracked",scheduler_->TrackedRequestCount()},{"inflight",inflight_.size()},{"rows",rows_},{"capacity",capacity_},{"prefill_completion_priority",scheduler_->PrefillCompletionPriority()}};
+#ifdef GARNET_METAL_WIDE_OWNER_PREFILL
+    status["prefill_completion_owners"]=scheduler_->PrefillCompletionOwners();
+#endif
+    return status.dump();
 }
 bool MetalContinuousScheduler::CloseUnlocked() {
     bool result=!allocator_||allocator_->Clear();
     inflight_.clear();scheduler_.reset();allocator_.reset();sessionOwner_=X::Value();
+#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
+    groupedRequests_.clear();groupedChunks_=maximumGroupedChunks_=0;groupedTicket_=0;groupedExecuted_=false;
+#endif
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
     trackedExpected_.clear();
 #endif

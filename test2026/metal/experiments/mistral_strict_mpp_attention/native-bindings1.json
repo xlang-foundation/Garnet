@@ -1,0 +1,32 @@
+{
+  "scope": "Standalone strict FP32 MPP online attention and guarded native-register follow-up. Original shader controls preserved. No Garnet runtime/xModel API or default changed; no model/serving/quality qualification.",
+  "base_checkpoint": "04a87c28e67ddce569ac6e384f29b5560b7148b0",
+  "base_shader_prepare_helper_sha256": "b9e09fde185c8b88eb42aac29de6b49f2e503c5ff146f8a7b6e51fd791e7ff27",
+  "base_combined_shader_sha256": "e53e9e5e3315596ebdc6247d52b993e91ed8b7444163a184ed099db492e5f0ae",
+  "public_combined_shader_sha256": "8a5525f72b3f8a4cd4a2df3c75ea1c3f344e9fdebd386198f52296fb02d036d2",
+  "register_combined_shader_sha256": "91ca590ec7675738a0bde893726a301ba0ab805f1b714f3cbcf202d246db1dbd",
+  "diagnostic_combined_shader_sha256": "408ae3f5ceb4fe266302f411cdd25b8415f4a761bb072c1b6972f34e6d6a05d4",
+  "files_sha256": {
+    "strict_attention2.mm": "593e152f4247fd394899c7d46ef5928de7946a3deb349fdb07eaf5def24779d6",
+    "strict_attention3.mm": "c19ccb2ff7648136bfffa917e6ac1bb004dfccc878266bdd19e0fa78a70c230a",
+    "strict-mpp2.metal": "6b7b36bb1303c4761c2b192df236d6372a66e045be64507221b2dd7c360046d0",
+    "coordinate-probe1.metal": "bc961c5c822720604c7d4549d6fc2cfa49b7069c78a25cdacd07540446174289",
+    "strict-register1.metal": "103efd2d454d789155bf542f1535849b3e43dfb92586ecf072c91cbd18ff3e7d",
+    "strict-register2.metal": "383c0cc1bf36ebdc7466b95e2fc8ac333087abe13fd58efb999ea1c273198be2",
+    "coordinate_dump1.mm": "5e6d2c1ff5dc70bd2a17f79be6e8f0078600769017b2f7ac1165cf021a402cbf",
+    "coordinate-dump1.metal": "7bd776435be92305d0613dcf5a0c18a57dafe57e87ab723f69cfa8dc41c4ec90",
+    "audit_strict_attention1.py": "bb446a78bb79e3dd66b6deba76906e4945b5d3a93c6309a1bed8ac86870709ed",
+    "audit_register_attention1.py": "70a6a5ea7405fc47f7438ab0683ec83c9b126afa88d054da927727f19610cc04",
+    "audit_screens1.py": "11f34371ee7d31c041410e77ee601937b5f9a87d4ab6380f47fd4775a438c7d8",
+    "collect_screens1.py": "befccf946f2d7ccf15c1a9dbeaaa3be97b7013fd8d72107efa12b91779abd273",
+    "collect_register_screens1.py": "2ce8333c1d436b2a4ab00030b5999aed5e10c814dfa5089a451af523afbbbc98",
+    "chunk_mps_contiguous_policy.h": "d3d3859aac860baed2a6bf2fc44244ac86b4da72767cc89c795cca994b1ebaee"
+  },
+  "source_references_sha256": {
+    "/Users/shawn/CantorAI/out/research/qwen-local-coder/comparators/vllm-metal/vllm_metal/metal/kernels_v2/pagedattention_nax.metal": "9b5c9dc36948fee833a3cc64dfa89f5ba4467e72aa956d86de497dc66da8e498",
+    "/Users/shawn/CantorAI/out/research/qwen-local-coder/comparators/vllm-metal/vllm_metal/attention/nax_split.py": "3662bc10175f20170af51f0478a52d61dce399f7b6f3f8aa69bfa6f7b9854ce2",
+    "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/MetalPerformancePrimitives.framework/Headers/MPPTensorOpsMatMul2d.h": "2f572492dbdd7328799522fb4dd00094f8d6c59537ed4b7a5734b6725303f1b0"
+  },
+  "precision": "strict FP32, relaxed_precision=false, Safe Metal4",
+  "native_runtime_changed": false
+}

@@ -1,0 +1,94 @@
+--- a/audit_productive1.py
++++ b/audit_trace1.py
+@@ -1,8 +1,9 @@
+-"""Independent CPU audit of causal B4 drafts and ordinary target state equivalence."""
++"""CPU causal trace audit for timed runs: no full-state equivalence admission."""
+ from pathlib import Path
+ import copy,hashlib,json,math,re
+ from tokenizers import Tokenizer
+ R=Path(__file__).resolve().parent
++Q=R.parent/'mistral-causal-batch4-helper1'
+ read=lambda n:json.loads((R/n).read_text())
+ def need(ok,why):
+  if not ok:raise ValueError(why)
+@@ -15,7 +16,7 @@
+   need(all(re.fullmatch('[0-9a-f]{64}',d) for row in layer for d in row),'state digest')
+ def target_run(d,inputs,mode):
+  need(d['completed'] and d['mode']==mode and d['inputs']==inputs,'run binding/completion')
+- need(d['library']==str(R/'build-on1/libgarnet.dylib') and 'native_mistral_verification_gqa16_values64_32_optional_v1' in d['backend'],'qualified native library')
++ need(d['library']==str(Q/'build-on1/libgarnet.dylib') and 'native_mistral_verification_gqa16_values64_32_optional_v1' in d['backend'],'qualified native library')
+  need(len(d['jobs'])==4 and [j['label'] for j in d['jobs']]==list('ABCD'),'target job set')
+  ids={j['native_request']:j['label'] for j in d['jobs']};fixtures={j['label']:j for j in inputs['jobs']};hist={x:[] for x in ids.values()};prefilled={x:0 for x in ids.values()};placements={};finished=set();si=0;decodes=[];states={}
+  for j in d['jobs']:
+@@ -61,28 +62,20 @@
+       for t in range(4):on=t<len(tokens);flat.append(tokens[t] if on else 0);slots.append(float(q['slot']+t) if on else 0.);active.append(float(on))
+      need(event['submitted_ids']==flat and event['submitted_slots']==slots and event['submitted_active']==active,'submitted target tokens/slots/masks')
+     decodes.append(dict(plan=plan,event=event,before=before))
+-   snap=d['snapshots'][si];si+=1;need(snap['stage']==plan['stage'],'snapshot stage');checkstates(snap['states'],32);need(len(snap['hidden'])==4 and all(re.fullmatch('[0-9a-f]{64}',h) for h in snap['hidden']),'target hidden digests')
+-   owners={o['label']:o for o in snap['owners']};need(set(owners)==set(placements),'snapshot owner set')
+-   for label,o in owners.items():
+-    need((o['row'],o['epoch'])==placements[label] and o['generated_ids']==hist[label] and o['prefilled']==prefilled[label] and o['finished']==(label in finished),'snapshot progress')
+-    key=(label,prefilled[label],len(hist[label]),label in finished);value=(kvrow(snap['states'],o['row']),snap['hidden'][o['row']],list(hist[label]))
+-    need(key not in states or states[key]==value,'unchanged target owner state');states[key]=value
+- need(si==len(d['snapshots']) and len(finished)==4,'target snapshots/completion')
++ need(len(finished)==4,'target completion')
+  need(all(j['generated']==hist[j['label']] for j in d['jobs']),'published final output')
+  cleanup=d['cleanup'];need(all(cleanup[k]==0 for k in ('garnet_live_matrix_owners','garnet_live_affine_weight_owners','garnet_live_bf16_weight_owners','garnet_live_pipeline_sets')) and cleanup['metal_allocated_bytes']<=4194304,'target cleanup')
+  need(d['prepared']['memory']['metal_allocated_bytes']<=d['prepared']['memory']['metal_recommended_working_set_bytes']-536870912,'target memory bound')
+  return dict(states=states,decodes=decodes,histories=hist)
+-def audit(ordinary,candidate,inputs,ttok,dtok):
++def audit(ordinary,candidate,inputs,ttok,dtok,reconcile_offset=0):
+  a=target_run(ordinary,inputs,'ordinary');b=target_run(candidate,inputs,'productive');need(a['histories']==b['histories'],'ordinary/verified target token mismatch')
+  state_pairs=0
+  for key,value in b['states'].items():need(key in a['states'] and a['states'][key]==value,'ordinary/verified target KV or hidden mismatch');state_pairs+=65
+  need(len(candidate['helper_rounds'])==len(b['decodes']),'helper round count')
+- fixtures={j['label']:j for j in inputs['jobs']};histories={x:[] for x in fixtures};epochs={};expected_calls=[];reconcile_count=0;survivor_pairs=0;draft_count=0;accepted=0;proposed=0;previous=None;live=set(fixtures);zeroed=0
++ fixtures={j['label']:j for j in inputs['jobs']};histories={x:[] for x in fixtures};epochs={};expected_calls=[];reconcile_count=reconcile_offset;survivor_pairs=0;draft_count=0;accepted=0;proposed=0;previous=None;live=set(fixtures);zeroed=0
+  for event,round in zip(b['decodes'],candidate['helper_rounds']):
+   before_target=event['before'];traces=round['traces'];need({t['label'] for t in traces}==set(before_target) and len(traces)==len(before_target),'helper selected owner set')
+-  for phase in ('before','after_reconcile','after'):checkstates(round[phase],24)
+-  if previous is not None:
+-   for label in live:row='ABCD'.index(label);need(kvrow(round['before'],row)==kvrow(previous,row),'helper survivor handoff')
++  need(all(round[phase] is None for phase in ('before','after_reconcile','after')),'timed state capture policy')
+   selected=[];offset={};bylabel={t['label']:t for t in traces}
+   for q in event['plan']['requests']:
+    label=next(j['label'] for j in candidate['jobs'] if j['native_request']==q['id']);t=bylabel[label];generated=before_target[label];remaining=fixtures[label]['limit']-len(generated);limit=min(3,remaining-1);row='ABCD'.index(label)
+@@ -109,10 +102,6 @@
+    elif reason=='draft_eos':need(executed==tokens and len(tokens)<8,'helper EOS stop')
+    else:need(len(tokens)==8 and executed==tokens[:-1],'helper budget stop')
+    histories[label]=prompt+executed;offset[label]=kept;selected.append(label);draft_count+=len(tokens);zeroed+=bytes
+-  touched={'ABCD'.index(x) for x in selected}
+-  for row in range(4):
+-   if row not in touched:
+-    need(kvrow(round['before'],row)==kvrow(round['after_reconcile'],row)==kvrow(round['after'],row),'helper untouched row changed');survivor_pairs+=96
+   need(round['call_first']==len(expected_calls),'helper call range start');cursors=dict(offset)
+   while any(cursors[x]<len(bylabel[x]['prompt_ids']) for x in selected):
+    ids=[];slots=[];active=[];labels=[];lengths={};ep=[0]*4
+@@ -136,26 +125,4 @@
+     label=next(j['label'] for j in candidate['jobs'] if j['native_request']==c['id']);live.remove(label);histories[label]=[]
+  need(candidate['helper_calls']==expected_calls,'helper native tokens/slots/masks/epochs')
+  need(proposed>0 and accepted>0,'no productive helper acceptance')
+- return dict(passed=True,exact_target_output_ids=sum(map(len,b['histories'].values())),ordinary_decode_calls=len(a['decodes']),productive_decode_calls=len(b['decodes']),accepted_draft_tokens=accepted,proposed_target_tokens=proposed,helper_draft_tokens=draft_count,helper_native_calls=len(expected_calls),helper_reconciliation_calls=reconcile_count,helper_zeroed_bytes=zeroed,helper_unchanged_digest_pairs=survivor_pairs,ordinary_vs_verified_target_digest_pairs=state_pairs,reference_outputs_read_during_generation=False,performance_claim=False,http_qualified=False,quality_suite_qualified=False,no_comparator_execution=True,goal_complete=False)
+-def main():
+- inputs=read('productive-input1.json');ordinary=read('ordinary-target-result1.json');candidate=read('productive-target-result1.json');ttok=Tokenizer.from_file(inputs['target_model']+'/tokenizer.json');dtok=Tokenizer.from_file(inputs['draft_model']+'/tokenizer.json');report=audit(ordinary,candidate,inputs,ttok,dtok);negative=[]
+- def reject(name,mutate):
+-  bad=copy.deepcopy(candidate);mutate(bad)
+-  try:audit(ordinary,bad,inputs,ttok,dtok)
+-  except (ValueError,KeyError,TypeError,IndexError,StopIteration):negative.append(name);return
+-  raise AssertionError('accepted corruption '+name)
+- reject('published target output',lambda d:d['jobs'][0]['generated'].__setitem__(0,1))
+- reject('target hidden state',lambda d:d['snapshots'][-1]['hidden'].__setitem__(0,'0'*64))
+- reject('target KV state',lambda d:d['snapshots'][-1]['states'][0][0].__setitem__(0,'0'*64))
+- reject('future prefix injection',lambda d:d['helper_rounds'][0]['traces'][0]['generated_before'].append(1))
+- reject('wrong helper owner epoch',lambda d:d['helper_rounds'][0]['traces'][0].__setitem__('helper_epoch',0))
+- reject('wrong helper prompt',lambda d:d['helper_rounds'][0]['traces'][0]['prompt_ids'].__setitem__(0,0))
+- reject('host snapshot insertion',lambda d:d['helper_rounds'][0]['traces'][0]['reconcile'].__setitem__('host_snapshot_bytes',1))
+- reject('helper inactive mask',lambda d:d['helper_calls'][0]['active'].__setitem__(0,0.))
+- reject('helper execution slot',lambda d:d['helper_calls'][0]['slots'].__setitem__(0,1.))
+- reject('missing helper call',lambda d:d['helper_calls'].pop())
+- reject('helper output leak',lambda d:d['cleanup'].__setitem__('garnet_live_matrix_owners',1))
+- reject('foreign native library',lambda d:d.__setitem__('library','/tmp/foreign.dylib'))
+- report['negative_controls_rejected']=negative;report['files_sha256']={n:sha(R/n) for n in ['productive-input1.json','productive_worker1.py','run_productive1.py','ordinary-target-result1.json','productive-target-result1.json','productive1-preflight.json','productive1-postflight.json','build-audit1.json','helper-audit1.json']}
+- (R/'productive-audit1.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps({k:v for k,v in report.items() if k!='files_sha256'},indent=2))
+-if __name__=='__main__':main()
++ return dict(passed=True,exact_target_output_ids=sum(map(len,b['histories'].values())),ordinary_decode_calls=len(a['decodes']),productive_decode_calls=len(b['decodes']),accepted_draft_tokens=accepted,proposed_target_tokens=proposed,helper_draft_tokens=draft_count,helper_native_calls=len(expected_calls),helper_reconciliation_calls=reconcile_count-reconcile_offset,helper_zeroed_bytes=zeroed,helper_unchanged_digest_pairs=survivor_pairs,ordinary_vs_verified_target_digest_pairs=state_pairs,reference_outputs_read_during_generation=False,performance_claim=False,full_state_capture_in_timed_runs=False,http_qualified=False,quality_suite_qualified=False,no_comparator_execution=True,goal_complete=False)

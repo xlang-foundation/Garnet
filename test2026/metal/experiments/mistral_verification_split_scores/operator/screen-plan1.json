@@ -1,0 +1,57 @@
+{
+  "scope": "Exact-word isolated score scheduling screen before native integration",
+  "previous_goal_turn": "no progress: status interpretation only; resumed next safe operator experiment",
+  "cohorts": 2,
+  "serial": true,
+  "score_tile": 128,
+  "correctness_firsts": [
+    0,
+    1,
+    127,
+    511,
+    2048,
+    4092,
+    4093,
+    4094,
+    4095
+  ],
+  "masks": "all 16 except active slot>=4096",
+  "layouts": [
+    {
+      "offset_words": 0,
+      "padding_words": 0
+    },
+    {
+      "offset_words": 16,
+      "padding_words": 8
+    }
+  ],
+  "all_parent_words_retained": true,
+  "readonly_before_after_retained": true,
+  "native_msl_compile_options": null,
+  "timing_firsts": [
+    508,
+    2044,
+    4092
+  ],
+  "timing_masks": [
+    1,
+    15
+  ],
+  "warmups": 4,
+  "measured_rounds": 21,
+  "method_order": "alternating, reversed second cohort",
+  "component_gate": "both cohorts median control/split>=1.10 at first2044 mask15; no regression at first508 mask15",
+  "gpu_duration": "complete command; candidate both dot and softmax encoders",
+  "no_build_or_hash_during_timing": true,
+  "not_serving_or_model_admission": true,
+  "no_comparator_execution": true,
+  "goal_complete": false,
+  "files_sha256": {
+    "plan1.json": "2a6901de5ac5746af73cac486df1cddaea048629c57ec9c8c80d18279108b701",
+    "screen1.mm": "bd3203177db34d5362406749dbfc9c579899a220de46ed47f461c4563c06478c",
+    "control1.metal": "fecfa35fa6782ea42686e395cec0395c46d541d753aa69644f7d5724bb275716",
+    "candidate1.metal": "97dc5783e63829bf2b8167f5236b97cb3202cbdf85d46ed6ebb241e6cb287df6",
+    "split1.metal": "c1367e359d723b74cff159e9c35e571c403b210a0159cf8460dc1212e1b51a4c"
+  }
+}

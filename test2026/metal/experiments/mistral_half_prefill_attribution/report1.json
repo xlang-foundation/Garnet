@@ -1,0 +1,134 @@
+{
+  "passed": true,
+  "scope": "Audit GPU encoder timestamp attribution; instrumentation is not a benchmark.",
+  "diagnostic_only": true,
+  "instrumentation_changes_timing": true,
+  "body_records": 19,
+  "total_records": 20,
+  "last_body_encoders": 1026,
+  "instrumented_body_driver_gpu_ms": 950.37625,
+  "timestamp_covered_union_ms": 947.3752620000005,
+  "cross_category_overlap_ms": 5.873544,
+  "uncovered_gaps_within_encoder_envelope_ms": 3.000946999999974,
+  "encoder_envelope_ms": 950.3762090000005,
+  "attribution": [
+    {
+      "category": "projections",
+      "encoders": 384,
+      "exclusive_interval_ms": 707.1526729999999,
+      "share_of_timestamp_covered_union": 0.7464335426144995
+    },
+    {
+      "category": "half_attention",
+      "encoders": 32,
+      "exclusive_interval_ms": 72.53304400000002,
+      "share_of_timestamp_covered_union": 0.07656210470059749
+    },
+    {
+      "category": "Silu",
+      "encoders": 32,
+      "exclusive_interval_ms": 62.573544000000005,
+      "share_of_timestamp_covered_union": 0.06604937505746268
+    },
+    {
+      "category": "half_Q_KV_pack",
+      "encoders": 32,
+      "exclusive_interval_ms": 27.952457,
+      "share_of_timestamp_covered_union": 0.029505158221030246
+    },
+    {
+      "category": "Add",
+      "encoders": 64,
+      "exclusive_interval_ms": 24.71604400000001,
+      "share_of_timestamp_covered_union": 0.026088969167109198
+    },
+    {
+      "category": "Layout",
+      "encoders": 288,
+      "exclusive_interval_ms": 23.779007000000014,
+      "share_of_timestamp_covered_union": 0.025099881698198705
+    },
+    {
+      "category": "NormRope",
+      "encoders": 64,
+      "exclusive_interval_ms": 14.459289000000004,
+      "share_of_timestamp_covered_union": 0.015262472623018518
+    },
+    {
+      "category": "Norm",
+      "encoders": 64,
+      "exclusive_interval_ms": 6.671873,
+      "share_of_timestamp_covered_union": 0.007042481757350338
+    },
+    {
+      "category": "session",
+      "encoders": 66,
+      "exclusive_interval_ms": 1.663787,
+      "share_of_timestamp_covered_union": 0.001756206929540872
+    }
+  ],
+  "site_counts": [
+    {
+      "kind": "Add",
+      "site": "EncodePointwise",
+      "encoders": 64
+    },
+    {
+      "kind": "AttentionChunk",
+      "site": "EncodeAttentionChunkInternal",
+      "encoders": 64
+    },
+    {
+      "kind": "Layout",
+      "site": "EncodeStateKernel",
+      "encoders": 288
+    },
+    {
+      "kind": "MatMul",
+      "site": "EncodeAffineInt4MatMul",
+      "encoders": 64
+    },
+    {
+      "kind": "MatMul",
+      "site": "TryEncodePackedAffine",
+      "encoders": 320
+    },
+    {
+      "kind": "Norm",
+      "site": "EncodePointwise",
+      "encoders": 64
+    },
+    {
+      "kind": "NormRope",
+      "site": "EncodeStateKernel",
+      "encoders": 64
+    },
+    {
+      "kind": "Silu",
+      "site": "EncodePointwise",
+      "encoders": 32
+    },
+    {
+      "kind": "session",
+      "site": "EncodeStateKernel",
+      "encoders": 66
+    }
+  ],
+  "same_complete_state_hidden_values_and_predictions_as_uninstrumented_candidate": true,
+  "negative_controls_rejected": [
+    "missing_encoder",
+    "wrong_kind",
+    "negative_interval",
+    "outside_calibration",
+    "nonfinite_duration",
+    "inconsistent_duration",
+    "wrong_command"
+  ],
+  "raw_stderr_sha256": "8e259ac1009dac3874b8c6dcbb2dedd14773e0bf991c1b603bd6bb2a97e36f4a",
+  "diagnostic_result_sha256": "2e9da34b5e8e39ba3a31b86f441970f42178a726d8a4a7105efe75064c70107d",
+  "foundation_provenance_sha256": "f47d1073955b9943d1038bc066d9fc0d04aff79599a6c951051fcaae74fefe08",
+  "serving_speed_claim": false,
+  "quality_qualified": false,
+  "goal_complete": false,
+  "limits": "Exclusive interval shares apply only to this instrumented encoder timeline. Session includes hoisted KV and other session work. No hardware-counter occupancy, bandwidth, or isolated causal speedup is established."
+}

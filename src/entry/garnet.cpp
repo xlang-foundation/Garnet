@@ -16,6 +16,7 @@
 #include "nlohmann/json.hpp"
 #include "xlang3/xlang3.h"
 #include <fstream>
+#include <sstream>
 #include <array>
 #include <numeric>
 #include <filesystem>
@@ -2493,12 +2494,27 @@ namespace Garnet
 
     X::Value GarnetAPI::SynthesizeJson(const X::ARGS& params, const X::KWARGS& kwParams)
     {
+        return SynthesizeSpeech(params, false);
+    }
+
+    X::Value GarnetAPI::SynthesizeBytes(const X::ARGS& params, const X::KWARGS& kwParams)
+    {
+        auto result = SynthesizeSpeech(params, true);
+        if (result.IsDict()) return result;
+        auto response = X::Value::Dict(Host());
+        response.SetItem("metadata", result);
+        return response;
+    }
+
+    X::Value GarnetAPI::SynthesizeSpeech(const X::ARGS& params, bool inMemory)
+    {
         X::Value retValue;
         auto* rt = Host()->runtime;
-        if (params.size() < 5 || params[0].ToString().empty() ||
-            params[4].ToString().empty()) {
+        if (params.size() < (inMemory ? 4u : 5u) || params[0].ToString().empty() ||
+            (!inMemory && params[4].ToString().empty())) {
             retValue = NativeValue(Host(), GarnetJsonError("request_invalid",
-                "synthesize_json requires text, speaker, language, max frames, and output path"));
+                inMemory ? "synthesize_bytes requires text, speaker, language, and max frames" :
+                    "synthesize_json requires text, speaker, language, max frames, and output path"));
             return retValue;
         }
         const std::string text = params[0].ToString();
@@ -2507,7 +2523,9 @@ namespace Garnet
             ? std::string("English") : params[2].ToString();
         const int requestedFrames = (std::max)(1,
             CheckedInt(params[3], "argument"));
-        const std::filesystem::path outputPath(params[4].ToString());
+        const std::filesystem::path outputPath(inMemory ? std::string() : params[4].ToString());
+        const size_t samplingIndex = inMemory ? 4 : 5;
+        const size_t instructionIndex = samplingIndex + 1;
 
         const auto instance = FindServingInstance(std::string(), "speech");
         if (!instance) {
@@ -2536,12 +2554,12 @@ namespace Garnet
         request.SetItem("language", X::Value::String(Host(), language));
         request.SetItem("max_audio_frames", X::Value(maxFrames));
         request.SetItem("reuse_output", X::Value(1));
-        if (params.size() > 6 && !params[6].ToString().empty()) {
-            request.SetItem("instruct", X::Value::String(Host(), params[6].ToString()));
+        if (params.size() > instructionIndex && !params[instructionIndex].ToString().empty()) {
+            request.SetItem("instruct", X::Value::String(Host(), params[instructionIndex].ToString()));
         }
-        if (params.size() > 5 && !params[5].ToString().empty()) {
+        if (params.size() > samplingIndex && !params[samplingIndex].ToString().empty()) {
             try {
-                const json sampling = json::parse(params[5].ToString());
+                const json sampling = json::parse(params[samplingIndex].ToString());
                 if (sampling.contains("do_sample")) {
                     request.SetItem("do_sample", X::Value(
                         sampling.at("do_sample").get<bool>() ? 1 : 0));
@@ -2630,12 +2648,8 @@ namespace Garnet
             value = (std::max)(-1.0F, (std::min)(1.0F, value));
             pcm[index] = static_cast<int16_t>(std::lround(value * 32767.0F));
         }
+        std::ostringstream wav(std::ios::binary);
         try {
-            if (!outputPath.parent_path().empty()) {
-                std::filesystem::create_directories(outputPath.parent_path());
-            }
-            std::ofstream wav(outputPath, std::ios::binary | std::ios::trunc);
-            if (!wav) throw std::runtime_error("cannot open output WAV");
             const uint32_t dataBytes = static_cast<uint32_t>(pcm.size() * sizeof(int16_t));
             const uint32_t riffBytes = 36U + dataBytes;
             const uint32_t sampleRate = 24000U;
@@ -2656,22 +2670,37 @@ namespace Garnet
             wav.write("data", 4); wav.write(reinterpret_cast<const char*>(&dataBytes), 4);
             wav.write(reinterpret_cast<const char*>(pcm.data()), dataBytes);
             if (!wav) throw std::runtime_error("cannot write output WAV");
+            if (!inMemory) {
+                if (!outputPath.parent_path().empty())
+                    std::filesystem::create_directories(outputPath.parent_path());
+                std::ofstream output(outputPath, std::ios::binary | std::ios::trunc);
+                const auto bytes = wav.str();
+                output.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+                if (!output) throw std::runtime_error("cannot write output WAV");
+            }
         }
         catch (const std::exception& exception) {
             retValue = NativeValue(Host(), GarnetJsonError("waveform_write_failed", exception.what()));
             return retValue;
         }
-        retValue = NativeValue(Host(), json({
+        json metadata = {
             {"status", "ok"},
             {"model_id", instance->modelId},
-            {"output_path", outputPath.string()},
             {"sample_rate", 24000},
             {"audio_frames", FindField(result, "audio_frame_count").ToLongLong()},
             {"audio_samples", static_cast<long long>(sampleCount)},
             {"audio_duration_seconds", FindField(result, "audio_duration_seconds").ToDouble()},
             {"duration_ms", FindField(result, "total_ms").ToDouble()}
-        }).dump());
-        return retValue;
+        };
+        if (!inMemory) {
+            metadata["output_path"] = outputPath.string();
+            return NativeValue(Host(), metadata.dump());
+        }
+        const auto bytes = wav.str();
+        auto response = X::Value::Dict(Host());
+        response.SetItem("metadata", NativeValue(Host(), metadata.dump()));
+        response.SetItem("audio", X::Value::Bytes(Host(), bytes.data(), bytes.size()));
+        return response;
     }
 
     X::Value GarnetAPI::StopServing(const X::ARGS& params, const X::KWARGS& kwParams)
@@ -4498,6 +4527,17 @@ namespace Garnet
                     compiledPartitionOptions.builderWorkspaceBytes = megabytes << 20;
                 }
                 X::Value optimizationLevel = FindField(compileOptions, "builder_optimization_level");
+                X::Value prepareAsync=FindField(compileOptions,"prepare_async");
+                X::Value linearProvider=FindField(compileOptions,"linear_kernel_provider");
+                if(linearProvider.IsValid()) {
+                    if(!linearProvider.IsString()||(linearProvider.ToString()!="streamed_bf16"&&linearProvider.ToString()!="registered_bf16"))
+                        throw X::Error("linear_kernel_provider must be streamed_bf16 or registered_bf16 when specified");
+                    compiledPartitionOptions.linearKernelProvider=linearProvider.ToString();
+                }
+                if(prepareAsync.IsValid()){
+                    if(prepareAsync.raw().tag!=X3_TAG_BOOL)throw X::Error("prepare_async must be a boolean");
+                    compiledPartitionOptions.prepareAsync=prepareAsync.ToLongLong()!=0;
+                }
                 if (optimizationLevel.IsValid()) {
                     compiledPartitionOptions.builderOptimizationLevel = (std::max)(
                         0, (std::min)(5, static_cast<int>(optimizationLevel.ToLongLong())));
@@ -4547,6 +4587,17 @@ namespace Garnet
                     X::Value preferredEnabled = FindField(partition, "enable_preferred_boundaries");
                     X::Value preferredMin = FindField(partition, "preferred_min_operations");
                     X::Value maxAtomic = FindField(partition, "max_atomic_regions_per_partition");
+                    X::Value devices = FindField(partition,"devices");
+                    if(devices.IsValid()){
+                        if(!devices.IsList())throw X::Error("partition devices must be a list of CUDA device indices");
+                        int deviceCount=0;
+                        if(cudaGetDeviceCount(&deviceCount)!=cudaSuccess)throw X::Error("CUDA device enumeration failed");
+                        for(uint64_t index=0;index<devices.Size();++index){
+                            const auto device=CheckedInt64(devices.Get(index),"partition device");
+                            if(device<0||device>=deviceCount)throw X::Error("partition CUDA device index out of range");
+                            compiledPartitionOptions.partitionDevices.push_back(static_cast<int>(device));
+                        }
+                    }
                     if (preferredEnabled.IsValid()) {
                         compiledPartitionOptions.enablePreferredBoundaries =
                             preferredEnabled.ToLongLong() != 0;

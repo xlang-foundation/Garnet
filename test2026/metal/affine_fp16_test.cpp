@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Typed FP16 coefficients, strict FP16 tensor operands, FP32 accumulation.
 #include "../../src/backends/metal/metal_context.h"
+#include "../../src/backends/metal/affine_reuse128_policy.h"
 #include "../../src/model/affine_int4_codec.h"
 #include <algorithm>
 #include <cmath>
@@ -113,7 +114,12 @@ void Dense(MetalContext& gpu,size_t m,size_t n,size_t k) {
     Require(gpu.AffineProfilePipelineCount()==count,"dense FP16 encode compiled a pipeline");
     if(m>4)Require(gpu.LastMPPAffineDispatches()==1,"FP16 tensor path was not used");
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
-    Require(gpu.LastReuse64AffineDispatches()==size_t(m>=64&&n>=GARNET_METAL_REUSE64_MIN_OUTPUTS),"dense FP16 cooperative64 threshold mismatch");
+    size_t reuse128=0;
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+    reuse128=size_t(UseAffineReuse128(m,n,GARNET_METAL_REUSE64_MIN_OUTPUTS));
+    Require(gpu.LastReuse128AffineDispatches()==reuse128,"dense FP16 cooperative128 route mismatch");
+#endif
+    Require(gpu.LastReuse64AffineDispatches()==size_t(m>=64&&n>=GARNET_METAL_REUSE64_MIN_OUTPUTS)-reuse128,"dense FP16 cooperative64 threshold mismatch");
 #endif
     f.Compare(gpu.Download(f.dense),all,m>4);
     std::cout<<"fp16_dense rows="<<m<<" columns="<<n<<" inner="<<k<<'\n';
@@ -137,7 +143,12 @@ void Indexed(MetalContext& gpu,size_t m,size_t n,size_t k,bool decode) {
         Require(gpu.LastAffineProfileDispatches()==size_t(!selected.empty())&&gpu.LastAffineProfileMisses()==0,"indexed FP16 profile dispatch/miss mismatch");
         Require(gpu.AffineProfilePipelineCount()==count,"indexed FP16 encode compiled a pipeline");
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
-        Require(gpu.LastReuse64AffineDispatches()==size_t(!decode&&selected.size()>=64&&n>=GARNET_METAL_REUSE64_MIN_OUTPUTS),"indexed FP16 cooperative64 threshold mismatch");
+        size_t reuse128=0;
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+        reuse128=size_t(!decode&&UseAffineReuse128(selected.size(),n,GARNET_METAL_REUSE64_MIN_OUTPUTS));
+        Require(gpu.LastReuse128AffineDispatches()==reuse128,"indexed FP16 cooperative128 route mismatch");
+#endif
+        Require(gpu.LastReuse64AffineDispatches()==size_t(!decode&&selected.size()>=64&&n>=GARNET_METAL_REUSE64_MIN_OUTPUTS)-reuse128,"indexed FP16 cooperative64 threshold mismatch");
 #endif
         auto actual=gpu.Download(f.out);f.Compare(actual,selected,!decode);
         if(decode)for(auto row:selected)for(size_t col=0;col<n;++col)

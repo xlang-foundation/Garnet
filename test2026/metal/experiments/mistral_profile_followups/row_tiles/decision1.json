@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "decision": "Reject larger512-row and128-thread alternatives for native integration. Both512-row down variants regress against the qualified tensor256 kernel. The128-thread/N32 standalone gate improves only1.1-1.5% and does not represent the existing fused gate/up path; its down projection regresses.",
+  "source_control_verbatim": true,
+  "full_output_parents_exact": true,
+  "unchanged_fp64_bound": true,
+  "measured_gpu_commands": 288,
+  "no_native_runtime_changes": true,
+  "no_model_or_http_speed_claim": true,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

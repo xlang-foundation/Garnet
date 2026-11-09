@@ -1,0 +1,166 @@
+{
+  "passed": true,
+  "scope": "Audit balanced operator timings and exact pre/post parent witnesses.",
+  "cohorts": [
+    {
+      "cohort": "forward",
+      "shape": "gate",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 4.666104214265943,
+          "native_over_method": 1.0
+        },
+        "inline-rowfast": {
+          "gpu_median_ms": 4.683708306401968,
+          "native_over_method": 0.9962414200491599
+        },
+        "inline-pair": {
+          "gpu_median_ms": 4.682520753704011,
+          "native_over_method": 0.9964940807950327
+        },
+        "shared-tensor": {
+          "gpu_median_ms": 4.448666586540639,
+          "native_over_method": 1.0488770339371256
+        },
+        "shared-rowfast": {
+          "gpu_median_ms": 4.450604203157127,
+          "native_over_method": 1.048420394461486
+        },
+        "shared-pair": {
+          "gpu_median_ms": 4.45058336481452,
+          "native_over_method": 1.0484253033333315
+        }
+      }
+    },
+    {
+      "cohort": "forward",
+      "shape": "down",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 5.13889582362026,
+          "native_over_method": 1.0
+        },
+        "inline-rowfast": {
+          "gpu_median_ms": 5.160562577657402,
+          "native_over_method": 0.9958014744107653
+        },
+        "inline-pair": {
+          "gpu_median_ms": 5.166270770132542,
+          "native_over_method": 0.9947012172357393
+        },
+        "shared-tensor": {
+          "gpu_median_ms": 4.812687519006431,
+          "native_over_method": 1.0677809027337752
+        },
+        "shared-rowfast": {
+          "gpu_median_ms": 4.821729147806764,
+          "native_over_method": 1.0657786171912547
+        },
+        "shared-pair": {
+          "gpu_median_ms": 4.837562562897801,
+          "native_over_method": 1.0622903077333956
+        }
+      }
+    },
+    {
+      "cohort": "reverse",
+      "shape": "gate",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 4.677937366068363,
+          "native_over_method": 1.0
+        },
+        "inline-rowfast": {
+          "gpu_median_ms": 4.690291592851281,
+          "native_over_method": 0.9973660002713376
+        },
+        "inline-pair": {
+          "gpu_median_ms": 4.672687500715256,
+          "native_over_method": 1.0011235216034249
+        },
+        "shared-tensor": {
+          "gpu_median_ms": 4.4545832788571715,
+          "native_over_method": 1.0501402877057657
+        },
+        "shared-rowfast": {
+          "gpu_median_ms": 4.458416602574289,
+          "native_over_method": 1.0492373824750525
+        },
+        "shared-pair": {
+          "gpu_median_ms": 4.457916715182364,
+          "native_over_method": 1.0493550384502863
+        }
+      }
+    },
+    {
+      "cohort": "reverse",
+      "shape": "down",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 5.152062512934208,
+          "native_over_method": 1.0
+        },
+        "inline-rowfast": {
+          "gpu_median_ms": 5.162770859897137,
+          "native_over_method": 0.9979258527535847
+        },
+        "inline-pair": {
+          "gpu_median_ms": 5.158770829439163,
+          "native_over_method": 0.9986996288986761
+        },
+        "shared-tensor": {
+          "gpu_median_ms": 4.803666728548706,
+          "native_over_method": 1.072527051536475
+        },
+        "shared-rowfast": {
+          "gpu_median_ms": 4.82372916303575,
+          "native_over_method": 1.0680662903743594
+        },
+        "shared-pair": {
+          "gpu_median_ms": 4.829229204915464,
+          "native_over_method": 1.0668498624356337
+        }
+      }
+    }
+  ],
+  "measured_gpu_commands": 288,
+  "warmup_gpu_commands": 144,
+  "pre_post_witnesses": 48,
+  "input_gather_included": true,
+  "full_weight_expansion_used": false,
+  "extra_output_scatter_used": false,
+  "negative_controls_rejected": [
+    "missing sample",
+    "wrong balanced order",
+    "cold sample admitted",
+    "false GPU duration",
+    "reversed GPU clock",
+    "nonfinite wall",
+    "fabricated extra expansion",
+    "wrong result parent",
+    "prepared input mutated",
+    "wrong native baseline resource",
+    "fabricated profile admission"
+  ],
+  "decision": "Keep original dispatch order. Direct MPP reads from the existing shared Q4 tile show a repeatable modest512-row component improvement; proceed only to bounded native qualification, with no model/HTTP/2x admission.",
+  "native_runtime_changed": false,
+  "writer_map_qualified": false,
+  "model_or_http_admitted": false,
+  "quality_admitted": false,
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-forward2/result1.json": "19e01003bd73132909ab878c9308aa1afe9176a5030b16bc31c25a5a02be4df2",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-forward2-status.json": "f12094718bfb9e7c9952fcc3a12cbc8f681fcdb30644a9fb0bf6044099ed7bc7",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-forward2-command.json": "ecf1ec5d192e24ef9e4d693e1e31ddfc4d9b25299089824760ea906a7064faf3",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-reverse2/result1.json": "0785235f42120771bb798016f7a05ab6bf9ef8dab6580912a1d7a572ca239618",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-reverse2-status.json": "8d94284cf6398637960f5a3ebf8752c042bf122ef0153349a1dd3fbeb284f1ef",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-reverse2-command.json": "4ab4a4a72e8bf99ed527c3987d9f0527e9c2eb04a4cbedbf8460f513e144495e",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/audit_timing3.py": "143b5c7944b1a41684a4ca193a902d818b1463ef6e2aa961fa968821c676cda5",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/pilot4-audit.json": "7770294e5d8d57ac45062459e7135c3fef57391ce8d6da54712425e030c81fd8",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/audit_pilot4.py": "664fa141960f58ec8262da7c72fcd14dd5218d2ecf58c1e79389a476b9907c30",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/plan4.json": "4f9344eb56bf67355e5316d1c75d37bee87e6cdd04c8c93a08a59b38584e6809",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing2-preflight.json": "904e9e1c05649a0edfd4b7292ae8788b1a21aa6f18350a443f1728fc677ed779",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing2-postflight.json": "9306e982285465c33b458a135d4c8bc6fd7bcdb425dc3210c3be8d6e332c585e",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-preparation2.json": "852f6e3fc98dbd18309c33bc5c6b12aa195eb623af0e17b53b1fdf7ea9fe82e0"
+  }
+}

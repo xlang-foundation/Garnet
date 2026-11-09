@@ -7,7 +7,10 @@
 #include "modelopt_fp8_plugin.h"
 #include "ct_int4_plugin.h"
 #include "trt_context_pool.h"
+#include "cuda_engine_pool.h"
+#include "../common/cuda_device_scope.h"
 #include "trt_memory_profile.h"
+#include "streamed_bf16_projection_plugin.h"
 #include "qwen35_lowering.h"
 #include "qwen_tts_sampling.h"
 #include "qwen35_packed_store_plugin.h"
@@ -51,7 +54,8 @@ class Logger : public ILogger
 {
     void log(Severity severity, const char* msg) noexcept override
     {
-        if (severity <= Severity::kWARNING)
+        const auto* verbose=std::getenv("GARNET_TRT_VERBOSE");
+        if (severity <= Severity::kWARNING || (verbose && *verbose=='1'))
             std::cout << "[TRT] " << msg << std::endl;
     }
 } gLogger;
@@ -171,7 +175,11 @@ namespace Garnet {
 
         struct CachedTRTExecution {
             int device = -1;
+            std::atomic<unsigned> residencyOwners{0};
+            std::string artifactStamp;
             int64_t weightStreamingBudget = -1;
+            int64_t fullResidentWeightLimit = 0;
+            int64_t fullResidentWeightMinimum = 0;
             bool userManagedWorkspace = false;
             std::atomic<bool> workspaceReady{false};
             std::mutex workspaceMutex;
@@ -325,12 +333,17 @@ namespace Garnet {
 
         std::shared_ptr<CachedTRTExecution> GetCachedTRTEngine(
             const std::string& enginePath,
-            const Garnet::SafeTensorsIndex* weightIndex = nullptr,int workspacePolicy=-1,bool embeddedWeights=false) {
+            const Garnet::SafeTensorsIndex* weightIndex = nullptr,int workspacePolicy=-1,bool embeddedWeights=false,bool validateArtifact=false) {
             int device = -1;
             if (cudaGetDevice(&device) != cudaSuccess) return nullptr;
-            const auto streamingPolicy = ReadTRTWeightStreamingPolicy();
+            const bool resident=CUDAEnginePool::Active()||validateArtifact;
+            const auto artifactStamp=[&] {
+                return std::to_string(std::filesystem::file_size(enginePath))+":"+
+                    std::to_string(std::filesystem::last_write_time(enginePath).time_since_epoch().count());
+            };
+            const auto streamingPolicy = ReadTRTRuntimeWeightStreamingPolicy();
             if (!streamingPolicy.valid) {
-                std::cout << "[TRTBuilder] Invalid GARNET_TRT_WEIGHT_STREAMING_BUDGET_MIB" << std::endl;
+                std::cout << "[TRTBuilder] Invalid TensorRT weight streaming policy or runtime budget override" << std::endl;
                 return nullptr;
             }
             const char* allocatorPolicy = std::getenv("GARNET_TRT_SYNC_ALLOCATOR");
@@ -343,8 +356,12 @@ namespace Garnet {
                     if (auto owner = found->second.lock()) {
                         if (owner->device != device || bool(owner->allocator) != syncAllocator ||
                             owner->weightStreamingBudget != streamingPolicy.budgetBytes ||
+                            owner->fullResidentWeightLimit != streamingPolicy.fullResidentLimitBytes ||
+                            owner->fullResidentWeightMinimum != streamingPolicy.fullResidentMinimumBytes ||
                             (workspacePolicy>=0&&owner->userManagedWorkspace!=(workspacePolicy==1))) return nullptr;
-                        return owner;
+                        if(!resident||owner->artifactStamp==artifactStamp()){
+                            CUDAEnginePool::Retain(enginePath,owner);return owner;
+                        }
                     }
                 }
                 auto& mutexSlot = g_trtEngineLoadMutexes[enginePath];
@@ -360,8 +377,12 @@ namespace Garnet {
                     if (auto owner = found->second.lock()) {
                         if (owner->device != device || bool(owner->allocator) != syncAllocator ||
                             owner->weightStreamingBudget != streamingPolicy.budgetBytes ||
+                            owner->fullResidentWeightLimit != streamingPolicy.fullResidentLimitBytes ||
+                            owner->fullResidentWeightMinimum != streamingPolicy.fullResidentMinimumBytes ||
                             (workspacePolicy>=0&&owner->userManagedWorkspace!=(workspacePolicy==1))) return nullptr;
-                        return owner;
+                        if(!resident||owner->artifactStamp==artifactStamp()){
+                            CUDAEnginePool::Retain(enginePath,owner);return owner;
+                        }
                     }
                 }
             }
@@ -375,7 +396,10 @@ namespace Garnet {
             auto owner = std::make_shared<CachedTRTExecution>();
             auto& cached = *owner;
             cached.device = device;
+            cached.artifactStamp=artifactStamp();
             cached.weightStreamingBudget = streamingPolicy.budgetBytes;
+            cached.fullResidentWeightLimit = streamingPolicy.fullResidentLimitBytes;
+            cached.fullResidentWeightMinimum = streamingPolicy.fullResidentMinimumBytes;
             cached.userManagedWorkspace = workspacePolicy==1;
             cached.runtime = createInferRuntime(gLogger);
             if (!cached.runtime) {
@@ -388,6 +412,7 @@ namespace Garnet {
             }
             if(!EnsureBF16ProjectionPluginRegistered()||!EnsureQwen35DeltaPluginRegistered()||!EnsureQwen35PackedStorePluginRegistered()||!EnsureModelOptNVFP4PluginRegistered()||!EnsureModelOptFP8PluginRegistered()||!EnsureCTInt4G128PluginRegistered()||!EnsureBF16KVOverlayPluginRegistered()||!EnsureBF16KVLowBatchOverlayPluginRegistered()||!EnsureBF16KVPrefill128OverlayPluginRegistered()||!EnsureBF16KVFloatReferencePluginRegistered())return nullptr;
             LogTRTMemoryCheckpoint("before_engine_deserialize",enginePath);
+            if(!EnsureStreamedBF16ProjectionPluginRegistered())return nullptr;
             cached.engine = cached.runtime->deserializeCudaEngine(engineStream);
             if (!cached.engine) {
                 std::cout << "[TRTBuilder] deserializeCudaEngine failed for cached engine: " << enginePath << std::endl;
@@ -398,7 +423,7 @@ namespace Garnet {
             if (streamingPolicy.Enabled() && cached.engine->getStreamableWeightsSize() > 0) {
                 // Before refit and before any execution context. V2 includes
                 // streaming scratch in the subsequently queried context size.
-                if (!cached.engine->setWeightStreamingBudgetV2(streamingPolicy.budgetBytes)) {
+                if (!cached.engine->setWeightStreamingBudgetV2(streamingPolicy.BudgetForEngine(cached.engine->getStreamableWeightsSize()))) {
                     std::cout << "[TRTBuilder] Weight streaming budget rejected: " << enginePath << std::endl;
                     return nullptr;
                 }
@@ -426,6 +451,7 @@ namespace Garnet {
                         std::unique_ptr<Garnet::SafeTensorsMappedFile>> mappedWeights;
                     std::string mappingError;
                     std::deque<std::vector<unsigned char>> expertShardStorage;
+                    LogTRTMemoryCheckpoint("before_set_named_weights",enginePath);
                     for (const char* weightName : weightNames) {
                         const Garnet::SafeTensorMetadata* metadata = weightIndex->Find(weightName);
                         std::string originalName;
@@ -519,6 +545,7 @@ namespace Garnet {
                             return nullptr;
                         }
                     }
+                    LogTRTMemoryCheckpoint("after_set_named_weights",enginePath);
                     if (!refitter->refitCudaEngine()) {
                         std::cout << "[TRTBuilder] refitCudaEngine failed: " << enginePath << std::endl;
                         return nullptr;
@@ -540,6 +567,7 @@ namespace Garnet {
             LogTRTMemoryCheckpoint("after_engine_refit",enginePath,
                 cached.engine->getDeviceMemorySizeV2());
             cached.contexts = std::make_unique<TRTContextPool>(cached.engine,8,enginePath,cached.userManagedWorkspace);
+            CUDAEnginePool::Retain(enginePath,owner);
 
             std::lock_guard<std::mutex> lock(g_trtExecutionCacheMutex);
             g_trtExecutionCache[enginePath] = owner;
@@ -747,12 +775,117 @@ namespace Garnet {
         }
     }
 
+    struct CUDAEnginePool::State {
+        struct Entry {std::shared_ptr<void> owner;uint64_t bytes=0,lastUse=0;};
+        mutable std::mutex mutex;
+        std::unordered_map<std::string,Entry> engines;
+        uint64_t limit=128ULL<<30,bytes=0,clock=0,hits=0,misses=0,evictions=0;
+        size_t scopes=0;
+        bool closed=false;
+        std::thread::id thread;
+        ~State(){for(auto& entry:engines)std::static_pointer_cast<CachedTRTExecution>(entry.second.owner)->residencyOwners.fetch_sub(1);}
+    };
+    namespace {
+        thread_local std::shared_ptr<CUDAEnginePool::State> currentEnginePool;
+        thread_local size_t enginePoolDepth=0;
+    }
+    CUDAEnginePool::CUDAEnginePool():state_(std::make_shared<State>()){}
+    CUDAEnginePool::~CUDAEnginePool(){
+        if(currentEnginePool==state_){
+            {std::lock_guard<std::mutex> lock(state_->mutex);state_->scopes-=enginePoolDepth;}
+            currentEnginePool.reset();enginePoolDepth=0;
+        }
+        try{Close();}catch(...){}
+    }
+    void CUDAEnginePool::Configure(int64_t bytes){
+        std::lock_guard<std::mutex> lock(state_->mutex);
+        if(bytes<=0||state_->closed||state_->scopes||!state_->engines.empty())throw X::Error("Configure an empty inactive engine pool with a positive weight budget");
+        state_->limit=static_cast<uint64_t>(bytes);
+    }
+    void CUDAEnginePool::Enter(){
+        std::lock_guard<std::mutex> lock(state_->mutex);
+        if(state_->closed||(currentEnginePool&&currentEnginePool!=state_)||
+            (state_->scopes&&state_->thread!=std::this_thread::get_id()))throw X::Error("Engine pool is closed or active on another scope/thread");
+        state_->thread=std::this_thread::get_id();++state_->scopes;++enginePoolDepth;currentEnginePool=state_;
+    }
+    void CUDAEnginePool::Leave(){
+        if(currentEnginePool!=state_||!enginePoolDepth)throw X::Error("Engine pool scope mismatch");
+        {std::lock_guard<std::mutex> lock(state_->mutex);--state_->scopes;}
+        if(!--enginePoolDepth)currentEnginePool.reset();
+    }
+    void CUDAEnginePool::Close(){
+        std::unordered_map<std::string,State::Entry> retired;
+        {
+            std::lock_guard<std::mutex> lock(state_->mutex);
+            if(state_->scopes)throw X::Error("Leave the engine pool scope before closing it");
+            if(state_->closed)return;
+            state_->closed=true;state_->bytes=0;retired.swap(state_->engines);
+            for(auto& entry:retired)std::static_pointer_cast<CachedTRTExecution>(entry.second.owner)->residencyOwners.fetch_sub(1);
+        }
+    }
+    bool CUDAEnginePool::Active(){return bool(currentEnginePool);}
+    void CUDAEnginePool::Retain(const std::string& path,const std::shared_ptr<void>& execution){
+        auto state=currentEnginePool;if(!state)return;
+        auto owner=std::static_pointer_cast<CachedTRTExecution>(execution);
+        std::vector<std::shared_ptr<void>> retired;
+        std::lock_guard<std::mutex> lock(state->mutex);
+        const auto key=path+"|device:"+std::to_string(owner->device);
+        auto found=state->engines.find(key);
+        if(found!=state->engines.end()&&found->second.owner==execution){++state->hits;found->second.lastUse=++state->clock;return;}
+        const uint64_t bytes=static_cast<uint64_t>(owner->engine->getStreamableWeightsSize());
+        if(bytes>state->limit)throw std::runtime_error("Compiled engine exceeds resident host-weight budget");
+        // Allocate bookkeeping before changing ownership/accounting. An
+        // allocation failure must leave every retained entry consistent.
+        retired.reserve(state->engines.size());
+        auto retire=[&](auto entry){
+            state->bytes-=entry->second.bytes;
+            std::static_pointer_cast<CachedTRTExecution>(entry->second.owner)->residencyOwners.fetch_sub(1);
+            retired.push_back(std::move(entry->second.owner));state->engines.erase(entry);++state->evictions;
+        };
+        if(found!=state->engines.end())retire(found);
+        while(state->bytes>state->limit-bytes){
+            auto oldest=state->engines.end();
+            for(auto entry=state->engines.begin();entry!=state->engines.end();++entry)
+                if(entry->second.owner.use_count()==1&&(oldest==state->engines.end()||entry->second.lastUse<oldest->second.lastUse))oldest=entry;
+            if(oldest==state->engines.end())throw std::runtime_error("Resident engine budget is occupied by active model leases");
+            retire(oldest);
+        }
+        state->engines.emplace(key,State::Entry{execution,bytes,state->clock+1});
+        owner->residencyOwners.fetch_add(1);state->bytes+=bytes;++state->misses;++state->clock;
+    }
+    std::string CUDAEnginePool::StatsJson() const{
+        std::lock_guard<std::mutex> lock(state_->mutex);size_t contexts=0;
+        for(const auto& entry:state_->engines)contexts+=std::static_pointer_cast<CachedTRTExecution>(entry.second.owner)->contexts->Size();
+        auto result=nlohmann::json{{"engines",state_->engines.size()},{"streamable_weight_bytes",state_->bytes},{"maximum_weight_bytes",state_->limit},
+            {"engine_hits",state_->hits},{"engine_misses",state_->misses},{"evictions",state_->evictions},{"contexts",contexts},
+            {"active_scopes",state_->scopes},{"closed",state_->closed},
+            {"scope","Native refitted-engine residency; weight accounting excludes other host allocations and is not process RAM or VRAM"}};
+        const auto external=nlohmann::json::parse(StreamedBF16ProjectionStats());
+        if(external.at("uploaded_weight_bytes").get<uint64_t>()>0)
+            result["external_projection_staging"]=external;
+        return result.dump();
+    }
+    void TRTBuilder::RetireResidentContexts(const std::vector<std::shared_ptr<void>>& executions){
+        for(const auto& execution:executions){auto owner=std::static_pointer_cast<CachedTRTExecution>(execution);
+            if(owner->residencyOwners.load(std::memory_order_acquire))owner->contexts->RetireIdle();}
+    }
+
     TRTBuilder::TRTBuilder(X3PackageHost* host) : host_(host) {
         if (!host || !host->runtime)
             throw std::invalid_argument("TRTBuilder requires an XLang3 host");
     }
 
     TRTBuilder::~TRTBuilder() {
+    }
+
+    std::shared_ptr<void> TRTBuilder::RetainCachedEngine(const std::string& path,
+        const SafeTensorsIndex* weights,std::string& error,bool validateArtifact){
+        try{
+            if(!EnsurePagedKVDecodePluginRegistered())throw std::runtime_error("paged-KV plugin registration failed");
+            auto owner=GetCachedTRTEngine(path,weights,0,false,validateArtifact);
+            if(!owner)throw std::runtime_error("failed to prepare cached engine "+path);
+            error.clear();return owner;
+        }catch(const std::exception& exception){error=exception.what();return {};}
     }
 
     std::shared_ptr<void> TRTBuilder::RetainCachedExecution(
@@ -3736,7 +3869,7 @@ namespace Garnet {
                 return collapse->getOutput(0);
             }
         }
-        if (sourceDimensions.nbDims != 1 || targetRank <= 1 || targetRank > Dims::MAX_DIMS) {
+        if (sourceDimensions.nbDims < 0 || sourceDimensions.nbDims >= targetRank || targetRank > Dims::MAX_DIMS) {
             std::string sourceShape = "[";
             for (int dimension = 0; dimension < sourceDimensions.nbDims; ++dimension) {
                 if (dimension) sourceShape += ",";
@@ -3751,10 +3884,12 @@ namespace Garnet {
         }
         Dims broadcastDimensions{};
         broadcastDimensions.nbDims = targetRank;
-        for (int dimension = 0; dimension < targetRank - 1; ++dimension) {
+        for (int dimension = 0; dimension < targetRank; ++dimension) {
             broadcastDimensions.d[dimension] = 1;
         }
-        broadcastDimensions.d[targetRank - 1] = sourceDimensions.d[0];
+        for (int dimension = 0; dimension < sourceDimensions.nbDims; ++dimension) {
+            broadcastDimensions.d[targetRank-sourceDimensions.nbDims+dimension] = sourceDimensions.d[dimension];
+        }
         auto* reshape = network->addShuffle(*tensor);
         if (!reshape) {
             loweringError = "TensorRT broadcast reshape failed for " + layerName;
@@ -4628,6 +4763,9 @@ namespace Garnet {
         const std::string& enginePath,
         const std::vector<TensorInputShapeRange>& inputShapeRanges,
         std::string& errorMessage) {
+        if(!capturedLinearKernelProvider.empty()&&!EnsureStreamedBF16ProjectionPluginRegistered()) {
+            errorMessage="streamed BF16 projection registration failed";return false;
+        }
         capturedTensorNames.clear();
         unsigned long long graphOutputId = 0;
         try {
@@ -4661,6 +4799,7 @@ namespace Garnet {
         integerWeights.clear();
         vectorWeights.clear();
         integerVectorWeights.clear();
+        integer64VectorWeights.clear();
         booleanVectorWeights.clear();
         lastOutput = nullptr;
         pendingKVKeyPages = nullptr;
@@ -4685,7 +4824,7 @@ namespace Garnet {
         }
         const auto streamingPolicy = ReadTRTWeightStreamingPolicy();
         if (!streamingPolicy.valid) {
-            errorMessage = "Invalid GARNET_TRT_WEIGHT_STREAMING_BUDGET_MIB";
+            errorMessage = "Invalid GARNET_TRT_WEIGHT_STREAMING_BUDGET_MIB / GARNET_TRT_FULL_RESIDENT_WEIGHT_LIMIT_MIB";
             return false;
         }
         builder = createInferBuilder(gLogger);
@@ -4838,7 +4977,21 @@ namespace Garnet {
             // dimension itself is dynamic.
             auto* optimizationProfile = builder->createOptimizationProfile();
             bool profileValid = optimizationProfile != nullptr;
-            if (profileValid && !inputShapeRanges.empty()) {
+            if(profileValid&&partitionBuildActive&&!partitionInputShapeRanges.empty()){
+                auto makeDims=[](const std::vector<int>& shape){Dims result{};result.nbDims=int(shape.size());for(int i=0;i<result.nbDims;++i)result.d[i]=shape[i];return result;};
+                for(const auto& input:partitionInputNames){
+                    auto range=partitionInputShapeRanges.find(input.first);auto tensor=tensorMap.find(input.first);
+                    if(range==partitionInputShapeRanges.end()||tensor==tensorMap.end()){profileValid=false;break;}
+                    const auto dimensions=tensor->second->getDimensions();bool dynamic=false;
+                    for(int i=0;i<dimensions.nbDims;++i)dynamic=dynamic||dimensions.d[i]<0;
+                    if(!dynamic)continue;
+                    profileValid=optimizationProfile->setDimensions(input.second.c_str(),OptProfileSelector::kMIN,makeDims(range->second.minShape))&&
+                        optimizationProfile->setDimensions(input.second.c_str(),OptProfileSelector::kOPT,makeDims(range->second.optShape))&&
+                        optimizationProfile->setDimensions(input.second.c_str(),OptProfileSelector::kMAX,makeDims(range->second.maxShape));
+                    if(!profileValid)break;
+                }
+            }
+            else if (profileValid && !inputShapeRanges.empty()) {
                 if (inputShapeRanges.size() != symbolicInputs.size()) profileValid = false;
                 for (size_t index = 0; profileValid && index < inputShapeRanges.size(); ++index) {
                     auto makeDims = [&](const std::vector<int>& shape) {
@@ -4942,7 +5095,8 @@ namespace Garnet {
         const std::string& baseEnginePath,
         const std::vector<CapturedTensorOperation>& operations,
         std::vector<EnginePartitionSpec>& partitions,
-        std::string& errorMessage)
+        std::string& errorMessage,
+        const std::vector<TensorInputShapeRange>& inputShapeRanges)
     {
         partitions.clear();
         std::vector<unsigned long long> terminalIds;
@@ -4978,6 +5132,10 @@ namespace Garnet {
             errorMessage = "captured graph does not require physical partitioning";
             return false;
         }
+        if(!capturedPartitionDevices.empty()&&capturedPartitionDevices.size()!=static_cast<size_t>(partitionCount)){
+            errorMessage="partition devices must contain exactly one device per compiled partition";
+            return false;
+        }
 
         std::unordered_map<unsigned long long, int> requestInputIndices;
         for (size_t index = 0; index < symbolicInputs.size(); ++index) {
@@ -4987,12 +5145,99 @@ namespace Garnet {
             }
         }
 
+        partitionInputShapeRanges.clear();
+        std::unordered_map<unsigned long long,std::vector<std::vector<int>>> shapeScenarios;
+        size_t scenarioCount=0,optimumScenario=0;
+        if(!inputShapeRanges.empty()){
+            if(inputShapeRanges.size()!=symbolicInputs.size()){errorMessage="partition profile/input count mismatch";return false;}
+            int minBatch=1,optBatch=1,maxBatch=1,minSequence=1,optSequence=1,maxSequence=1;
+            for(const auto& range:inputShapeRanges){
+                if(range.batchAxis>=0){minBatch=range.minShape[range.batchAxis]/range.batchUnits;optBatch=range.optShape[range.batchAxis]/range.batchUnits;maxBatch=range.maxShape[range.batchAxis]/range.batchUnits;}
+                if(range.sequenceAxis>=0){minSequence=range.minShape[range.sequenceAxis];optSequence=range.optShape[range.sequenceAxis];maxSequence=range.maxShape[range.sequenceAxis];}
+            }
+            const int64_t batches=int64_t(maxBatch)-minBatch+1,sequences=int64_t(maxSequence)-minSequence+1;
+            // Exhaustive integer shape inference proves interior boundary
+            // bounds too; endpoint interpolation is unsafe for general graphs.
+            if(batches<1||sequences<1||batches>16384||sequences>16384||batches*sequences>16384){
+                errorMessage="dynamic partition profiles require at most 16384 batch/sequence shape combinations";return false;
+            }
+            scenarioCount=size_t(batches*sequences);
+            optimumScenario=size_t(int64_t(optBatch-minBatch)*sequences+optSequence-minSequence);
+            for(size_t i=0;i<symbolicInputs.size();++i){
+                const auto id=TensorId(symbolicInputs[i]);const auto& range=inputShapeRanges[i];
+                partitionInputShapeRanges[id]=range;auto& cases=shapeScenarios[id];cases.reserve(scenarioCount);
+                for(int64_t batch=minBatch;batch<=maxBatch;++batch)for(int64_t sequence=minSequence;sequence<=maxSequence;++sequence){
+                    auto shape=range.optShape;
+                    if(range.batchAxis>=0)shape[range.batchAxis]=int(batch*range.batchUnits);
+                    if(range.sequenceAxis>=0)shape[range.sequenceAxis]=int(sequence);
+                    cases.push_back(std::move(shape));
+                }
+            }
+        }
+        // Shape-only contexts derive boundary profiles from the actual compiled
+        // engines. No model inference, weight refit, or XLang worker calls.
+        auto inferBoundaryProfiles=[&](const EnginePartitionSpec& spec)->bool{
+            try{
+                TensorRTFileStreamReader reader(spec.enginePath);
+                std::unique_ptr<IRuntime> runtime(createInferRuntime(gLogger));
+                if(!runtime||!reader.IsOpen())throw std::runtime_error("cannot read partition engine");
+                std::unique_ptr<ICudaEngine> engine(runtime->deserializeCudaEngine(reader));
+                if(!engine)throw std::runtime_error("cannot deserialize partition for shape inference");
+                if(engine->getStreamableWeightsSize()>0&&!engine->setWeightStreamingBudgetV2(0))
+                    throw std::runtime_error("shape inference weight budget rejected");
+                std::unique_ptr<IExecutionContext> context(engine->createExecutionContext(ExecutionContextAllocationStrategy::kUSER_MANAGED));
+                if(!context||!context->setOptimizationProfileAsync(0,CurrentExecutionStream()))
+                    throw std::runtime_error("cannot create shape-only execution context");
+                std::vector<TensorInputShapeRange> outputs(spec.outputs.size());
+                std::vector<std::vector<std::vector<int>>> outputScenarios(spec.outputs.size());
+                for(auto& cases:outputScenarios)cases.reserve(scenarioCount);
+                for(size_t scenario=0;scenario<scenarioCount;++scenario){
+                    for(size_t i=0;i<spec.inputs.size();++i){
+                        const auto& values=shapeScenarios.at(spec.inputs[i].tensorId).at(scenario);
+                        Dims selected{};selected.nbDims=int(values.size());for(int d=0;d<selected.nbDims;++d)selected.d[d]=values[d];
+                        const auto declared=engine->getTensorShape(spec.inputs[i].name.c_str());bool dynamic=false;
+                        for(int d=0;d<declared.nbDims;++d)dynamic=dynamic||declared.d[d]<0;
+                        if(dynamic&&!context->setInputShape(spec.inputs[i].name.c_str(),selected))
+                            throw std::runtime_error("partition boundary input shape rejected");
+                    }
+                    if(context->inferShapes(0,nullptr)!=0)throw std::runtime_error("partition shapes must not depend on tensor data");
+                    for(size_t i=0;i<spec.outputs.size();++i){
+                        const auto dimensions=context->getTensorShape(spec.outputs[i].name.c_str());
+                        if(dimensions.nbDims<1||dimensions.nbDims>Dims::MAX_DIMS)throw std::runtime_error("partition boundary rank unresolved");
+                        std::vector<int> shape;
+                        for(int d=0;d<dimensions.nbDims;++d){
+                            if(dimensions.d[d]<1||dimensions.d[d]>INT_MAX)throw std::runtime_error("partition boundary extent unresolved");
+                            shape.push_back(int(dimensions.d[d]));
+                        }
+                        auto& range=outputs[i];
+                        if(scenario==0){range.minShape=shape;range.maxShape=shape;}
+                        if(shape.size()!=range.minShape.size())throw std::runtime_error("partition boundary rank varies");
+                        for(size_t d=0;d<shape.size();++d){range.minShape[d]=(std::min)(range.minShape[d],shape[d]);range.maxShape[d]=(std::max)(range.maxShape[d],shape[d]);}
+                        if(scenario==optimumScenario)range.optShape=shape;
+                        outputScenarios[i].push_back(std::move(shape));
+                    }
+                }
+                if(cudaStreamSynchronize(CurrentExecutionStream())!=cudaSuccess)throw std::runtime_error("partition shape stream failed");
+                for(size_t i=0;i<outputs.size();++i){
+                    const auto& range=outputs[i];
+                    if(range.minShape.size()!=range.optShape.size()||range.optShape.size()!=range.maxShape.size())throw std::runtime_error("partition boundary rank varies");
+                    for(size_t d=0;d<range.minShape.size();++d)
+                        if(range.minShape[d]>range.optShape[d]||range.optShape[d]>range.maxShape[d])throw std::runtime_error("partition boundary profile is not monotonic");
+                    partitionInputShapeRanges[spec.outputs[i].tensorId]=std::move(outputs[i]);
+                    shapeScenarios[spec.outputs[i].tensorId]=std::move(outputScenarios[i]);
+                }
+                return true;
+            }catch(const std::exception& exception){errorMessage=std::string("partition profile inference: ")+exception.what();return false;}
+        };
+
         const std::filesystem::path basePath(baseEnginePath);
         partitionBuildActive = true;
         partitionBoundaryMetadata.clear();
         for (int partitionId = 0; partitionId < partitionCount; ++partitionId) {
             EnginePartitionSpec spec;
             spec.id = partitionId;
+            spec.deviceId=capturedPartitionDevices.empty()?-1:capturedPartitionDevices[partitionId];
+            CUDADeviceScope partitionDevice(spec.deviceId);
             spec.enginePath = partitionId == 0
                 ? basePath.string()
                 : (basePath.parent_path() /
@@ -5037,6 +5282,11 @@ namespace Garnet {
                 }
                 partitionInputNames[inputId] = binding.name;
                 spec.inputs.push_back(binding);
+                if(!inputShapeRanges.empty()){
+                    auto range=partitionInputShapeRanges.find(inputId);
+                    if(range==partitionInputShapeRanges.end()){errorMessage="partition boundary profile unavailable";partitionBuildActive=false;return false;}
+                    spec.inputShapeRanges.push_back(range->second);
+                }
             }
             int terminalIndex = 0;
             for (const auto outputId : outputIds) {
@@ -5059,7 +5309,7 @@ namespace Garnet {
                     symbolicInputs,
                     weightIndex,
                     spec.enginePath,
-                    {},
+                    inputShapeRanges,
                     errorMessage)) {
                 partitionBuildActive = false;
                 partitionInputNames.clear();
@@ -5068,12 +5318,14 @@ namespace Garnet {
                 partitions.clear();
                 return false;
             }
+            if(!inputShapeRanges.empty()&&!inferBoundaryProfiles(spec)){partitionBuildActive=false;partitions.clear();return false;}
             partitions.push_back(std::move(spec));
         }
         partitionBuildActive = false;
         partitionInputNames.clear();
         partitionOutputNames.clear();
         partitionBoundaryMetadata.clear();
+        partitionInputShapeRanges.clear();
         errorMessage.clear();
         return true;
     }
@@ -5120,7 +5372,8 @@ namespace Garnet {
         for (const auto& partition : partitions) {
             preparations.push_back(std::async(
                 std::launch::async,
-                [enginePath = partition.enginePath, weightIndex, host = host_]() {
+                [enginePath = partition.enginePath, device=partition.deviceId, weightIndex, host = host_]() {
+                    CUDADeviceScope deviceScope(device);
                     TRTBuilder builder(host);
                     std::string localError;
                     const bool prepared = builder.PrepareCapturedEngine(
@@ -5435,6 +5688,10 @@ namespace Garnet {
         }
         X::Value requestInputs(inputsValue);
         std::unordered_map<unsigned long long, X::Value> intermediates;
+        std::map<std::pair<unsigned long long,int>,X::Value> placedInputs;
+        std::unordered_map<unsigned long long,int> lastConsumer;
+        for(const auto& partition:partitions)
+            for(const auto& binding:partition.inputs)lastConsumer[binding.tensorId]=partition.id;
         X::Value terminalOutput;
         unsigned long long terminalTensorId = 0;
         const char* profileEnvironment = std::getenv("GARNET_PROFILE_PARTITIONS");
@@ -5451,6 +5708,7 @@ namespace Garnet {
         };
 
         for (const auto& partition : partitions) {
+            CUDADeviceScope partitionDevice(partition.deviceId);
             const auto partitionStart = std::chrono::steady_clock::now();
             if (profilePartitions) {
                 writePartitionProfile(
@@ -5464,8 +5722,16 @@ namespace Garnet {
                 errorMessage = "failed to load partition engine " + partition.enginePath;
                 return X::Value();
             }
+            if(!partition.inputShapeRanges.empty()){
+                if(partition.inputShapeRanges.size()!=partition.inputs.size()){errorMessage="partition profile/input count mismatch";return X::Value();}
+                if(cachedUse.slot->activeOptimizationProfile!=0){
+                    if(!context->setOptimizationProfileAsync(0,CurrentExecutionStream())){errorMessage="partition optimization profile selection failed";return X::Value();}
+                    cachedUse.slot->activeOptimizationProfile=0;
+                }
+            }
 
             ExecutionInputs execution;
+            size_t bindingIndex=0;
             for (const auto& binding : partition.inputs) {
                 X::Value inputValue;
                 if (binding.requestInputIndex >= 0) {
@@ -5488,6 +5754,13 @@ namespace Garnet {
                     return X::Value();
                 }
                 X::Tensor input(inputValue);
+                if(partition.deviceId>=0){
+                    const auto key=std::make_pair(binding.tensorId,partition.deviceId);
+                    auto placed=placedInputs.find(key);
+                    if(placed==placedInputs.end())
+                        placed=placedInputs.emplace(key,TensorHelper::CopyToDevice(input,partition.deviceId)).first;
+                    input=X::Tensor(placed->second);
+                }
                 if (!IsContiguousTensor(input)) {
                     errorMessage = "TensorRT partition inputs must be contiguous";
                     return X::Value();
@@ -5495,6 +5768,17 @@ namespace Garnet {
                 if (TensorHelper::EnsureGPUMemory(input) != TensorOpStatus::Success) {
                     errorMessage = "partition input is not GPU resident: " + binding.name;
                     return X::Value();
+                }
+                if(!partition.inputShapeRanges.empty()){
+                    const auto& range=partition.inputShapeRanges[bindingIndex++];const auto& info=input.Info();
+                    if(range.minShape.size()!=size_t(info.rank)){errorMessage="partition runtime profile rank mismatch";return X::Value();}
+                    Dims selected{};selected.nbDims=int(info.rank);const auto declared=engine->getTensorShape(binding.name.c_str());bool dynamic=false;
+                    if(declared.nbDims!=selected.nbDims){errorMessage="partition engine/input rank mismatch";return X::Value();}
+                    for(int d=0;d<selected.nbDims;++d){
+                        if(info.shape[d]<range.minShape[d]||info.shape[d]>range.maxShape[d]){errorMessage="partition runtime shape outside compiled profile";return X::Value();}
+                        selected.d[d]=info.shape[d];dynamic=dynamic||declared.d[d]<0;
+                    }
+                    if(dynamic&&!context->setInputShape(binding.name.c_str(),selected)){errorMessage="partition runtime input shape rejected";return X::Value();}
                 }
                 // Partition bindings likewise lack persisted plugin mutation
                 // metadata; input/output direction alone cannot imply READ.
@@ -5512,7 +5796,7 @@ namespace Garnet {
 
             std::vector<std::pair<EnginePartitionBinding, X::Value>> outputs;
             for (const auto& binding : partition.outputs) {
-                const Dims dimensions = engine->getTensorShape(binding.name.c_str());
+                const Dims dimensions = partition.inputShapeRanges.empty()?engine->getTensorShape(binding.name.c_str()):context->getTensorShape(binding.name.c_str());
                 if (dimensions.nbDims < 0 || dimensions.nbDims > Dims::MAX_DIMS) {
                     errorMessage = "invalid partition output shape for " + binding.name;
                     return X::Value();
@@ -5521,10 +5805,11 @@ namespace Garnet {
                 std::vector<int64_t> outputShape; outputShape.reserve(dimensions.nbDims);
                 for (int index = 0; index < dimensions.nbDims; ++index) {
                     if (dimensions.d[index] <= 0) {
-                        errorMessage = "dynamic partition outputs are not implemented";
+                        errorMessage = "partition output shape remains unresolved";
                         return X::Value();
                     }
                     outputShape.push_back(dimensions.d[index]);
+                    if(elementCount>std::numeric_limits<size_t>::max()/size_t(dimensions.d[index])){errorMessage="partition output element count overflows";return X::Value();}
                     elementCount *= static_cast<size_t>(dimensions.d[index]);
                 }
 
@@ -5551,6 +5836,7 @@ namespace Garnet {
                     errorMessage = "unsupported partition output dtype";
                     return X::Value();
                 }
+                if(elementCount>std::numeric_limits<size_t>::max()/elementBytes){errorMessage="partition output byte count overflows";return X::Value();}
 
                 void* devicePointer = nullptr;
                 X::Value outputValue;
@@ -5624,6 +5910,14 @@ namespace Garnet {
                     terminalTensorId = output.first.tensorId;
                 }
             }
+            // Consumer leases carry completion events, so dropping graph-edge
+            // references after their last use cannot free in-flight storage.
+            for(const auto& binding:partition.inputs){
+                if(lastConsumer[binding.tensorId]!=partition.id)continue;
+                if(binding.tensorId!=terminalTensorId)intermediates.erase(binding.tensorId);
+                for(auto copy=placedInputs.begin();copy!=placedInputs.end();)
+                    if(copy->first.first==binding.tensorId)copy=placedInputs.erase(copy);else ++copy;
+            }
         }
 
         if (!terminalOutput.IsValid()) {
@@ -5683,6 +5977,13 @@ namespace Garnet {
             return X::Value();
         }
         if (!loweringActive) {
+            return X::Value(true);
+        }
+        if (opName == "tensor_concat") {
+            LowerTensorPrimitive(opName, GetOrCreateTRTTensor(input1),
+                GetOrCreateTRTTensor(input2), kwParams, lastOutput);
+            if (!lastOutput) return X::Value();
+            tensorMap[TensorId(output)] = lastOutput;
             return X::Value(true);
         }
         if(opName.rfind("qwen35_",0)==0) {
@@ -6239,7 +6540,10 @@ namespace Garnet {
             return item ? static_cast<int>(item->second.ToLongLong()) : fallback;
         };
 
-        if(opName.rfind("qwen35_",0)==0) {
+        if (LowerTensorPrimitive(opName, source, nullptr, kwParams, lastOutput)) {
+            if (!lastOutput) return X::Value();
+        }
+        else if(opName.rfind("qwen35_",0)==0) {
             try {
                 std::unordered_map<std::string,ITensor*> external;std::set<std::string> usedExternal;
                 if(auto* bindings=FindKeyword(kwParams,"external_weights")){
@@ -6645,9 +6949,10 @@ namespace Garnet {
         else if (opName.rfind("gpt_oss_", 0) == 0) {
             lastOutput = LowerGptOss(opName, source, nullptr, kwParams);
         }
-        else if (opName == "neg" || opName == "exp") {
+        else if (opName == "neg" || opName == "exp" || opName == "sqrt" || opName == "sin" || opName == "log") {
             auto* layer = network->addUnary(*source,
-                opName == "neg" ? UnaryOperation::kNEG : UnaryOperation::kEXP);
+                opName == "neg" ? UnaryOperation::kNEG : opName == "sqrt" ? UnaryOperation::kSQRT :
+                opName == "sin" ? UnaryOperation::kSIN : opName == "log" ? UnaryOperation::kLOG : UnaryOperation::kEXP);
             lastOutput = layer ? layer->getOutput(0) : nullptr;
         }
         else if (opName == "reshape" || opName == "permute") {
@@ -6661,8 +6966,9 @@ namespace Garnet {
             if (opName == "reshape") {
                 Dims shape{};
                 shape.nbDims = static_cast<int>(values.size());
+                int inferred=0;
                 for (int i = 0; i < shape.nbDims; ++i) {
-                    if (values[i] < 0 || values[i] > INT_MAX) {
+                    if (values[i] < -1 || values[i] > INT_MAX || (values[i]==-1&&++inferred>1)) {
                         loweringError = "invalid reshape dimension";
                         return X::Value();
                     }
@@ -7759,7 +8065,9 @@ namespace Garnet {
                 return X::Value();
             }
             const std::string weightName = weightNameItem->second.ToString();
-            ITensor* weight = GetOrCreateTRTWeightFP32(weightName);
+            auto* preserveDtype = FindKeyword(kwParams, "preserve_dtype");
+            ITensor* weight = preserveDtype && preserveDtype->second.ToLongLong()
+                ? GetOrCreateTRTWeight(weightName) : GetOrCreateTRTWeightFP32(weightName);
             if (!weight) {
                 loweringError = "embedding weight " + weightName + ": " + loweringError;
                 return X::Value();
@@ -7783,7 +8091,29 @@ namespace Garnet {
                 return X::Value();
             }
             const bool bf16Compute = computeDtype == "bfloat16";
-            ITensor* weight = !bf16Compute && (opName == "lm_head" || predictorWeight)
+            const std::string accumulationOutput = keywordText("accumulation_output_dtype");
+            if(!accumulationOutput.empty()&&(accumulationOutput!="float32"||bf16Compute||opName!="linear")){
+                loweringError="linear accumulation_output_dtype supports float32 without compute_dtype=bfloat16";return X::Value();
+            }
+            const bool floatAccumulationOutput=accumulationOutput=="float32";
+            const auto* cacheHint=FindKeyword(kwParams,"cache_weights");
+            if(cacheHint && cacheHint->second.raw().tag!=X3_TAG_BOOL){
+                loweringError="linear cache_weights must be boolean";return X::Value();
+            }
+            const auto* streamedMetadata=capturedWeightIndex?capturedWeightIndex->Find(projectionWeightName):nullptr;
+            const bool streamed=(capturedLinearKernelProvider=="streamed_bf16"||capturedLinearKernelProvider=="registered_bf16")&&opName=="linear"&&
+                !predictorWeight&&(bf16Compute||(computeDtype!="float32"&&keywordText("accumulation_dtype")!="float32"))&&keywordInt("tp_rank",-1)<0&&
+                streamedMetadata&&streamedMetadata->dataType=="BF16"&&streamedMetadata->shape.size()==2&&
+                streamedMetadata->shape[0]>0&&streamedMetadata->shape[0]<=32768&&
+                streamedMetadata->shape[1]>0&&streamedMetadata->shape[1]<=16384&&
+                streamedMetadata->dataSize<=(256ULL<<20);
+            const auto projectionCompute=keywordText("projection_compute");
+            const bool fp8Projection=projectionCompute=="fp8_e4m3";
+            if(!projectionCompute.empty()&&(!fp8Projection||!streamed||floatAccumulationOutput)){
+                loweringError="fp8_e4m3 projection requires a streamed BF16 matrix and BF16 output";
+                return X::Value();
+            }
+            ITensor* weight = streamed?nullptr:!bf16Compute && (opName == "lm_head" || predictorWeight)
                 ? GetOrCreateTRTWeightFP32(weightNameItem->second.ToString())
                 : GetOrCreateTRTWeight(weightNameItem->second.ToString());
             const std::string tpMode = keywordText("tp_mode");
@@ -7878,7 +8208,9 @@ namespace Garnet {
             }
             ITensor* projectionInput = source;
             const DataType sourceType = source->getType();
-            const DataType projectionType = bf16Compute ? DataType::kBF16 :
+            const bool roundAccumulationInput=floatAccumulationOutput&&!streamed&&weight&&weight->getType()==DataType::kBF16&&
+                computeDtype!="float32"&&keywordText("accumulation_dtype")!="float32";
+            const DataType projectionType = streamed ? DataType::kBF16 : floatAccumulationOutput ? DataType::kFLOAT : bf16Compute ? DataType::kBF16 :
                 opName == "lm_head" || computeDtype == "float32" ||
                 keywordText("accumulation_dtype") == "float32"
                 ? DataType::kFLOAT
@@ -7887,11 +8219,29 @@ namespace Garnet {
                 auto* cast = network->addCast(*weight, projectionType);
                 weight = cast ? cast->getOutput(0) : nullptr;
             }
-            if (weight && source->getType() != projectionType) {
+            if ((weight||streamed) && source->getType() != projectionType) {
                 auto* cast = network->addCast(*source, projectionType);
                 projectionInput = cast ? cast->getOutput(0) : nullptr;
             }
-            if (gptOssGemv) {
+            if(roundAccumulationInput&&sourceType==DataType::kFLOAT){
+                auto* narrowed=network->addCast(*source,DataType::kBF16);
+                auto* restored=narrowed?network->addCast(*narrowed->getOutput(0),DataType::kFLOAT):nullptr;
+                projectionInput=restored?restored->getOutput(0):nullptr;
+            }
+            if(streamed) {
+                try {
+                    auto spec=StreamedBF16ProjectionSpec::FromMetadata(*streamedMetadata);
+                    spec.registeredSource=capturedLinearKernelProvider=="registered_bf16";
+                    spec.floatOutput=floatAccumulationOutput;
+                    spec.fp8Compute=fp8Projection;
+                    spec.cacheWeights=!cacheHint||cacheHint->second.ToLongLong()!=0;
+                    auto* plugin=new StreamedBF16ProjectionPlugin(std::move(spec));
+                    ownedPlugins.push_back(plugin);ITensor* inputs[]{projectionInput};
+                    auto* projected=projectionInput?network->addPluginV2(inputs,1,*plugin):nullptr;
+                    if(!projected)throw std::runtime_error("streamed projection plugin construction failed");
+                    lastOutput=projected->getOutput(0);
+                }catch(const std::exception& error){loweringError=projectionWeightName+": "+error.what();return X::Value();}
+            } else if (gptOssGemv) {
                 lastOutput = LowerGptOssDecodeGemv(projectionInput, weight,
                     tpRank, tpMode == "qkv", keywordInt("tp_heads", 0),
                     keywordInt("tp_kv_heads", 0), keywordInt("tp_head_dim", 0));
@@ -7914,8 +8264,9 @@ namespace Garnet {
                 }
                 lastOutput = projection->getOutput(0);
             }
-            if ((opName != "lm_head" || bf16Compute) && lastOutput->getType() != sourceType) {
-                auto* cast = network->addCast(*lastOutput, sourceType);
+            const DataType outputType=floatAccumulationOutput?DataType::kFLOAT:sourceType;
+            if ((opName != "lm_head" || bf16Compute) && lastOutput->getType() != outputType) {
+                auto* cast = network->addCast(*lastOutput, outputType);
                 lastOutput = cast ? cast->getOutput(0) : nullptr;
                 if (!lastOutput) {
                     loweringError =
@@ -8053,9 +8404,16 @@ namespace Garnet {
                     *root->getOutput(0),
                     ElementWiseOperation::kDIV)
                 : nullptr;
-            auto* scaled = normalized
+            ITensor* normalizedValue = normalized ? normalized->getOutput(0) : nullptr;
+            auto* roundBeforeScale = FindKeyword(kwParams, "round_before_scale");
+            if (normalizedValue && roundBeforeScale && roundBeforeScale->second.ToLongLong()) {
+                auto* narrowed = network->addCast(*normalizedValue, DataType::kBF16);
+                auto* restored = narrowed ? network->addCast(*narrowed->getOutput(0), DataType::kFLOAT) : nullptr;
+                normalizedValue = restored ? restored->getOutput(0) : nullptr;
+            }
+            auto* scaled = normalizedValue
                 ? network->addElementWise(
-                    *normalized->getOutput(0),
+                    *normalizedValue,
                     *scaleFloat,
                     ElementWiseOperation::kPROD)
                 : nullptr;

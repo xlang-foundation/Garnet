@@ -1,0 +1,43 @@
+{
+  "scope": "New FP32 arithmetic policy operator pilot: centered group64 affine Q4 dot with one shared per-input group sum. Original FP64 error bound unchanged; not lossless to the old accumulation order. No model/runtime/serving qualification.",
+  "source_profiling_study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-gpu-census1",
+  "source_engine": "mistral-fused-q4-decode-native1/source3",
+  "control_shader_sha256": {
+    "ordinary1.metal": "4ab855d7b84d9b7a9023895495c5c8ec729d27b0f6fb87b3413b25770709b37e",
+    "indexed1.metal": "3c193e488eea53970c3f5c00edf45dd59c0c6bb37c08e6f6cc723708f21c8f4c"
+  },
+  "trained_layer": 15,
+  "shapes": [
+    "gate",
+    "down"
+  ],
+  "logical_rows": [
+    1,
+    4
+  ],
+  "candidate_output_columns_per_simd": [
+    1,
+    4
+  ],
+  "quantization_group": 64,
+  "operand_precision": "Original FP32 inputs; original FP16 coefficient bits; centered integer nibbles; FP32 FMA/accumulation, MSL3.1 fastMathEnabled=NO.",
+  "center": "nearest integer -bias/scale only when in0..15, otherwise0; residual=fma(z,scale,bias)",
+  "input_sum": "per physical row/group, sequential FP32 addition of64 values; preallocated scratch; included in command time",
+  "dtype_specific_bound": "2e-6+4e-6*sum_abs(original FP32 dequantized-weight products)",
+  "fixed1_vs_batch_bits_required": true,
+  "old_fp32_bits_expected_to_differ": true,
+  "pilot_warmups": 5,
+  "pilot_measured_rounds": 21,
+  "selection_is_not_qualification": true,
+  "required_before_native_integration": [
+    "Full trained layers0/15/31 and Q4 coefficient reconstruction proof",
+    "All selected row masks, tails, offsets, padding and adversarial numeric cases",
+    "Independent FP64 oracle at unchanged bound",
+    "Fixed1-vs-batch bit identity inside the new arithmetic policy",
+    "Repeated serial operator timing with fixed paired order",
+    "Full model IDs/quality and ordinary/verification parity inside separately identified profile",
+    "Prefix-cache producer lineage and multi-request serving qualification"
+  ],
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

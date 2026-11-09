@@ -2,6 +2,9 @@
 #pragma once
 #include "xlang3/xlang3.h"
 #include "metal_context.h"
+#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+#include "kv_commit_hoist_policy.h"
+#endif
 #include "safetensors_index.h"
 #ifdef GARNET_METAL_MLX_AFFINE_INT4
 #include "mlx_qwen35_checkpoint.h"
@@ -35,6 +38,14 @@ class MetalCompiledGraph {
     std::unique_ptr<MetalContext> gpu_;
     std::vector<Slot> slots_;
     std::vector<Op> ops_;
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+    // Logical whole-segment aliases retained for native AR DAG expansion.
+    // These are capture identities, independent of temporary storage reuse.
+    std::unordered_map<size_t,size_t> lookaheadAliases_;
+#endif
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+    std::unordered_map<size_t,size_t> diagnosticAliases_;
+#endif
     std::vector<size_t> inputs_;
     std::vector<std::vector<int64_t>> inputShapes_;
     std::unordered_map<uint64_t,size_t> tensors_;
@@ -51,6 +62,18 @@ class MetalCompiledGraph {
     std::vector<size_t> outputParts_;
     std::vector<std::vector<size_t>> outputStorageGroups_;
     std::vector<uint8_t> residentOps_;
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+    std::vector<uint8_t> fusedDecodeSites_;
+#endif
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+    std::vector<uint8_t> fusedMlpSites_;
+#endif
+#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+    KVHoistPlan kvHoistPlan_;
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+    bool halfOnlyPrepared_=false;
+#endif
+#endif
     uint64_t generation_=0;
     double compileMs_=0,inferenceMs_=0;
     size_t visionGlobalAlphaDispatches_=0;
@@ -109,6 +132,16 @@ class MetalCompiledGraph {
     void Encode(MetalContext&,bool packedOutput=true,const MetalMatrix* greedyOutput=nullptr,
         const std::vector<size_t>* selectedTokenRows=nullptr,VerificationBindings* verification=nullptr);
     void EncodeGreedy(MetalContext&,const MetalMatrix& prediction,const std::vector<size_t>* selectedRows=nullptr);
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+    struct DiagnosticFfn {size_t begin=0,residual=0,normWeight=0,gateWeight=0,upWeight=0,downWeight=0;float epsilon=0,offset=0;};
+    DiagnosticFfn DescribeDiagnosticFfn() const;
+    struct DiagnosticKV {size_t keyOp=0,valueOp=0,keyOut=0,valueOut=0,keyWeight=0,valueWeight=0,normWeight=0;float epsilon=0,offset=0;};
+    DiagnosticKV DescribeDiagnosticKV() const;
+    struct DiagnosticQO {size_t queryOp=0,queryOut=0,queryWeight=0,outputOp=0,outputWeight=0,context=0;std::vector<size_t> inputOps;};
+    DiagnosticQO DescribeDiagnosticQO(const DiagnosticKV&,const DiagnosticFfn&) const;
+    void EncodeDiagnosticAttentionPrefix(MetalContext&,const DiagnosticKV&,const DiagnosticQO&);
+    void EncodeDiagnosticPrefix(MetalContext&,size_t end,const DiagnosticKV* suppliedKV=nullptr);
+#endif
     bool CanUpdateKVInPlace(size_t part) const;
 #ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
     bool CanUpdateLinearStateInPlace(size_t part) const;
@@ -158,6 +191,12 @@ public:
 #endif
 #endif
 #endif
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+    size_t FusedMlpSites() const {std::lock_guard<std::mutex> lock(mutex_);size_t n=0;for(auto v:fusedMlpSites_)n+=v!=0;return n;}
+#endif
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+    size_t FusedDecodeSites() const {std::lock_guard<std::mutex> lock(mutex_);size_t n=0;for(auto v:fusedDecodeSites_)n+=v!=0;return n;}
+#endif
     bool Ready() const {return ready_;}
     double CompileMs() const {return compileMs_;}
     double LastInferenceMs() const {return inferenceMs_;}
@@ -168,6 +207,9 @@ public:
     size_t LastVisionVectorDispatches() const {return visionVectorDispatches_;}
     size_t LastMlpGraphDispatches() const {return mlpGraphDispatches_;}
     BEGIN_PACKAGE(MetalCompiledGraph)
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+        APISET().AddProp("fused_decode_sites",&MetalCompiledGraph::FusedDecodeSites);
+#endif
 #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
         APISET().AddProp("shared_prefill_scratch_bytes",&MetalCompiledGraph::SharedPrefillScratchBytes);
 #ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
@@ -200,6 +242,9 @@ public:
 #endif
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
         APISET().AddProp("nonresident_pack_slots",&MetalCompiledGraph::NonresidentPackSlots);
+#endif
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+        APISET().AddProp("fused_mlp_sites",&MetalCompiledGraph::FusedMlpSites);
 #endif
         APISET().AddProp("ready",&MetalCompiledGraph::Ready);
         APISET().AddProp("compile_ms",&MetalCompiledGraph::CompileMs);

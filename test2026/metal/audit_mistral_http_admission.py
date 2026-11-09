@@ -47,6 +47,20 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     require({'prepared_dense_prefill', 'dense_prefill_max_tokens=512',
              'indexed_token_projections', 'active_decode_projections',
              'affine_coefficient_dtype=fp16'} <= backend, 'incorrect native backend')
+    grouped = profile.get('mistral_grouped_value_context',False)
+    require(type(grouped) is bool and grouped==('mistral_grouped_value_context_two_heads' in backend), 'grouped value context compiled policy differs')
+    aliases = profile.get('prefill_alias_groups',False)
+    hidden_pool = profile.get('prefill_hidden_pool',False)
+    require(type(aliases) is bool and aliases==('prefill_alias_groups' in backend), 'alias compiled policy differs')
+    require(type(hidden_pool) is bool and hidden_pool==('native_prefill_hidden_pool' in backend), 'hidden pool compiled policy differs')
+    if aliases:
+        require(profile.get('require_lifetime_reuse') is True and 'prefill_lifetime_reuse' in backend, 'alias lifetime profile differs')
+        require(counts['native_prefill_alias_prepared']==1, 'missing alias preparation')
+        alias_event=next(e for e in events if e['event']=='native_prefill_alias_prepared')
+        require(alias_event['layout']==profile.get('expected_prefill_alias_layout') and len(alias_event['layout'])==32, 'alias prepared layout differs')
+        require(sum(x['groups'] for x in alias_event['layout'])>0 and all(x['slots']>=2*x['groups'] for x in alias_event['layout']), 'empty or invalid alias layout')
+        require(events.index(alias_event)<events.index(ready), 'alias preparation after readiness')
+    else: require(counts['native_prefill_alias_prepared']==0, 'unexpected alias preparation')
     matrix_attention = profile.get('chunk_attention_mps', False)
     attention_scratch = profile.get('chunk_attention_scratch', False)
     require(type(attention_scratch) is bool and attention_scratch == ('chunk_attention_full_write_scratch' in backend)
@@ -78,7 +92,24 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             'Mistral four-row decode reuse policy differs from backend')
     require(type(active_requests) is bool and active_requests == ('chunk_attention_active_rows' in backend)
             and (not active_requests or matrix_attention), 'physical request schedule differs from backend')
+    packed = profile.get('mistral_packed_prefill', False)
+    require(type(packed) is bool and packed == ('mistral_packed_prefill_optional' in backend)
+            and (not packed or (profile.get('packed_prefill_min_rows')==128
+                and profile.get('packed_prefill_plans')==3 and profile.get('packed_prefill_scratch_bytes')==14680064
+                and {'packed_prefill_min_rows=128','packed_prefill_scratch_bytes=14680064'}<=backend
+                and 'mistral_streamed_prefill_optional' not in backend)), 'packed compiled profile differs')
+    require(counts['native_packed_prefill_prepared']==int(packed), 'missing/unexpected packed preparation')
+    if packed:
+        prepared=next(e for e in events if e['event']=='native_packed_prefill_prepared')
+        require((prepared['plans'],prepared['scratch_buffers'],prepared['scratch_bytes'])==(3,1,14680064), 'incorrect packed workspace')
+        require(events.index(prepared)<events.index(ready), 'packed plans prepared after ready')
     reuse64 = profile.get('require_reuse64', False)
+    reuse128 = profile.get('require_reuse128', False)
+    require(type(reuse128) is bool and reuse128 == ('mpp_affine_reuse128_optional' in backend)
+            and (not reuse128 or (reuse64 and profile.get('reuse128_min_rows')==128
+                and profile.get('reuse128_threadgroup_threads')==256 and profile.get('reuse128_even64_tiles') is True
+                and {'mpp_affine_reuse128_min_rows=128','mpp_affine_reuse128_threads=256',
+                     'mpp_affine_reuse128_even64_tiles=1'}<=backend)), 'cooperative128 compiled policy differs')
     require(type(reuse64) is bool and reuse64 == ('mpp_affine_reuse64_optional' in backend),
             'cooperative64 policy differs from backend')
     if reuse64:
@@ -104,10 +135,12 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
     profile_counts = collections.Counter()
     pending = None
     pending_fresh = False
+    pool_expected = None
     fresh_prefill_batches = 0
     attention_checks, attention_expected = set(), None
     maximum_active = 0
     reuse64_expected = None
+    last_prefill_active = None
     requests = []
     scatter_expected = None
     layout_expected = None
@@ -226,6 +259,9 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 attention_expected = (stage, active, tail, extent, active_owners)
                 attention_checks = set()
             stage_counts[stage] += 1
+        elif kind == 'native_prefill_pool':
+            require(hidden_pool and pool_expected==(e['stage'],e['bindings']), 'incorrect hidden pool binding route')
+            pool_expected=None
         elif kind == 'native_compact_prefill_prepared':
             require(compact_owner and e['families'] == (17 if wide_owner else 14)
                     and (not wide_owner or e.get('maximum_chunk')==512), 'incorrect compact family inventory')
@@ -277,6 +313,8 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                     'incorrect/unexpected vector layout dispatch coverage')
             layout_expected = None
         elif kind == 'native_affine_profile':
+            require(pool_expected is None, 'missing pool event before next affine stage')
+            if hidden_pool and e['stage'] in ('prefill','decode'):pool_expected=(e['stage'],32 if e['stage']=='prefill' else 0)
             stage = e['stage']
             require(stage in ('prefill', 'decode', 'head'), 'unknown affine stage')
             if stage != 'head':
@@ -298,22 +336,37 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
                 require(e['mistral_decode_reuse_dispatches'] == expected_reuse, 'incorrect Mistral reuse projection coverage')
             else:
                 require(e.get('mistral_decode_reuse_dispatches',0) == 0, 'unexpected Mistral reuse dispatch')
+            if stage=='prefill':
+                last_prefill_active=sum(r['prefill_tokens'] for r in requests)
+                require(not packed or e['active_rows']==last_prefill_active, 'packed extent differs from native plan')
             profile_counts[stage] += 1
         elif kind in ('native_mpp', 'native_indexed'):
             expected = 224 if kind == 'native_mpp' or e['active_tokens'] < physical_batch*current_chunk else 0
             require(e['affine_dispatches'] == expected, 'incorrect prefill projection route')
+            if packed and kind=='native_mpp':
+                selected=160 if last_prefill_active>=128 else 0
+                require(e['packed_prefill_dispatches']==selected and e['legacy_mpp_dispatches']==224-selected,
+                        'incorrect packed/legacy MPP accounting')
+            if packed and kind=='native_indexed':
+                require(e['active_tokens']==last_prefill_active, 'packed indexed extent differs')
             if kind == 'native_indexed':
                 require(0 < e['active_tokens'] <= physical_batch*current_chunk and e['physical_rows'] == physical_batch*current_chunk,
                         'invalid indexed prefill extent')
                 if reuse64:
                     require(reuse64_expected is None, 'missing prior cooperative64 event')
                     reuse64_expected = (e['active_tokens'], e['physical_rows'])
-        elif kind == 'native_reuse64':
+        elif kind in ('native_reuse64','native_cooperative_affine'):
             require(reuse64 and reuse64_expected == (e['logical_rows'], e['physical_rows']),
                     'cooperative64 extent differs from active native rows')
-            require(e['affine_dispatches'] == (profile['expected_body_reuse64_projections']
-                                             if e['logical_rows'] >= 64 else 0),
-                    'incorrect cooperative64 projection coverage')
+            expected=profile['expected_body_reuse64_projections'] if e['logical_rows']>=64 else 0
+            require(e['affine_dispatches']==expected and (kind=='native_cooperative_affine')==reuse128,
+                    'incorrect cooperative projection coverage')
+            if reuse128:
+                packed_selected=expected if packed and e['logical_rows']>=128 else 0
+                selected=expected-packed_selected if e['logical_rows']>=128 and ((e['logical_rows']+63)//64)%2==0 else 0
+                require(e['reuse128_dispatches']==selected and e['reuse64_dispatches']==expected-selected-packed_selected
+                        and e['reuse128_threads']==256 and e.get('packed_dispatches',0)==packed_selected,
+                        'incorrect native64/128/packed tile selection')
             reuse64_expected = None
         elif kind == 'native_indexed_decode':
             require(e['stage'] in ('decode', 'head') and 0 < e['active_rows'] <= 4
@@ -353,6 +406,8 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             completed[key] = e
             del rows[e['native_row']]
     require(not tick_batches and compact_expected is None and not rows and pending is None and reuse64_expected is None and scatter_expected is None and layout_expected is None and all(not c for c in chunks.values()), 'unfinished native work')
+    require(pool_expected is None, 'missing final hidden pool event')
+    require(counts['native_prefill_pool']==(fresh_prefill_batches+stage_counts['decode'] if hidden_pool else 0), 'missing/unexpected hidden pool route')
     require(counts['native_compact_prefill'] == (fresh_prefill_batches+stage_counts['decode'] if compact_owner else 0), 'missing compact execution route')
     require(counts['native_chunk_flash_attention'] == (fresh_prefill_batches+stage_counts['decode'] if flash_attention else 0), 'missing fused attention stage event')
     require(wide_owner or counts['native_profile_tick']==0, 'unexpected adaptive profile tick')
@@ -360,7 +415,8 @@ def validate(events, clients, controls, profile, exit_status, expected_requests=
             'missing vector layout stage event')
     require(counts['native_chunk_kv_scatter'] == (fresh_prefill_batches+stage_counts['decode'] if kv_scatter else 0),
             'missing contiguous KV stage event')
-    require(counts['native_reuse64'] == (fresh_prefill_batches if reuse64 else 0),
+    require(counts['native_reuse64'] == (fresh_prefill_batches if reuse64 and not reuse128 else 0)
+            and counts['native_cooperative_affine'] == (fresh_prefill_batches if reuse128 else 0),
             'missing/unexpected cooperative64 event')
     require(profile_counts['prefill'] == fresh_prefill_batches == counts['native_mpp'] == counts['native_indexed']
             and profile_counts['decode'] == stage_counts['decode']
@@ -466,6 +522,11 @@ def main():
         for i, (body, expected) in enumerate(zip(bodies, workload['requests'])):
             prefix = root/'campaign/cohort-1'/(plan['id']+'-measured-0')/('request-'+str(i))
             clients.append(load_client(prefix, plan['id'], body, expected['token_ids'], read, raw))
+    if profile.get('mistral_packed_prefill'):
+        inventory=read(Path(profile['memory_inventory_path']))
+        refs=[x for x in inventory['references'] if x['role']=='packed_prefill_half_input']
+        require(len(refs)==1 and inventory['buffers'][refs[0]['buffer_id']]['length_bytes']==14680064,
+                'saved packed workspace inventory differs')
     report = validate(events, clients, controls, profile, exit_status)
     rejected = []
     corruptions = ['wrong-bound', 'stale-lease', 'wrong-slot', 'oversized-chunk', 'missing-projection',
@@ -484,6 +545,12 @@ def main():
         corruptions += ['wrong-vector-layout-policy', 'wrong-vector-layout-count', 'missing-vector-layout-event']
     if profile.get('compact_owner_prefill'):
         corruptions += ['wrong-compact-policy','wrong-compact-inventory','wrong-compact-span','missing-compact-route','wrong-compact-footprint']
+    if profile.get('prefill_alias_groups'):
+        corruptions += ['alias-policy','alias-layout','missing-alias-preparation','alias-lifetime']
+    if profile.get('prefill_hidden_pool'):
+        corruptions += ['pool-policy','pool-bindings','missing-pool-route']
+    if profile.get('mistral_grouped_value_context'):
+        corruptions += ['grouped-value-policy']
     if profile.get('chunk_flash_attention'):
         corruptions += ['wrong-flash-policy','wrong-flash-dispatch','missing-flash-route']
     if profile.get('wide_owner_prefill'):
@@ -491,13 +558,40 @@ def main():
                         'missing-profile-tick','wrong-tick-budget','wrong-prepared-chunk','wrong-tick-order']
     if profile.get('chunk_attention_scratch'):
         corruptions += ['wrong-attention-scratch-policy']
+    if profile.get('require_reuse128'):
+        # The new event carries both real kernel counts; preserve total work
+        # while replacing128 by64 to exercise the independent policy decision.
+        corruptions=[c for c in corruptions if c not in ('wrong-reuse-rows','wrong-reuse-count','missing-reuse-event')]
+        corruptions += ['wrong-reuse128-policy','wrong-reuse128-route','wrong-reuse128-threads','missing-cooperative-event']
+    if profile.get('mistral_packed_prefill'):
+        corruptions=[c for c in corruptions if c!='wrong-reuse128-route']
+        corruptions+=['wrong-packed-policy','wrong-packed-workspace','missing-packed-preparation','wrong-packed-route','wrong-packed-mpp']
     for label in corruptions:
         es, cs, ct = copy.deepcopy(events), copy.deepcopy(clients), copy.deepcopy(controls)
-        if label == 'wrong-bound':
+        if label == 'wrong-packed-policy':
+            next(e for e in es if e['event']=='ready')['backend']=next(e for e in es if e['event']=='ready')['backend'].replace('packed_prefill_min_rows=128','packed_prefill_min_rows=64')
+        elif label == 'wrong-packed-workspace':next(e for e in es if e['event']=='native_packed_prefill_prepared')['scratch_bytes']=4
+        elif label == 'missing-packed-preparation':es.remove(next(e for e in es if e['event']=='native_packed_prefill_prepared'))
+        elif label == 'wrong-packed-route':
+            e=next(e for e in es if e['event']=='native_cooperative_affine' and e['packed_dispatches'])
+            e['reuse128_dispatches']+=e['packed_dispatches'];e['packed_dispatches']=0
+        elif label == 'wrong-packed-mpp':
+            e=next(e for e in es if e['event']=='native_mpp' and e['packed_prefill_dispatches'])
+            e['legacy_mpp_dispatches']+=e['packed_prefill_dispatches'];e['packed_prefill_dispatches']=0
+        elif label == 'wrong-bound':
             next(e for e in es if e['event'] == 'native_dense_schedule_bound')['global_token_budget'] = 1024
         elif label == 'wrong-attention-scratch-policy':
             ready = next(e for e in es if e['event'] == 'ready')
             ready['backend'] = ready['backend'].replace('chunk_attention_full_write_scratch','chunk_attention_full_write_scratch_BAD')
+        elif label == 'wrong-reuse128-policy':
+            ready=next(e for e in es if e['event']=='ready')
+            ready['backend']=ready['backend'].replace('mpp_affine_reuse128_optional','mpp_affine_reuse128_optional_BAD')
+        elif label == 'wrong-reuse128-route':
+            e=next(e for e in es if e['event']=='native_cooperative_affine' and e['reuse128_dispatches'])
+            e['reuse64_dispatches']+=e['reuse128_dispatches'];e['reuse128_dispatches']=0
+        elif label == 'wrong-reuse128-threads':
+            next(e for e in es if e['event']=='native_cooperative_affine')['reuse128_threads']=128
+        elif label == 'missing-cooperative-event':es.remove(next(e for e in es if e['event']=='native_cooperative_affine'))
         elif label == 'wrong-wide-policy':
             ready = next(e for e in es if e['event'] == 'ready')
             ready['backend'] = ready['backend'].replace('wide_owner_prefill','wide_owner_prefill_BAD')
@@ -567,6 +661,15 @@ def main():
         elif label == 'missing-kv-scatter-event': es.remove(next(e for e in es if e['event'] == 'native_chunk_kv_scatter'))
         elif label == 'wrong-mistral-reuse-count': next(e for e in es if e['event'] == 'native_affine_profile' and e['mistral_decode_reuse_dispatches'])['mistral_decode_reuse_dispatches'] = 0
         elif label == 'wrong-mistral-reuse-owners': next(e for e in es if e['event'] == 'native_affine_profile' and e['mistral_decode_reuse_dispatches'])['active_rows'] = 3
+        elif label == 'alias-policy':next(e for e in es if e['event']=='ready')['backend']=next(e for e in es if e['event']=='ready')['backend'].replace('prefill_alias_groups','prefill_alias_groups_BAD')
+        elif label == 'alias-layout':next(e for e in es if e['event']=='native_prefill_alias_prepared')['layout'][0]['slots']+=1
+        elif label == 'missing-alias-preparation':es.remove(next(e for e in es if e['event']=='native_prefill_alias_prepared'))
+        elif label == 'alias-lifetime':next(e for e in es if e['event']=='ready')['backend']=next(e for e in es if e['event']=='ready')['backend'].replace('prefill_lifetime_reuse','prefill_lifetime_reuse_BAD')
+        elif label == 'grouped-value-policy':
+            ready=next(e for e in es if e['event']=='ready');ready['backend']=ready['backend'].replace('mistral_grouped_value_context_two_heads','mistral_grouped_value_context_two_heads_BAD')
+        elif label == 'pool-policy':next(e for e in es if e['event']=='ready')['backend']=next(e for e in es if e['event']=='ready')['backend'].replace('native_prefill_hidden_pool','native_prefill_hidden_pool_BAD')
+        elif label == 'pool-bindings':next(e for e in es if e['event']=='native_prefill_pool' and e['bindings'])['bindings']=0
+        elif label == 'missing-pool-route':es.remove(next(e for e in es if e['event']=='native_prefill_pool'))
         else: es[-1]['memory'][OWNERS[0]] = 1
         try:
             validate(es, cs, ct, profile, exit_status)

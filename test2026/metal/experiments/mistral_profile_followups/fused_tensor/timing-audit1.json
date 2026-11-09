@@ -1,0 +1,123 @@
+{
+  "passed": true,
+  "cohorts": [
+    {
+      "cohort": "forward",
+      "layer": 0,
+      "methods_gpu_ms": {
+        "0": 13.987812562845647,
+        "1": 13.761979178525507,
+        "2": 13.87412496842444,
+        "3": 14.121166546829045
+      },
+      "legacy_over_both_tensor": 1.0081942172699139,
+      "new_gate_up_ratio_with_tensor_down": 0.991916910785065,
+      "new_gate_up_ratio_with_original_down": 0.9905564470512287
+    },
+    {
+      "cohort": "forward",
+      "layer": 15,
+      "methods_gpu_ms": {
+        "0": 13.991979183629155,
+        "1": 13.792312471196055,
+        "2": 13.914374867454171,
+        "3": 14.124979265034199
+      },
+      "legacy_over_both_tensor": 1.0055772765154187,
+      "new_gate_up_ratio_with_tensor_down": 0.9912276047310167,
+      "new_gate_up_ratio_with_original_down": 0.9905840512110146
+    },
+    {
+      "cohort": "forward",
+      "layer": 31,
+      "methods_gpu_ms": {
+        "0": 13.997395755723119,
+        "1": 13.75506236217916,
+        "2": 13.860395760275424,
+        "3": 14.161374885588884
+      },
+      "legacy_over_both_tensor": 1.0098842773191472,
+      "new_gate_up_ratio_with_tensor_down": 0.9924004047273921,
+      "new_gate_up_ratio_with_original_down": 0.9884206772865933
+    },
+    {
+      "cohort": "reverse",
+      "layer": 0,
+      "methods_gpu_ms": {
+        "0": 13.996020890772343,
+        "1": 13.785020913928747,
+        "2": 13.928395812399685,
+        "3": 14.142312575131655
+      },
+      "legacy_over_both_tensor": 1.0048551950478357,
+      "new_gate_up_ratio_with_tensor_down": 0.9897062877590469,
+      "new_gate_up_ratio_with_original_down": 0.9896557452268057
+    },
+    {
+      "cohort": "reverse",
+      "layer": 15,
+      "methods_gpu_ms": {
+        "0": 14.016312430612743,
+        "1": 13.80420837085694,
+        "2": 13.873937423340976,
+        "3": 14.158520731143653
+      },
+      "legacy_over_both_tensor": 1.0102620476745297,
+      "new_gate_up_ratio_with_tensor_down": 0.9949740978097014,
+      "new_gate_up_ratio_with_original_down": 0.9899559916440915
+    },
+    {
+      "cohort": "reverse",
+      "layer": 31,
+      "methods_gpu_ms": {
+        "0": 14.004854252561927,
+        "1": 13.80256237462163,
+        "2": 13.896562508307397,
+        "3": 14.144708402454853
+      },
+      "legacy_over_both_tensor": 1.0077927001148517,
+      "new_gate_up_ratio_with_tensor_down": 0.99323572763915,
+      "new_gate_up_ratio_with_original_down": 0.9901126169650373
+    }
+  ],
+  "measured_gpu_commands": 288,
+  "warmup_gpu_commands": 96,
+  "pre_post_parent_witnesses": 48,
+  "negative_controls_rejected": [
+    "missing sample",
+    "unbalanced order",
+    "warmup admitted",
+    "false GPU duration",
+    "nonfinite wall",
+    "backward clock",
+    "invented cost field",
+    "missing post witness",
+    "post half mismatch",
+    "post weight mutation",
+    "post intermediate materialization",
+    "wrong GPU writer map",
+    "fabricated serving admission"
+  ],
+  "input_gather_and_both_projection_stages_included": true,
+  "no_hash_reset_or_write_in_timed_commands": true,
+  "all_outputs_exact_on_trained_captures": true,
+  "new_gate_up_above_three_percent_every_cell": false,
+  "native_model_or_http_admitted": false,
+  "no_comparator_execution": true,
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/timing-forward1/result1.json": "e62896dcad827ac5ba5d4ae57b7631fff20e37551dfc73d29a68de5b575d4f52",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/timing-forward1-command.json": "28e6f8d980ac74b2107d4f00889f450625b1a5109d40350d7e26fa15bc4d9b66",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/timing-forward1-status.json": "406b49160cdaa369b79b826b5e6b1506e53e9a1c9f0229563e862d3e43937077",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/timing-reverse1/result1.json": "b473272606fe4c176b3ddad8c762619147f1e63f4c154dda1f95b941e276e794",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/timing-reverse1-command.json": "5c299a06a822dfe3fe9e36ea0c88a214689c4caf4131b215ff9156ea34ba4bd1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/timing-reverse1-status.json": "dacb39619c8f82ea98acdee37d061bc861f94bf1137095ee2853745d6b5a8b99",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/audit_timing1.py": "848c0a11b5b797cff892770e49fb406a5884f34781a4d2c5c5b9ab46a62dc73c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/audit_pilot1.py": "be8fd526c9c5e5750a54068f85107b6c611e8f4d58cdd860605ebaafd0c74a4c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/pilot-audit1.json": "cb877c876edd3efd3d0b15a81a888f1d26bd89c0c265f20dd059bd737535cc51",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/plan1.json": "108cb56bf928cd3b8f18cc513dcdcdae23a6a945c4495fd3b49b740115cb2101",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/timing-plan1.json": "6e5de631bf338fd95b6828210261f7590e7c6faa92f9e1364d9121796424c8dd",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/timing1-preflight.json": "75f57f2b8406ca7f1d0ae8360ce1a257dc8f67d0153c945a1502d486acb24bfd",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-tensor-mlp1/timing1-postflight.json": "cfb1df352a69634f1025563e1d0c809a4bc0785b734c0232fc6315a9ef72131f"
+  }
+}

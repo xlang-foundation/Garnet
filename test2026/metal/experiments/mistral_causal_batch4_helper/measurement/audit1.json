@@ -1,0 +1,326 @@
+{
+  "passed": true,
+  "scope": "Native C4 burst; original 2K prompts and128 outputs/request; no HTTP/SSE transport.",
+  "rows": [
+    {
+      "engine": 1,
+      "mode": "ordinary",
+      "waves": [
+        {
+          "wave": 0,
+          "phase": "cold",
+          "native_first_prediction_seconds": 12.922327833017334,
+          "decode_tokens_per_second_per_request": 10.543885091237133,
+          "native_aggregate_tokens_per_second": 20.46680876673154
+        },
+        {
+          "wave": 1,
+          "phase": "warm",
+          "native_first_prediction_seconds": 13.444564457866363,
+          "decode_tokens_per_second_per_request": 10.107290155691803,
+          "native_aggregate_tokens_per_second": 19.647581327710352
+        },
+        {
+          "wave": 2,
+          "phase": "warm",
+          "native_first_prediction_seconds": 14.001934333937243,
+          "decode_tokens_per_second_per_request": 9.811343421128006,
+          "native_aggregate_tokens_per_second": 18.968311939093763
+        }
+      ]
+    },
+    {
+      "engine": 2,
+      "mode": "productive",
+      "waves": [
+        {
+          "wave": 0,
+          "phase": "cold",
+          "native_first_prediction_seconds": 14.400771312066354,
+          "decode_tokens_per_second_per_request": 10.675485756082733,
+          "native_aggregate_tokens_per_second": 19.343624994876738
+        },
+        {
+          "wave": 1,
+          "phase": "warm",
+          "native_first_prediction_seconds": 14.401215792051516,
+          "decode_tokens_per_second_per_request": 10.557899714885064,
+          "native_aggregate_tokens_per_second": 19.24672470195824
+        },
+        {
+          "wave": 2,
+          "phase": "warm",
+          "native_first_prediction_seconds": 14.60876699956134,
+          "decode_tokens_per_second_per_request": 10.372501524001692,
+          "native_aggregate_tokens_per_second": 18.94773211549269
+        }
+      ]
+    },
+    {
+      "engine": 3,
+      "mode": "productive",
+      "waves": [
+        {
+          "wave": 0,
+          "phase": "cold",
+          "native_first_prediction_seconds": 14.794840957969427,
+          "decode_tokens_per_second_per_request": 10.371369025743487,
+          "native_aggregate_tokens_per_second": 18.811420971790874
+        },
+        {
+          "wave": 1,
+          "phase": "warm",
+          "native_first_prediction_seconds": 14.843369749491103,
+          "decode_tokens_per_second_per_request": 10.276590517699034,
+          "native_aggregate_tokens_per_second": 18.70335690563864
+        },
+        {
+          "wave": 2,
+          "phase": "warm",
+          "native_first_prediction_seconds": 14.904212791472673,
+          "decode_tokens_per_second_per_request": 10.27729592127126,
+          "native_aggregate_tokens_per_second": 18.664961018627622
+        }
+      ]
+    },
+    {
+      "engine": 4,
+      "mode": "ordinary",
+      "waves": [
+        {
+          "wave": 0,
+          "phase": "cold",
+          "native_first_prediction_seconds": 14.76366866659373,
+          "decode_tokens_per_second_per_request": 9.247031609862653,
+          "native_aggregate_tokens_per_second": 17.932308224750212
+        },
+        {
+          "wave": 1,
+          "phase": "warm",
+          "native_first_prediction_seconds": 14.832788416533731,
+          "decode_tokens_per_second_per_request": 9.134212850821976,
+          "native_aggregate_tokens_per_second": 17.78449093460317
+        },
+        {
+          "wave": 2,
+          "phase": "warm",
+          "native_first_prediction_seconds": 14.931196896592155,
+          "decode_tokens_per_second_per_request": 9.10617901563922,
+          "native_aggregate_tokens_per_second": 17.700601898414074
+        }
+      ]
+    }
+  ],
+  "warm_medians": {
+    "ordinary": {
+      "native_first_prediction_seconds": 14.417361375235487,
+      "decode_tokens_per_second_per_request": 9.472778135974991,
+      "native_aggregate_tokens_per_second": 18.376401436848468
+    },
+    "productive": {
+      "native_first_prediction_seconds": 14.726068374526221,
+      "decode_tokens_per_second_per_request": 10.324898722636476,
+      "native_aggregate_tokens_per_second": 18.825544510565663
+    }
+  },
+  "paired_ratios": [
+    {
+      "control_engine": 1,
+      "productive_engine": 2,
+      "decode": 1.0507950336133693,
+      "aggregate": 0.9890864508444384,
+      "first_prediction_control_over_productive": 0.946105311022064
+    },
+    {
+      "control_engine": 4,
+      "productive_engine": 3,
+      "decode": 1.126833600365952,
+      "aggregate": 1.0530708796539139,
+      "first_prediction_control_over_productive": 1.0005513984922816
+    }
+  ],
+  "causal_trace_audits": [
+    {
+      "engine": 2,
+      "wave": 0,
+      "passed": true,
+      "exact_target_output_ids": 512,
+      "ordinary_decode_calls": 128,
+      "productive_decode_calls": 49,
+      "accepted_draft_tokens": 321,
+      "proposed_target_tokens": 546,
+      "helper_draft_tokens": 466,
+      "helper_native_calls": 167,
+      "helper_reconciliation_calls": 184,
+      "helper_zeroed_bytes": 3548160,
+      "helper_unchanged_digest_pairs": 0,
+      "ordinary_vs_verified_target_digest_pairs": 0,
+      "reference_outputs_read_during_generation": false,
+      "performance_claim": false,
+      "full_state_capture_in_timed_runs": false,
+      "http_qualified": false,
+      "quality_suite_qualified": false,
+      "no_comparator_execution": true,
+      "goal_complete": false
+    },
+    {
+      "engine": 2,
+      "wave": 1,
+      "passed": true,
+      "exact_target_output_ids": 512,
+      "ordinary_decode_calls": 128,
+      "productive_decode_calls": 49,
+      "accepted_draft_tokens": 321,
+      "proposed_target_tokens": 546,
+      "helper_draft_tokens": 466,
+      "helper_native_calls": 167,
+      "helper_reconciliation_calls": 184,
+      "helper_zeroed_bytes": 3548160,
+      "helper_unchanged_digest_pairs": 0,
+      "ordinary_vs_verified_target_digest_pairs": 0,
+      "reference_outputs_read_during_generation": false,
+      "performance_claim": false,
+      "full_state_capture_in_timed_runs": false,
+      "http_qualified": false,
+      "quality_suite_qualified": false,
+      "no_comparator_execution": true,
+      "goal_complete": false
+    },
+    {
+      "engine": 2,
+      "wave": 2,
+      "passed": true,
+      "exact_target_output_ids": 512,
+      "ordinary_decode_calls": 128,
+      "productive_decode_calls": 49,
+      "accepted_draft_tokens": 321,
+      "proposed_target_tokens": 546,
+      "helper_draft_tokens": 466,
+      "helper_native_calls": 167,
+      "helper_reconciliation_calls": 184,
+      "helper_zeroed_bytes": 3548160,
+      "helper_unchanged_digest_pairs": 0,
+      "ordinary_vs_verified_target_digest_pairs": 0,
+      "reference_outputs_read_during_generation": false,
+      "performance_claim": false,
+      "full_state_capture_in_timed_runs": false,
+      "http_qualified": false,
+      "quality_suite_qualified": false,
+      "no_comparator_execution": true,
+      "goal_complete": false
+    },
+    {
+      "engine": 3,
+      "wave": 0,
+      "passed": true,
+      "exact_target_output_ids": 512,
+      "ordinary_decode_calls": 128,
+      "productive_decode_calls": 49,
+      "accepted_draft_tokens": 321,
+      "proposed_target_tokens": 546,
+      "helper_draft_tokens": 466,
+      "helper_native_calls": 167,
+      "helper_reconciliation_calls": 184,
+      "helper_zeroed_bytes": 3548160,
+      "helper_unchanged_digest_pairs": 0,
+      "ordinary_vs_verified_target_digest_pairs": 0,
+      "reference_outputs_read_during_generation": false,
+      "performance_claim": false,
+      "full_state_capture_in_timed_runs": false,
+      "http_qualified": false,
+      "quality_suite_qualified": false,
+      "no_comparator_execution": true,
+      "goal_complete": false
+    },
+    {
+      "engine": 3,
+      "wave": 1,
+      "passed": true,
+      "exact_target_output_ids": 512,
+      "ordinary_decode_calls": 128,
+      "productive_decode_calls": 49,
+      "accepted_draft_tokens": 321,
+      "proposed_target_tokens": 546,
+      "helper_draft_tokens": 466,
+      "helper_native_calls": 167,
+      "helper_reconciliation_calls": 184,
+      "helper_zeroed_bytes": 3548160,
+      "helper_unchanged_digest_pairs": 0,
+      "ordinary_vs_verified_target_digest_pairs": 0,
+      "reference_outputs_read_during_generation": false,
+      "performance_claim": false,
+      "full_state_capture_in_timed_runs": false,
+      "http_qualified": false,
+      "quality_suite_qualified": false,
+      "no_comparator_execution": true,
+      "goal_complete": false
+    },
+    {
+      "engine": 3,
+      "wave": 2,
+      "passed": true,
+      "exact_target_output_ids": 512,
+      "ordinary_decode_calls": 128,
+      "productive_decode_calls": 49,
+      "accepted_draft_tokens": 321,
+      "proposed_target_tokens": 546,
+      "helper_draft_tokens": 466,
+      "helper_native_calls": 167,
+      "helper_reconciliation_calls": 184,
+      "helper_zeroed_bytes": 3548160,
+      "helper_unchanged_digest_pairs": 0,
+      "ordinary_vs_verified_target_digest_pairs": 0,
+      "reference_outputs_read_during_generation": false,
+      "performance_claim": false,
+      "full_state_capture_in_timed_runs": false,
+      "http_qualified": false,
+      "quality_suite_qualified": false,
+      "no_comparator_execution": true,
+      "goal_complete": false
+    }
+  ],
+  "total_exact_target_ids": 6144,
+  "all_burst_output_sha256": "ad47f37a12de0c509e5af074d37a2a9158f5922682a1700c2909f6e8135afba2",
+  "negative_controls_rejected": [
+    "published target output",
+    "future helper prefix",
+    "helper epoch",
+    "helper prompt token",
+    "helper snapshot copy",
+    "helper call omission",
+    "helper call active mask",
+    "foreign runtime",
+    "inflated aggregate speed"
+  ],
+  "full_state_evidence": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-helper1/productive-audit1.json",
+  "full_state_capture_in_timed_collection": false,
+  "matched_http_comparison_admitted": false,
+  "vllm_sglang_results_unchanged": true,
+  "no_comparator_execution": true,
+  "quality_suite_passed": false,
+  "thermal_os_conditions": "Uncontrolled observational measurements.",
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine1-ordinary-result1.json": "1e78d8276035d4500c63a978af0a1d7f2940cb7d0e3383897ccd2346a961bb37",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine1-ordinary-status1.json": "8146a1526e8db910f7081e91f6edffef1cace5ad1249ca23fb29b78563dfcc0e",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine1-ordinary-command1.json": "85ab25732e5a6f3e23ddd1146a59de18347a4c2b18a36785a365d92451e426e9",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine2-productive-result1.json": "186b0fe252386d836dcaa3ba8f23d14468cd36d1f5c39486042d8c9a95d8e7ac",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine2-productive-status1.json": "469bf8fcd9de2683644c5eee4faec17619fad77b264a234ba377f5fe0b8662af",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine2-productive-command1.json": "fd5f35a1d6b32eeea4f524d46d9d51c8cad427011d6755028e39d9b018c2625c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine3-productive-result1.json": "a9e87008a6945a7aeac48551f80e10ef487e9f9c58e78fb4a1fa611eff44d5e0",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine3-productive-status1.json": "ac8833f1720feeedd0d333dbe47059e4d76ba999e15b8c3cd44d4f39f2d5c8fc",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine3-productive-command1.json": "a706a9369f05301ff134a786ac808c2e8b2821831cbb2a1a3b0c7e95df9790b1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine4-ordinary-result1.json": "e9978004a28d77bba6da885a37c833fe8d05f4573f7b10c95d76cc6219a56640",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine4-ordinary-status1.json": "230136a74e1df2bb7ea96c79e8337756b90a9a222643e940ae74981df9944fd9",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/engine4-ordinary-command1.json": "e9daca5fe88d151834607b57ab6975bf25c5b371373a8162c30ed432b5de19b3",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/audit1.py": "bc58652823d781ad88583a03f629fed3d360d64085a27ed1ba05437bd6490011",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/audit_trace1.py": "0f557a8018daea11735ef03906f97a9bff7f9962a5b76f044b2112ba8f03051b",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/prepare_auditor1.py": "c68241d6046ff027edeb162a31904e9ba3272b1c6818d1dd848d095c1c22a52a",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/trace-audit-adaptation1.patch": "12abd20d7f82d8d1f48b87fd996dab0a9fbd2861ecd9b1d3acd1c9ded9dc8906",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/trace-audit-preparation1.json": "54aefb1ca0e09f714887ed4a5b064459e5eb70dbb5f8a5e746247ec62186ab18",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/preflight1.json": "58191f4c08ae1d54118d31271a3c6ed1422cf6d8f40a781e060c66bd46a9e0a9",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/postflight1.json": "65a1978ca23ab536f386248f17fff39ac9ba91a61afcc958bb1e26392fbc5658",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/plan1.json": "47dbed7a5a8a2a49264ecf49b7f3cb1148b3c14f2d44ae90788a98b04de75370",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-measure1/preparation1.json": "fb846340c5556cf82c3f8caf235ae249a548008cf1069ba1bf04f893f3f33b66"
+  }
+}

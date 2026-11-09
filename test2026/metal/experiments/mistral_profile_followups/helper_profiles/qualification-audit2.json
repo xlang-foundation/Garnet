@@ -1,0 +1,210 @@
+{
+  "passed": true,
+  "profiles": {
+    "16": {
+      "summary": [
+        {
+          "case_id": "p2048-c1-o128",
+          "mode": "base",
+          "base_tps": 35.46934343597039,
+          "candidate_tps": 35.46934343597039,
+          "ratio": 1.0,
+          "accepted": 80,
+          "proposed": 138,
+          "target_calls": 47,
+          "draft_steps": 76,
+          "early_margin_stops": 0,
+          "draft_seconds": 1.0043434584513307,
+          "target_seconds": 2.574654125375673
+        }
+      ],
+      "initial_prefill_chunks": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "actual_initial_helper_tokens": 222,
+      "initial_helper_prefill_gpu_ms": 125.71333325468004,
+      "initial_helper_prefill_wall_seconds": 0.17288575018756092,
+      "helper_graphs": 96,
+      "prepared_metal_bytes": 5744869376,
+      "full_target_digest_pairs": 130,
+      "output_ids": 256
+    },
+    "256": {
+      "summary": [
+        {
+          "case_id": "p2048-c1-o128",
+          "mode": "base",
+          "base_tps": 36.27365934633144,
+          "candidate_tps": 36.27365934633144,
+          "ratio": 1.0,
+          "accepted": 80,
+          "proposed": 138,
+          "target_calls": 47,
+          "draft_steps": 76,
+          "early_margin_stops": 0,
+          "draft_seconds": 0.9127484599594027,
+          "target_seconds": 2.5869461656548083
+        }
+      ],
+      "initial_prefill_chunks": [
+        256
+      ],
+      "actual_initial_helper_tokens": 222,
+      "initial_helper_prefill_gpu_ms": 65.54070813581347,
+      "initial_helper_prefill_wall_seconds": 0.07974108285270631,
+      "helper_graphs": 192,
+      "prepared_metal_bytes": 5815107584,
+      "full_target_digest_pairs": 130,
+      "output_ids": 256
+    },
+    "32": {
+      "summary": [
+        {
+          "case_id": "p2048-c1-o128",
+          "mode": "base",
+          "base_tps": 36.0736450573067,
+          "candidate_tps": 36.0736450573067,
+          "ratio": 1.0,
+          "accepted": 80,
+          "proposed": 138,
+          "target_calls": 47,
+          "draft_steps": 76,
+          "early_margin_stops": 0,
+          "draft_seconds": 0.9441911661997437,
+          "target_seconds": 2.5748364101164043
+        }
+      ],
+      "initial_prefill_chunks": [
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32
+      ],
+      "actual_initial_helper_tokens": 222,
+      "initial_helper_prefill_gpu_ms": 79.94208321906626,
+      "initial_helper_prefill_wall_seconds": 0.11327541689388454,
+      "helper_graphs": 120,
+      "prepared_metal_bytes": 5749014528,
+      "full_target_digest_pairs": 130,
+      "output_ids": 256
+    },
+    "64": {
+      "summary": [
+        {
+          "case_id": "p2048-c1-o128",
+          "mode": "base",
+          "base_tps": 35.59914535435816,
+          "candidate_tps": 35.59914535435816,
+          "ratio": 1.0,
+          "accepted": 80,
+          "proposed": 138,
+          "target_calls": 47,
+          "draft_steps": 76,
+          "early_margin_stops": 0,
+          "draft_seconds": 0.9674249175004661,
+          "target_seconds": 2.598548247013241
+        }
+      ],
+      "initial_prefill_chunks": [
+        64,
+        64,
+        64,
+        32
+      ],
+      "actual_initial_helper_tokens": 222,
+      "initial_helper_prefill_gpu_ms": 64.65908326208591,
+      "initial_helper_prefill_wall_seconds": 0.13248245790600777,
+      "helper_graphs": 144,
+      "prepared_metal_bytes": 5757501440,
+      "full_target_digest_pairs": 130,
+      "output_ids": 256
+    },
+    "128": {
+      "summary": [
+        {
+          "case_id": "p2048-c1-o128",
+          "mode": "base",
+          "base_tps": 35.63050118247133,
+          "candidate_tps": 35.63050118247133,
+          "ratio": 1.0,
+          "accepted": 80,
+          "proposed": 138,
+          "target_calls": 47,
+          "draft_steps": 76,
+          "early_margin_stops": 0,
+          "draft_seconds": 0.9265837064012885,
+          "target_seconds": 2.636409124592319
+        }
+      ],
+      "initial_prefill_chunks": [
+        128,
+        128
+      ],
+      "actual_initial_helper_tokens": 222,
+      "initial_helper_prefill_gpu_ms": 66.42024987377226,
+      "initial_helper_prefill_wall_seconds": 0.08447379199787974,
+      "helper_graphs": 168,
+      "prepared_metal_bytes": 5775523840,
+      "full_target_digest_pairs": 130,
+      "output_ids": 256
+    }
+  },
+  "full_target_output_ids": 1280,
+  "full_target_state_digest_pairs": 650,
+  "all_target_commits_exact_ordinary": true,
+  "helper_state_bits_equal_across_profiles_required": false,
+  "helper_proposals_independently_audited": true,
+  "all_graph_families_precompiled": true,
+  "native_prefix_retention_without_host_snapshots": true,
+  "negative_controls_rejected": [
+    "wrong bound",
+    "wrong graph family",
+    "wrong target output",
+    "wrong target KV",
+    "future helper prefix",
+    "fake acceptance",
+    "missing native token witness",
+    "padded tokens tracked",
+    "false active tokens",
+    "unprepared chunk",
+    "host KV copy",
+    "false decode speed"
+  ],
+  "performance_admitted": false,
+  "http_or_quality_admitted": false,
+  "no_comparator_execution": true,
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/audit_qualification2.py": "d697b250735ff96d239c2e4e5c492d579bfd009e58816b66979f555672fa431e",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/audit_qualification1.py": "9771bb7f76fcc8506ccb14f0908269a7ab037e68923c2b5bd8da24db6bc1a4ee",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/audit_common1.py": "1768425825326e7cae3eecc853a31d86e7cef2188c9194156d3a551432e5b641",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/audit_bounded1.py": "6fbe2ade21516836d1877fdd216b41a41c8846fb7fbda36ddebb28641c25e626",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/plan1.json": "6e86959fb53cbb53131adf90eb319d224405100d8388b024943398f59af96245",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/input1.json": "354848b3b21f4136b0346f169fa70b1f780b673f73a7edd32d922006384674f2",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/qualification1-preflight.json": "2c0dece39ea4c9039c25927b689f52c96b7a5c1f2099f6bd53e5d059ce83e225",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/qualification1-postflight.json": "78e58923cdc73a56ebbcf772827fa7b6a88d63490a15562099ea5d77c53dd999",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/cap16-result1.json": "2393540ea2d63c3679de0dce9a598343a7615ca830f5631a3691b9ddb8abdcfc",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/cap256-result1.json": "19f1a8d8b046c76707035e920a7b7afc77927aae022de569d7d0126d67832d10",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/cap32-result1.json": "dca9b7cc401f7c4f96755c1359b1148d05d622b242466987eb091f5c68b6ce2f",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/cap64-result1.json": "25df528879bb00f0f85f76b0397307eefc841692cf706e56540e1732a17ca878",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/cap128-result1.json": "41329579f0ebde501b128f11b144c58a3da5fc98c903d94bb364b679a822c138",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/sweep2-preflight.json": "24b81b3cc4adcb0dc9b808b0c7530d52bbc99a40b3394d7f10eee77af9212ede",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/sweep2-postflight.json": "05709008493cf748fb0c16c618ec231020ff852783b3ee4c94eac1d7600cb44e"
+  }
+}

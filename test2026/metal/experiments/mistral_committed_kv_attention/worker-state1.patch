@@ -1,0 +1,50 @@
+--- hoist/worker-state1.py
++++ committed/worker-state1.py
+@@ -71,6 +71,8 @@
+     if split_scores and not split_capable:raise ValueError('Compiled split-score extension required')
+     active_chunk=profile.get('linear_chunk_active_only',False)
+     backend=garnet.backend_info()
++    committed_policy=profile.get('committed_kv_mps',False)
++    if type(committed_policy) is not bool or committed_policy!=('committed_kv_mps_fp32_v1' in backend):raise ValueError('Committed KV numerical profile differs from compiled backend')
+     if type(active_chunk) is not bool or active_chunk!=('linear_chunk_active_only' in backend):
+         raise ValueError('Frozen profile requires its explicit native active-only chunk policy')
+     if active_chunk and (not chunked or any(tag not in backend for tag in ('linear_chunk_conv','linear_chunk_delta'))):
+@@ -479,8 +481,11 @@
+                     skipped=decoder.session.chunk_attention_mps_skipped_matrices
+                     flags=active.tolist();row_width=len(flags)//batch
+                     owners=sum(1 for row in range(batch) if any(flags[row*row_width:(row+1)*row_width]))
+-                    full_products=expected*physical_batch*text_config['num_key_value_heads']*4
+-                    active_products=expected*owners*text_config['num_key_value_heads']*4
++                    committed=decoder.session.chunk_committed_kv_attention_dispatches
++                    if committed!=(expected if committed_policy else 0):raise ValueError('Committed numerical route coverage differs')
++                    factor=2 if committed else 4
++                    full_products=expected*physical_batch*text_config['num_key_value_heads']*factor
++                    active_products=expected*owners*text_config['num_key_value_heads']*factor
+                     emit(dict(event='native_chunk_attention_request_products',stage='prefill' if len(ids)>batch else 'decode',
+                         matrices=products,skipped_matrices=skipped,active_request_rows=owners))
+                     if products!=active_products or skipped!=full_products-active_products:
+@@ -570,10 +575,14 @@
+             diagnostic_forward[0]+=1
+             specialized=decoder.session.chunk_kv_hoisted_commits
+             mps=decoder.session.chunk_attention_mps_dispatches
+-            wanted=64 if profile['diagnostic_variant']=='on' and len(ids)>batch else 0
++            wanted=64 if len(ids)>batch else 0
+             if specialized!=wanted:raise ValueError('Native KV commit hoist route '+str(specialized)+' differs from expected '+str(wanted))
+             emit(dict(event='diagnostic_native_kv_hoist',invocation=diagnostic_forward[0],dispatches=specialized,mps_dispatches=mps,
+                 ids=ids,slots=slots.tolist(),active=active.tolist(),epochs=epochs))
++            committed=decoder.session.chunk_committed_kv_attention_dispatches
++            wanted_committed=mps if committed_policy else 0
++            if committed!=wanted_committed:raise ValueError('Private committed attention route differs')
++            emit(dict(event='diagnostic_committed_attention',invocation=diagnostic_forward[0],dispatches=committed,matrices=decoder.session.chunk_attention_mps_matrices,skipped_matrices=decoder.session.chunk_attention_mps_skipped_matrices))
+             if diagnostic_forward[0] in [1,16,18,25]:
+                 hashes=[]
+                 for layer in range(32):
+@@ -581,7 +590,7 @@
+                     hashes.append([decoder.io.verification_f32_sha256(value) for value in pair])
+                 hidden=decoder.session.diagnostic_final_hidden()
+                 emit(dict(event='diagnostic_full_state',invocation=diagnostic_forward[0],layers=hashes,
+-                    hidden=decoder.io.verification_f32_sha256(hidden),scope='Complete32-layer physical FP32 KV plus4-row final-hidden bank'))
++                    hidden=decoder.io.verification_f32_sha256(hidden),hidden_values=hidden.tolist(),scope='Complete32-layer physical FP32 KV plus4-row final-hidden bank'))
+             return result
+         def predict_rows(epochs):
+             started=time.monotonic() if trace_stages else 0

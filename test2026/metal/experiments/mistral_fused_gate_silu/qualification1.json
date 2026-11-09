@@ -1,0 +1,164 @@
+{
+  "passed": true,
+  "scope": "Correctness and isolated corrected gate/up + SiLU + half down-input timing; no runtime or serving admission.",
+  "study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-gate-silu-screen1",
+  "correctness_audit_sha256": "294c7f11601f0be92dccfaa459e2527b46094c5a256f92c65ee50b750da143d6",
+  "timing_audit_sha256": "8fb8a07cdde5a2c0bad0e58198cad80f7b8c955d8d9cbb118e2354ce1f8787f9",
+  "original_serving_checkpoint": "d6486e5a358d7c7725fae91fdbcca00ffefb8cba",
+  "packaged_auditors_exact_reports": true,
+  "correctness_cases": 36,
+  "independent_fp64_samples": 1080,
+  "maximum_fp64_fraction": 0.008032885754987663,
+  "candidate_policy": "MSL4 Fast, strict MMA descriptors, existing half operands and FP32 accumulators",
+  "rejected_policy": "MSL4 Safe nonlinear output differs in half bits.",
+  "first_timing_excluded": true,
+  "measured_commands": 540,
+  "warmup_commands": 180,
+  "ratios": {
+    "128": {
+      "separate_ordinary": {
+        "gpu": [
+          1.2507681626655098,
+          1.477608097629395
+        ],
+        "wall": [
+          1.2103896173408286,
+          1.4354742469560304
+        ]
+      },
+      "paired_ordinary": {
+        "gpu": [
+          1.2057634045435615,
+          1.3958073644741265
+        ],
+        "wall": [
+          1.1751946614783702,
+          1.3575280845952757
+        ]
+      },
+      "separate_profile32": {
+        "gpu": [
+          1.1619392534533322,
+          1.3860661210016827
+        ],
+        "wall": [
+          1.1375466163894328,
+          1.340014036409882
+        ]
+      },
+      "paired_profile32": {
+        "gpu": [
+          0.9283475768725812,
+          1.134486527024647
+        ],
+        "wall": [
+          0.9328247568356846,
+          1.1248940857481784
+        ]
+      }
+    },
+    "256": {
+      "separate_ordinary": {
+        "gpu": [
+          1.2847176523940453,
+          1.2907520548485343
+        ],
+        "wall": [
+          1.262613109062905,
+          1.2723084581068203
+        ]
+      },
+      "paired_ordinary": {
+        "gpu": [
+          1.2262797159148837,
+          1.230969257635536
+        ],
+        "wall": [
+          1.2089866745051931,
+          1.21602488729721
+        ]
+      },
+      "separate_profile32": {
+        "gpu": [
+          1.1771228420317137,
+          1.192024906966194
+        ],
+        "wall": [
+          1.1620615324319028,
+          1.1787408749426287
+        ]
+      },
+      "paired_profile32": {
+        "gpu": [
+          1.128196478997218,
+          1.1328930190308315
+        ],
+        "wall": [
+          1.120243894090898,
+          1.1232858419692249
+        ]
+      }
+    },
+    "512": {
+      "separate_ordinary": {
+        "gpu": [
+          1.2579003885705342,
+          1.2627855302334008
+        ],
+        "wall": [
+          1.2469488179349575,
+          1.253876299164459
+        ]
+      },
+      "paired_ordinary": {
+        "gpu": [
+          1.2190083484339764,
+          1.2270697835167854
+        ],
+        "wall": [
+          1.2116619115549214,
+          1.2187153460586868
+        ]
+      },
+      "separate_profile32": {
+        "gpu": [
+          1.1452212182760426,
+          1.1533244093675123
+        ],
+        "wall": [
+          1.1399774011299433,
+          1.1483298349296924
+        ]
+      },
+      "paired_profile32": {
+        "gpu": [
+          1.1084106847592265,
+          1.1148101678732614
+        ],
+        "wall": [
+          1.1068070669871757,
+          1.1100129467330733
+        ]
+      }
+    }
+  },
+  "current_coding_quality": "0/8",
+  "native_integration": false,
+  "serving_speed_claim": false,
+  "quality_qualified": false,
+  "goal_complete": false,
+  "packaged_preparation_exact_assets_and_sources": true,
+  "packaged_preparation_audit_sha256": "7bd85be99e90db05e441bb4bdc0bb9fc2bba9e33e9a7c5519208f55b0b2e7596",
+  "main_compile_setting_correction": {
+    "actual_native_main_options": "nil/default; native_bfloat_body is disabled.",
+    "standalone_control_options": "explicit MSL3.1",
+    "prior_control_was_compiler_setting_surrogate": true,
+    "numerically_identical_to_native_on_followup_captured_layers": [
+      0,
+      15,
+      31
+    ],
+    "performance_equivalence_established": false,
+    "followup_replay_audit_sha256": "ea1f05a476acf6e313828e8498660e7a449ba1b096c9ab2412c981d9d33a7f2c"
+  }
+}

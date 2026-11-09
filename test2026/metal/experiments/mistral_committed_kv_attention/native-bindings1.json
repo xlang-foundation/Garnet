@@ -1,0 +1,44 @@
+{
+  "scope": "DefaultOFF no-copy two-product FP32 MPS attention, private compiler-proved committed-KV path. Different reduction grouping and explicit prefix numerical domain. Experimental native/model/body evidence only; generic public attention API, xModel and GPU buffer inventory unchanged.",
+  "clean_parent": "dbc893c14363a0d5c266f5570171f6cad8e13ed6",
+  "hoist_prepare_helper_sha256": "903533fbc171133fda3f8ce11049b40a71d515bcb319b790b6d9764f47db3fb7",
+  "admitted_manifest_sha256": "a390bf23c86c399de8333a659014c2e41f6cd4071472ae1d04cca3791300d440",
+  "base_existing_files_sha256": {
+    "cmake/GarnetMetal.cmake": "9fb3bba5c45eb4974a96f713af0e6fa4a0bb09e0f5b68c6344022cafe719f1a3",
+    "src/entry/metal_main.cpp": "fffa214a909beededb675c44a98f557f496be221c269ae1bd27989b6e8f21f0d",
+    "src/backends/metal/decoder_session.h": "f4549c37ff10a6e3a547e3566d77bb65e9adb97a6e34e668b322b0e87ce13798",
+    "src/backends/metal/metal_context.mm": "ce8e2d52ad06fefdfd0b01222eec28fe548ded2ed3bb4167aa7d4c3eac24c833",
+    "src/backends/metal/token_prefix_session.cpp": "994fba63e38fcbc1f7d314367cf267374830408b64888d5f291b1d27d15f1567",
+    "src/backends/metal/compiled_graph.cpp": "4e45734ce5bd68dc0d240dd7f20720360a767c3d37e4715910c0b1f9313e9c87",
+    "src/backends/metal/metal_context.h": "e3362d4f8f00abb8c55826064dea5168a74091cccd23a7e5da5ad00a1c4c870b"
+  },
+  "candidate_owned_files_sha256": {
+    "cmake/GarnetMetal.cmake": "ab70ee12ffaec99c4ff317eeb0551ad832070a06849c5a77740f644cb9b80b17",
+    "src/entry/metal_main.cpp": "19417fefb669b6d9459bf22da9a3a7ea526b4397e1549ce943435685ed09231c",
+    "src/backends/metal/decoder_session.h": "8fa438b8a9d512e2290942f7785c71abcc7efe0948676570cf1f265635ab7517",
+    "src/backends/metal/metal_context.mm": "30a3ec46da309fbca1a3eb4e5c3b8175b8c626beab135726f56aaf41110214c9",
+    "src/backends/metal/token_prefix_session.cpp": "c1481c6c60d84b7943fb2095ae3bf51e007e445c599cdfd45137c32ae9df2b3f",
+    "src/backends/metal/compiled_graph.cpp": "4ada9027477549c4c6f6ea9ddc9a778874c2bb315929447a3d4ae3eb5513cbef",
+    "src/backends/metal/metal_context.h": "4576b8a4fdb61f80566a299eac2ae8f73112ae5895bcb69454b5eeb929c79ba8",
+    "src/backends/metal/chunk_mps_committed_shader.h": "7e05f186c1399b4263884989963746da5931ef580f68587bf2b73db262949b99",
+    "test2026/metal/committed_kv_attention_test.cpp": "d416979dea1b42f680c3653ec9d0f143638d32740e7d4cb98f29490cde303eda"
+  },
+  "libraries": {
+    "off": {
+      "path": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-committed-kv-attention1/library-off1",
+      "sha256": "f72614504380e8fd958ac289be392a8f7afa51aecb666c2cb78221bf5a799cfd",
+      "profile_sha256": "5ab77f230f64f44ccc1c2b350c55bb903dd16ae941db980d94abbdfa6e5bdb8e"
+    },
+    "on": {
+      "path": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-committed-kv-attention1/library-on1",
+      "sha256": "63de17b821b2519d2535bae93d41d71f9f3beea1a95bc816d1f0db2332743294",
+      "profile_sha256": "ee123c7512509641a3ee26caeaf98ffb18dbbfe98cc52c6c8a286022a3df3d67"
+    }
+  },
+  "model_sha256": "d7182d886f93a9efa73d6d556ee33ffe839a4e09e15965eeef46f295ab5b503d",
+  "option": "GARNET_METAL_COMMITTED_KV_MPS",
+  "default": "OFF",
+  "backend_tag": "committed_kv_mps_fp32_v1",
+  "prefix_domain": "committed-mps-fp32-v1",
+  "new_gpu_buffers": 0
+}

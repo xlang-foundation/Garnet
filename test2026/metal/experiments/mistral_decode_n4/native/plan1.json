@@ -1,0 +1,22 @@
+{
+  "scope": "Optional native N4 prepared weight/cache path only for four active MLP decode rows.",
+  "source_parent": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2",
+  "source_parent_bindings_sha256": "55e0e4ab22321f54860254aaa7d1e117980c157648aa7cedec430917db5c0c61",
+  "operator_correctness_audit_sha256": "2720d4149f8be7f556f288988a7f846687a2e8d2f4f29332f3c4a65e8ecad6c6",
+  "operator_c4_timing_audit_sha256": "73e936ebcb4c99e0df38280ffcc92abc942b544d52e8985791e01bf180ffe90b",
+  "operator_native_c1_timing_audit_sha256": "6a2edad1b14dc3d44ec5c3a51b47d3cc745d6be6cac12ff3a455cd64a417fd1c",
+  "predicate": "decodeRows==4 and (K4096,N14336 or K14336,N4096)",
+  "default_enabled": false,
+  "cache_budget_bytes": 3221225472,
+  "expected_mistral32_mlp_payload_bytes": 3170893824,
+  "checks_required": [
+    "Transactional immutable packed cache before readiness; never allocate or compile on decode.",
+    "Explicit3GiB process cache cap plus recommended working-set margin256MiB.",
+    "No change to one/two/three-row decode or prefill/head arithmetic.",
+    "Default-off and enabled native test suites, then complete model KV/hidden/token parity.",
+    "Native dispatch/cache counters, memory inventory and terminal owner cleanup.",
+    "No token-speed claim before fixed-profile full serving measurements."
+  ],
+  "runtime_integrated": false,
+  "goal_complete": false
+}

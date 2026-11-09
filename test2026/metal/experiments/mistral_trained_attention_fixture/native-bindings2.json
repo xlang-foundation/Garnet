@@ -1,0 +1,46 @@
+{
+  "scope": "Test-only bounded native actual-trained attention fixture capture, scoped autorelease lifetime and physical allocation guards. Native mathematical operators/shader strings/xModel unchanged. Untimed full-state/model/FP64 evidence; no serving/quality promotion.",
+  "base_checkpoint": "fada9b128381adef8c1c9f2500b8d2481f4bd3ac",
+  "hoist_prepare_helper_sha256": "903533fbc171133fda3f8ce11049b40a71d515bcb319b790b6d9764f47db3fb7",
+  "base_existing_files_sha256": {
+    "cmake/GarnetMetal.cmake": "9fb3bba5c45eb4974a96f713af0e6fa4a0bb09e0f5b68c6344022cafe719f1a3",
+    "src/entry/metal_main.cpp": "fffa214a909beededb675c44a98f557f496be221c269ae1bd27989b6e8f21f0d",
+    "src/backends/metal/decoder_session.h": "f4549c37ff10a6e3a547e3566d77bb65e9adb97a6e34e668b322b0e87ce13798",
+    "src/backends/metal/decoder_session.cpp": "f6f0c7b4ed2618a060421b41d881f53cdec0da1dae4fcfc8432689c3f27c1b2a",
+    "src/backends/metal/metal_context.mm": "ce8e2d52ad06fefdfd0b01222eec28fe548ded2ed3bb4167aa7d4c3eac24c833",
+    "src/backends/metal/metal_context.h": "e3362d4f8f00abb8c55826064dea5168a74091cccd23a7e5da5ad00a1c4c870b"
+  },
+  "candidate_owned_files_sha256": {
+    "cmake/GarnetMetal.cmake": "2a9761c0d16cb723babc5379290919b7c472e8ea6aa8b4a9a3e351e7b77eda3f",
+    "src/backends/metal/metal_context.h": "378a2f0a223e414a40e49949125440da5f5620b0b85490e33e5e57645e47cbf0",
+    "src/backends/metal/metal_context.mm": "57d41a01549ec8c7db0355998e28640f535f205bc98667d8d0aac50af3f3223b",
+    "src/backends/metal/decoder_session.h": "5a31cb252fc120dfb4ec88896fa562b0ff26fec213e37a9b773595eee209cb4c",
+    "src/backends/metal/decoder_session.cpp": "898fd9ed12d5de0e24bea3b0d046bae49328493ab1db0f032e9475d0e6c2ec69",
+    "src/entry/metal_main.cpp": "349ff01b780128a4e81d09a70bd9db74416cedaffdd070fa51a8dd9ac600a70c",
+    "src/backends/metal/diagnostic_attention_fixture.h": "1ed2e53c2258deed313d7ba3843383461c6034dd18a53ce9f1f6bd6c10cb66b6",
+    "test2026/metal/attention_fixture_capture_test.cpp": "cc88cd9fff237774b0e6528cad37fd14f2c9410b29fe37ec6297a213192a586f"
+  },
+  "native_library_sha256": "ba752f43b50b0fb5c7e4c6b4624ca722a2db7d238d9dbbbada079a64a956f821",
+  "source_audit_sha256": "178edf8b24aa62d0b59f59b3656864e2142823a8ed7784ea5a8ce991806cafd4",
+  "fixed_profile": {
+    "batch": 4,
+    "capacity": 4096,
+    "chunk": 128,
+    "heads": 32,
+    "kv_heads": 8,
+    "dim": 128,
+    "first_slot": 1920,
+    "layers": [
+      0,
+      15,
+      31
+    ]
+  },
+  "capture_option": "GARNET_METAL_ATTENTION_FIXTURE_CAPTURE",
+  "default": "OFF",
+  "required_recipe": "Use admitted hoist configure command with the complete selected packed Mistral/diagnostic layer-bulk/dense512 profile; other compile flag combinations are not qualified.",
+  "reserved_capture_bytes": 490749312,
+  "closed_metal_bytes": 1900544,
+  "original_bound": "1e-5+2e-4*abs(FP64 reference)",
+  "no_xmodel_or_neural_math_change": true
+}

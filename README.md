@@ -183,6 +183,9 @@ inference, numerical parity, or complete lowering on every backend. Exact
 coverage and known operator gaps are recorded in
 [production capture coverage](test/xlang3/models/production-capture.md).
 
+FLUX.2 Klein 4B adds text-to-image and reference-image editing on TensorRT/CUDA.
+See the [image generation example](xModel/README.md#image-generation).
+
 ## Getting Started
 
 The [Getting Started guide](docs/getting-started.md) covers prerequisites,

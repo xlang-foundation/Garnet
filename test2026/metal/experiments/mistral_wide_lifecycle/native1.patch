@@ -1,0 +1,59 @@
+--- a/src/backends/metal/compact_prefill_session.cpp
++++ b/src/backends/metal/compact_prefill_session.cpp
+@@ -34,0 +35,3 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++    if(wideVerificationPreparationClosed_)return false;
++#endif
+@@ -47,0 +51,3 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++       wideVerificationPreparationClosed_||
++#endif
+--- a/src/backends/metal/decoder_session.cpp
++++ b/src/backends/metal/decoder_session.cpp
+@@ -103,0 +104,3 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++    wideVerificationPreparationClosed_=false;
++#endif
+@@ -320 +323,5 @@
+-        ResetRowUnlocked(int64_t(lease.row));managedRows_=true;return result;
++        ResetRowUnlocked(int64_t(lease.row));managedRows_=true;
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++        wideVerificationPreparationClosed_=true;
++#endif
++        return result;
+@@ -815,0 +823,3 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++    wideVerificationPreparationClosed_=true;
++#endif
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -226,0 +227,4 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++    // Reset/release must not reopen compilation of this initialized engine.
++    bool wideVerificationPreparationClosed_=false;
++#endif
+@@ -342,0 +347,3 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++    bool WideVerificationPreparationOpen(){std::lock_guard<std::mutex> lock(mutex_);return gpu_&&!poisoned_&&!wideVerificationPreparationClosed_;}
++#endif
+@@ -576,0 +584,3 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++        APISET().AddProp("wide_verification_preparation_open",&MetalDecoderSession::WideVerificationPreparationOpen);
++#endif
+--- a/src/backends/metal/verification_session.cpp
++++ b/src/backends/metal/verification_session.cpp
+@@ -69,0 +70,4 @@
++#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
++    if(wideVerificationPreparationClosed_&&(r>4||(verification_&&verification_->batch*verification_->chunk>4)))
++        throw std::invalid_argument("Prepare or replace a wide verification profile before the first row claim or inference; reset does not reopen preparation");
++#endif
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -494 +494 @@
+-    info+="; native_dense_verify_b4t4_optional_v1";
++    info+="; native_dense_verify_b4t4_optional_v1; native_wide_verify_preparation_lifetime_v1";
+--- a/xModel/mistral/text_7b/metal_decoder.py
++++ b/xModel/mistral/text_7b/metal_decoder.py
+@@ -122,0 +123,2 @@
++        if wide and 'native_wide_verify_preparation_lifetime_v1' in garnet.backend_info() and not self.session.wide_verification_preparation_open:
++            raise ValueError('Prepare wide verification before the first claim or inference; reset does not reopen engine preparation')

@@ -2,6 +2,7 @@
 #include "tokenizer_assets.h"
 #include "qwen_tokenizer.h"
 #include "json_bpe_tokenizer.h"
+#include "unigram_tokenizer.h"
 #include "tokenizer_utf8.h"
 
 namespace Garnet::Tokenization {
@@ -40,9 +41,10 @@ std::unique_ptr<Tokenizer> OpenTokenizer(const std::string& folder, std::string*
         }
         std::unique_ptr<Tokenizer> tokenizer;
         if (family == "qwen") tokenizer = std::make_unique<QwenTextTokenizer>();
+        else if (family == "t5") tokenizer = std::make_unique<UnigramTokenizer>();
         else if (family == "mistral" || family == "gemma" || family == "llama" || family == "deepseek")
             tokenizer = std::make_unique<JsonBpeTokenizer>();
-        else throw std::runtime_error("unsupported tokenizer family; expected Qwen, Mistral, Gemma, Llama or DeepSeek artifacts");
+        else throw std::runtime_error("unsupported tokenizer family; expected Qwen, Mistral, Gemma, Llama, DeepSeek or T5 artifacts");
         if (!tokenizer->LoadFromFolder(folder, error)) return nullptr;
         return tokenizer;
     } catch (const std::exception& e) {

@@ -1,0 +1,413 @@
+{
+  "passed": true,
+  "scope": "Audit current-target calibrated encoder regions with preserved batch boundaries.",
+  "cases": 8,
+  "output_tokens": 3052,
+  "all_output_ids_full_kv_hidden_exact_saved_current_target": true,
+  "verification_frames": 1125,
+  "ordinary_fallback_frames": 54,
+  "target_gpu_ms": 73214.68687350008,
+  "target_direct_union_ms": 69753.96720600003,
+  "target_encoder_sum_ms": 70593.18549700003,
+  "direct_coverage": 0.9527318928034282,
+  "encoder_overlap_ms": 839.2182909999974,
+  "commit_gpu_ms": 438.5919149580992,
+  "other_commands": 11,
+  "groups": [
+    {
+      "site": "EncodeAffineInt4MatMul",
+      "kind": "MatMul",
+      "op": 23,
+      "physical_rows": 4,
+      "input_columns": 14336,
+      "encoder_count": 35872,
+      "region_union_ms": 12678.824337000002,
+      "percent_target_command_gpu": 17.317323720726147
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "VerificationAttention",
+      "op": 11,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 72000,
+      "region_union_ms": 12540.91117299999,
+      "percent_target_command_gpu": 17.12895555323224
+    },
+    {
+      "site": "EncodeAffineInt4MatMul",
+      "kind": "MatMul",
+      "op": 20,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 35872,
+      "region_union_ms": 12334.368967000017,
+      "percent_target_command_gpu": 16.84685067124752
+    },
+    {
+      "site": "EncodeAffineInt4MatMul",
+      "kind": "MatMul",
+      "op": 21,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 35872,
+      "region_union_ms": 12177.044175999998,
+      "percent_target_command_gpu": 16.63196920727043
+    },
+    {
+      "site": "EncodeAffineInt4MatMul",
+      "kind": "MatMul",
+      "op": 6,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 35872,
+      "region_union_ms": 4073.7672130000037,
+      "percent_target_command_gpu": 5.564139364604039
+    },
+    {
+      "site": "EncodeAffineInt4MatMul",
+      "kind": "MatMul",
+      "op": 14,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 35872,
+      "region_union_ms": 3973.2109840000003,
+      "percent_target_command_gpu": 5.426795023879419
+    },
+    {
+      "site": "EncodeAffineInt4MatMul",
+      "kind": "MatMul",
+      "op": 7,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 35872,
+      "region_union_ms": 1914.9054929999973,
+      "percent_target_command_gpu": 2.6154663425776308
+    },
+    {
+      "site": "EncodeAffineInt4MatMul",
+      "kind": "MatMul",
+      "op": 8,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 35872,
+      "region_union_ms": 1899.8821329999998,
+      "percent_target_command_gpu": 2.594946743790089
+    },
+    {
+      "site": "EncodePointwise",
+      "kind": "Norm",
+      "op": 2,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 36000,
+      "region_union_ms": 951.6602860000008,
+      "percent_target_command_gpu": 1.2998215612726365
+    },
+    {
+      "site": "EncodeAffineInt4MatMul",
+      "kind": "MatMul",
+      "op": 1,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 1125,
+      "region_union_ms": 899.2032690000013,
+      "percent_target_command_gpu": 1.2281733452656018
+    },
+    {
+      "site": "EncodePointwise",
+      "kind": "Norm",
+      "op": 19,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 36000,
+      "region_union_ms": 694.3094510000005,
+      "percent_target_command_gpu": 0.9483199077251051
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "Layout",
+      "op": 3,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 36000,
+      "region_union_ms": 646.1897680000003,
+      "percent_target_command_gpu": 0.8825958227704823
+    },
+    {
+      "site": "EncodePointwise",
+      "kind": "Silu",
+      "op": 22,
+      "physical_rows": 4,
+      "input_columns": 14336,
+      "encoder_count": 36000,
+      "region_union_ms": 645.7197879999992,
+      "percent_target_command_gpu": 0.8819539023852826
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "NormRope",
+      "op": 9,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 36000,
+      "region_union_ms": 561.6974630000009,
+      "percent_target_command_gpu": 0.7671923311923721
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "session",
+      "op": 18446744073709551615,
+      "physical_rows": 0,
+      "input_columns": 0,
+      "encoder_count": 74250,
+      "region_union_ms": 557.0405070000002,
+      "percent_target_command_gpu": 0.7608316456538995
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "NormRope",
+      "op": 10,
+      "physical_rows": 4,
+      "input_columns": 1024,
+      "encoder_count": 36000,
+      "region_union_ms": 519.9476829999999,
+      "percent_target_command_gpu": 0.7101685538836799
+    },
+    {
+      "site": "EncodePointwise",
+      "kind": "Add",
+      "op": 24,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 36000,
+      "region_union_ms": 456.9626140000002,
+      "percent_target_command_gpu": 0.6241406383251186
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "Layout",
+      "op": 5,
+      "physical_rows": 1,
+      "input_columns": 12,
+      "encoder_count": 36000,
+      "region_union_ms": 418.1077399999994,
+      "percent_target_command_gpu": 0.5710708573027207
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "Layout",
+      "op": 15,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 36000,
+      "region_union_ms": 335.9198249999998,
+      "percent_target_command_gpu": 0.4588148079911892
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "KVChunk",
+      "op": 12,
+      "physical_rows": 4,
+      "input_columns": 1024,
+      "encoder_count": 36000,
+      "region_union_ms": 290.39416,
+      "percent_target_command_gpu": 0.3966337525990399
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "Layout",
+      "op": 1,
+      "physical_rows": 1,
+      "input_columns": 16384,
+      "encoder_count": 36000,
+      "region_union_ms": 212.935197,
+      "percent_target_command_gpu": 0.29083672428717505
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "Layout",
+      "op": 4,
+      "physical_rows": 1,
+      "input_columns": 16384,
+      "encoder_count": 36000,
+      "region_union_ms": 212.31351099999995,
+      "percent_target_command_gpu": 0.2899875968421938
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "Layout",
+      "op": 0,
+      "physical_rows": 1,
+      "input_columns": 16384,
+      "encoder_count": 36000,
+      "region_union_ms": 186.22231999999994,
+      "percent_target_command_gpu": 0.254351043420774
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "Layout",
+      "op": 25,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 36000,
+      "region_union_ms": 183.5315480000004,
+      "percent_target_command_gpu": 0.25067586277751236
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "KVChunk",
+      "op": 13,
+      "physical_rows": 4,
+      "input_columns": 1024,
+      "encoder_count": 36000,
+      "region_union_ms": 181.82918799999973,
+      "percent_target_command_gpu": 0.2483507008835033
+    },
+    {
+      "site": "EncodePointwise",
+      "kind": "Add",
+      "op": 17,
+      "physical_rows": 1,
+      "input_columns": 16384,
+      "encoder_count": 36000,
+      "region_union_ms": 180.26471999999984,
+      "percent_target_command_gpu": 0.24621387825022076
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "Layout",
+      "op": 18,
+      "physical_rows": 1,
+      "input_columns": 16384,
+      "encoder_count": 36000,
+      "region_union_ms": 168.63648199999992,
+      "percent_target_command_gpu": 0.23033149385910656
+    },
+    {
+      "site": "EncodeStateKernel",
+      "kind": "Layout",
+      "op": 16,
+      "physical_rows": 1,
+      "input_columns": 16384,
+      "encoder_count": 36000,
+      "region_union_ms": 164.1970150000001,
+      "percent_target_command_gpu": 0.22426786483933037
+    },
+    {
+      "site": "EncodeArgmax",
+      "kind": "session",
+      "op": 18446744073709551615,
+      "physical_rows": 0,
+      "input_columns": 0,
+      "encoder_count": 1125,
+      "region_union_ms": 56.55444399999992,
+      "percent_target_command_gpu": 0.07724467100120823
+    },
+    {
+      "site": "EncodeAffineInt4IndexedDecode",
+      "kind": "MatMul",
+      "op": 23,
+      "physical_rows": 4,
+      "input_columns": 14336,
+      "encoder_count": 128,
+      "region_union_ms": 43.099204,
+      "percent_target_command_gpu": 0.05886688291717557
+    },
+    {
+      "site": "EncodeAffineInt4IndexedDecode",
+      "kind": "MatMul",
+      "op": 21,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 128,
+      "region_union_ms": 40.828036,
+      "percent_target_command_gpu": 0.05576481679221335
+    },
+    {
+      "site": "EncodeAffineInt4IndexedDecode",
+      "kind": "MatMul",
+      "op": 20,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 128,
+      "region_union_ms": 40.326170999999995,
+      "percent_target_command_gpu": 0.05507934640173402
+    },
+    {
+      "site": "EncodePointwise",
+      "kind": "Norm",
+      "op": 0,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 1125,
+      "region_union_ms": 25.211708999999964,
+      "percent_target_command_gpu": 0.034435316295978444
+    },
+    {
+      "site": "EncodeAffineInt4IndexedDecode",
+      "kind": "MatMul",
+      "op": 6,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 128,
+      "region_union_ms": 13.089956999999998,
+      "percent_target_command_gpu": 0.01787886769578999
+    },
+    {
+      "site": "EncodeAffineInt4IndexedDecode",
+      "kind": "MatMul",
+      "op": 14,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 128,
+      "region_union_ms": 12.628328999999999,
+      "percent_target_command_gpu": 0.017248354857843148
+    },
+    {
+      "site": "EncodeAffineInt4IndexedDecode",
+      "kind": "MatMul",
+      "op": 8,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 128,
+      "region_union_ms": 3.9140409999999997,
+      "percent_target_command_gpu": 0.0053459779275743646
+    },
+    {
+      "site": "EncodeAffineInt4IndexedDecode",
+      "kind": "MatMul",
+      "op": 7,
+      "physical_rows": 4,
+      "input_columns": 4096,
+      "encoder_count": 128,
+      "region_union_ms": 3.7495879999999997,
+      "percent_target_command_gpu": 0.005121360426601997
+    }
+  ],
+  "negative_controls_rejected": [
+    "changed_duration",
+    "clock_outside_range",
+    "missing_encoder",
+    "wrong_projection_extent",
+    "false_mps_coverage",
+    "missing_commit_command",
+    "wrong_commit_scope",
+    "wrong_accepted_prefix"
+  ],
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-gpu-census1/capture1.log": "92939a9dfd60ef6b36f72c6ff843854112173a7bfbf0e85bb89b9297b7d1b912",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-gpu-census1/result1.json": "8f6971d3cdd1b7afffae31072ffe83b60afdcafb751b6306823638ca3f03d25e",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-gpu-census1/preflight1.json": "593385bd6a350e90a3d6162968bb980b71c424f9e6ec478cc3b687dc7e6eb495",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-coder1/cohort1-control-result1.json": "c0515ac4148093bdbe993b48a9724d0396ea5358261d3a4411f5803f5c1ec14a"
+  },
+  "graph_fusions_and_batch_boundaries_preserved": true,
+  "mps_owned_encoders_observed": false,
+  "counter_overhead_measured": false,
+  "region_unions_may_overlap": true,
+  "proposals_replayed_from_saved_data": true,
+  "learned_draft_inference_run": false,
+  "serving_speed_claim": false,
+  "coding_quality_qualified": false,
+  "goal_complete": false
+}

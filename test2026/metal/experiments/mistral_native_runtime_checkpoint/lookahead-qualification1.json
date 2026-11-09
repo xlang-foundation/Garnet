@@ -1,0 +1,58 @@
+{
+  "exact_output_IDs": 56,
+  "logical_state_pairs": 6890,
+  "ordinary_calls": 20,
+  "lookahead_calls": 13,
+  "accepted_proposals": 12,
+  "DAG_token_rows": 426,
+  "decode_widths": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "speed_qualified": false,
+  "row_reuse_prefix_edit_model_qualified": false,
+  "coding_quality_qualified": false,
+  "goal_complete": false,
+  "passed": true,
+  "rejected_corruption_controls": [
+    "output",
+    "KV",
+    "hidden",
+    "owner",
+    "cleanup",
+    "GPU_count",
+    "helper"
+  ],
+  "scope": "CPU-only exact output and whole canonical KV/final-hidden logical-progress joins.",
+  "source_commit": "0edfd73e971f7d0e356515f6d92cdd457ae04e54",
+  "component_commit_parent": "e0da6531f26fa9aedd6ed09ab3cfd5cccec096ce",
+  "source_clean": true,
+  "source_matches_actual_build": true,
+  "default_OFF": true,
+  "native_API": [
+    "session.prepare_lookahead(window,levels,guesses)",
+    "scheduler.lookahead_generate_json(stops)"
+  ],
+  "tested_profile": {
+    "B": 4,
+    "C": 4096,
+    "W": 4,
+    "N": 4,
+    "G": 1,
+    "local_rows_per_request": 16
+  },
+  "accepted_span_distribution": {
+    "1": 34,
+    "2": 3,
+    "4": 3
+  },
+  "strict_cleanup_limit_bytes": 4194304,
+  "prepared_metal_bytes": 9984245760,
+  "local_KV_bytes": 16777216,
+  "ordinary_canonical_token_inputs": 52,
+  "internal_work_ratio": 8.192307692307692,
+  "new_ANE_gain": false,
+  "time_ns": 1794188395243368000
+}

@@ -38,6 +38,16 @@ kernel void affine_q4_indexed_decode(device const float* a [[buffer(0)]],
     if(selected_decode_rows>1){total=simd_sum(sum1);if(lane==0)out[r1*p.oStride+n]=total;}
     if(selected_decode_rows>2){total=simd_sum(sum2);if(lane==0)out[r2*p.oStride+n]=total;}
     if(selected_decode_rows>3){total=simd_sum(sum3);if(lane==0)out[r3*p.oStride+n]=total;}
+#ifdef GARNET_INDEXED_DECODE_FUSED_CLEAR
+    // Only a separately prepared physical-B4, dense-output profile selects
+    // this library. Selected rows retain the exact original arithmetic above.
+    uint mask=(1u<<uint(r0));
+    if(selected_decode_rows>1)mask|=1u<<uint(r1);
+    if(selected_decode_rows>2)mask|=1u<<uint(r2);
+    if(selected_decode_rows>3)mask|=1u<<uint(r3);
+    if(lane==0)for(uint row=0;row<4;++row)
+        if((mask&(1u<<row))==0)out[AffineIndex(row)*p.oStride+n]=0.0f;
+#endif
 }
 )METAL";
 }

@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "base_sha256": "4e8fdacbd7405c80ddb0d91688d0768811a1fd8559a900ace6ecf33a6919100d",
+  "changes": [
+    {
+      "old": " std::map<Key,id<MTLComputePipelineState>> pipelines;",
+      "new": " std::map<Key,id<MTLComputePipelineState>> pipelines;bool preparationFinished=false;"
+    },
+    {
+      "old": "Key key{indexed,k,n,aStride,active,groups};auto found=pipelines.find(key);if(found!=pipelines.end())return found->second;",
+      "new": "Key key{indexed,k,n,aStride,active,groups};auto found=pipelines.find(key);if(found!=pipelines.end())return found->second;Need(!preparationFinished,\"Pipeline creation after preparation barrier\");"
+    },
+    {
+      "old": " size_t words=0,caseIndex=0;",
+      "new": " for(auto shape:shapes)for(bool indexed:{false,true})for(size_t active:{1ul,2ul,3ul,4ul})for(int groups:{0,2,4,8})pipeline(indexed,shape.k,shape.n,shape.k,shape.n,active,groups);\n preparationFinished=true;report[\"all_pipelines_prepared_before_collection\"]=true;report[\"prepared_pipeline_count\"]=pipelines.size();\n size_t words=0,caseIndex=0;"
+    }
+  ],
+  "reason": "Prepare the full compiled shape family before any measurements; reject cache misses after the barrier. Earlier serial timing1 retained as diagnostics because per-selection preparation was interleaved between groups.",
+  "earlier_timing_discarded": false,
+  "earlier_timing_promoted": false,
+  "inference_executed": false
+}

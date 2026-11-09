@@ -1,0 +1,1981 @@
+{
+  "passed": true,
+  "cohorts": 2,
+  "cases": 18,
+  "layouts_per_case": 2,
+  "masks_per_layout": 22,
+  "methods": 3,
+  "parent_word_pairs": 619158144,
+  "independent_fp64_samples": 432,
+  "all_parent_bits_exact_ordinary_fp32": true,
+  "metrics": [
+    {
+      "cohort": 1,
+      "name": "l0-q",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.08750008419156075,
+      "candidate_gpu_ms": 0.08837482891976833,
+      "median_paired_speed_ratio": 0.9958623167945789
+    },
+    {
+      "cohort": 1,
+      "name": "l0-q",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.08750008419156075,
+      "candidate_gpu_ms": 0.0891250092536211,
+      "median_paired_speed_ratio": 0.9817680236370429
+    },
+    {
+      "cohort": 1,
+      "name": "l0-q",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.16895844601094723,
+      "candidate_gpu_ms": 0.1590417232364416,
+      "median_paired_speed_ratio": 1.0625167880297495
+    },
+    {
+      "cohort": 1,
+      "name": "l0-q",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.16895844601094723,
+      "candidate_gpu_ms": 0.1604584977030754,
+      "median_paired_speed_ratio": 1.0547303024212926
+    },
+    {
+      "cohort": 1,
+      "name": "l0-q",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.33804168924689293,
+      "candidate_gpu_ms": 0.3096249420195818,
+      "median_paired_speed_ratio": 1.0922411325243087
+    },
+    {
+      "cohort": 1,
+      "name": "l0-q",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.33804168924689293,
+      "candidate_gpu_ms": 0.30737509950995445,
+      "median_paired_speed_ratio": 1.098890274785501
+    },
+    {
+      "cohort": 1,
+      "name": "l0-k",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.03541656769812107,
+      "candidate_gpu_ms": 0.027458416298031807,
+      "median_paired_speed_ratio": 1.2895132658236703
+    },
+    {
+      "cohort": 1,
+      "name": "l0-k",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.03541656769812107,
+      "candidate_gpu_ms": 0.02774992026388645,
+      "median_paired_speed_ratio": 1.2747745102152117
+    },
+    {
+      "cohort": 1,
+      "name": "l0-k",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.07037492468953133,
+      "candidate_gpu_ms": 0.046999892219901085,
+      "median_paired_speed_ratio": 1.5044653548335596
+    },
+    {
+      "cohort": 1,
+      "name": "l0-k",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.07037492468953133,
+      "candidate_gpu_ms": 0.0463749747723341,
+      "median_paired_speed_ratio": 1.523810241039467
+    },
+    {
+      "cohort": 1,
+      "name": "l0-k",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.1396250445395708,
+      "candidate_gpu_ms": 0.08866679854691029,
+      "median_paired_speed_ratio": 1.5732473514509442
+    },
+    {
+      "cohort": 1,
+      "name": "l0-k",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.1396250445395708,
+      "candidate_gpu_ms": 0.08379179053008556,
+      "median_paired_speed_ratio": 1.671188888202143
+    },
+    {
+      "cohort": 1,
+      "name": "l0-gate",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.2846249844878912,
+      "candidate_gpu_ms": 0.28479169122874737,
+      "median_paired_speed_ratio": 0.9976544277589957
+    },
+    {
+      "cohort": 1,
+      "name": "l0-gate",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.2846249844878912,
+      "candidate_gpu_ms": 0.28687482699751854,
+      "median_paired_speed_ratio": 0.9902475448051705
+    },
+    {
+      "cohort": 1,
+      "name": "l0-gate",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.5663749761879444,
+      "candidate_gpu_ms": 0.5375000182539225,
+      "median_paired_speed_ratio": 1.0537520856012348
+    },
+    {
+      "cohort": 1,
+      "name": "l0-gate",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.5663749761879444,
+      "candidate_gpu_ms": 0.557666877284646,
+      "median_paired_speed_ratio": 1.0161504422005614
+    },
+    {
+      "cohort": 1,
+      "name": "l0-gate",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.135749975219369,
+      "candidate_gpu_ms": 1.0791248641908169,
+      "median_paired_speed_ratio": 1.0526479956837294
+    },
+    {
+      "cohort": 1,
+      "name": "l0-gate",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.135749975219369,
+      "candidate_gpu_ms": 1.1025418061763048,
+      "median_paired_speed_ratio": 1.0295098082740863
+    },
+    {
+      "cohort": 1,
+      "name": "l0-up",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.28395839035511017,
+      "candidate_gpu_ms": 0.2855416387319565,
+      "median_paired_speed_ratio": 0.9934383726055926
+    },
+    {
+      "cohort": 1,
+      "name": "l0-up",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.28395839035511017,
+      "candidate_gpu_ms": 0.2878748346120119,
+      "median_paired_speed_ratio": 0.9886360768536285
+    },
+    {
+      "cohort": 1,
+      "name": "l0-up",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.5685416981577873,
+      "candidate_gpu_ms": 0.5389584694057703,
+      "median_paired_speed_ratio": 1.0521107270322803
+    },
+    {
+      "cohort": 1,
+      "name": "l0-up",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.5685416981577873,
+      "candidate_gpu_ms": 0.5600417498499155,
+      "median_paired_speed_ratio": 1.012183366958081
+    },
+    {
+      "cohort": 1,
+      "name": "l0-up",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.1359583586454391,
+      "candidate_gpu_ms": 1.0799167212098837,
+      "median_paired_speed_ratio": 1.0518944066101406
+    },
+    {
+      "cohort": 1,
+      "name": "l0-up",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.1359583586454391,
+      "candidate_gpu_ms": 1.1072917841374874,
+      "median_paired_speed_ratio": 1.025562543663973
+    },
+    {
+      "cohort": 1,
+      "name": "l0-down",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.3074998967349529,
+      "candidate_gpu_ms": 0.30550011433660984,
+      "median_paired_speed_ratio": 1.0077832769427288
+    },
+    {
+      "cohort": 1,
+      "name": "l0-down",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.3074998967349529,
+      "candidate_gpu_ms": 0.3108750097453594,
+      "median_paired_speed_ratio": 0.992294874932398
+    },
+    {
+      "cohort": 1,
+      "name": "l0-down",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.615500146523118,
+      "candidate_gpu_ms": 0.591374933719635,
+      "median_paired_speed_ratio": 1.0464270414273105
+    },
+    {
+      "cohort": 1,
+      "name": "l0-down",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.615500146523118,
+      "candidate_gpu_ms": 0.6102500483393669,
+      "median_paired_speed_ratio": 1.0217893613896212
+    },
+    {
+      "cohort": 1,
+      "name": "l0-down",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.2337500229477882,
+      "candidate_gpu_ms": 1.2198749464005232,
+      "median_paired_speed_ratio": 1.002741876732944
+    },
+    {
+      "cohort": 1,
+      "name": "l0-down",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.2337500229477882,
+      "candidate_gpu_ms": 1.1818751227110624,
+      "median_paired_speed_ratio": 1.0369033470868416
+    },
+    {
+      "cohort": 1,
+      "name": "l15-q",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.0891250092536211,
+      "candidate_gpu_ms": 0.08962489664554596,
+      "median_paired_speed_ratio": 0.9949014601658773
+    },
+    {
+      "cohort": 1,
+      "name": "l15-q",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.0891250092536211,
+      "candidate_gpu_ms": 0.09008334018290043,
+      "median_paired_speed_ratio": 0.9907368105019049
+    },
+    {
+      "cohort": 1,
+      "name": "l15-q",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.1688748598098755,
+      "candidate_gpu_ms": 0.16075000166893005,
+      "median_paired_speed_ratio": 1.0504950163841915
+    },
+    {
+      "cohort": 1,
+      "name": "l15-q",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.1688748598098755,
+      "candidate_gpu_ms": 0.1601667609065771,
+      "median_paired_speed_ratio": 1.0519084987984413
+    },
+    {
+      "cohort": 1,
+      "name": "l15-q",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.33674994483590126,
+      "candidate_gpu_ms": 0.31174998730421066,
+      "median_paired_speed_ratio": 1.0809148461841427
+    },
+    {
+      "cohort": 1,
+      "name": "l15-q",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.33674994483590126,
+      "candidate_gpu_ms": 0.30625006183981895,
+      "median_paired_speed_ratio": 1.1006399148910913
+    },
+    {
+      "cohort": 1,
+      "name": "l15-k",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.03491668030619621,
+      "candidate_gpu_ms": 0.027458183467388153,
+      "median_paired_speed_ratio": 1.2720332218013826
+    },
+    {
+      "cohort": 1,
+      "name": "l15-k",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.03491668030619621,
+      "candidate_gpu_ms": 0.027458183467388153,
+      "median_paired_speed_ratio": 1.2772815402460398
+    },
+    {
+      "cohort": 1,
+      "name": "l15-k",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.07029157131910324,
+      "candidate_gpu_ms": 0.047458335757255554,
+      "median_paired_speed_ratio": 1.48324849583861
+    },
+    {
+      "cohort": 1,
+      "name": "l15-k",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.07029157131910324,
+      "candidate_gpu_ms": 0.0458334106951952,
+      "median_paired_speed_ratio": 1.5399468401715892
+    },
+    {
+      "cohort": 1,
+      "name": "l15-k",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.14033354818820953,
+      "candidate_gpu_ms": 0.08958345279097557,
+      "median_paired_speed_ratio": 1.5614270059661512
+    },
+    {
+      "cohort": 1,
+      "name": "l15-k",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.14033354818820953,
+      "candidate_gpu_ms": 0.0849999487400055,
+      "median_paired_speed_ratio": 1.6484616160047516
+    },
+    {
+      "cohort": 1,
+      "name": "l15-gate",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.2862501423805952,
+      "candidate_gpu_ms": 0.284416601061821,
+      "median_paired_speed_ratio": 1.0029311487171004
+    },
+    {
+      "cohort": 1,
+      "name": "l15-gate",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.2862501423805952,
+      "candidate_gpu_ms": 0.28662499971687794,
+      "median_paired_speed_ratio": 0.9947662351904276
+    },
+    {
+      "cohort": 1,
+      "name": "l15-gate",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.5679165478795767,
+      "candidate_gpu_ms": 0.5383333191275597,
+      "median_paired_speed_ratio": 1.0539970744297453
+    },
+    {
+      "cohort": 1,
+      "name": "l15-gate",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.5679165478795767,
+      "candidate_gpu_ms": 0.5573751404881477,
+      "median_paired_speed_ratio": 1.0204631272081475
+    },
+    {
+      "cohort": 1,
+      "name": "l15-gate",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.134124817326665,
+      "candidate_gpu_ms": 1.082375179976225,
+      "median_paired_speed_ratio": 1.0470413008527424
+    },
+    {
+      "cohort": 1,
+      "name": "l15-gate",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.134124817326665,
+      "candidate_gpu_ms": 1.1027499567717314,
+      "median_paired_speed_ratio": 1.0287884133532916
+    },
+    {
+      "cohort": 1,
+      "name": "l15-up",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.2847500145435333,
+      "candidate_gpu_ms": 0.284416601061821,
+      "median_paired_speed_ratio": 1.001612109571051
+    },
+    {
+      "cohort": 1,
+      "name": "l15-up",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.2847500145435333,
+      "candidate_gpu_ms": 0.2877917140722275,
+      "median_paired_speed_ratio": 0.989995673542008
+    },
+    {
+      "cohort": 1,
+      "name": "l15-up",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.5690418183803558,
+      "candidate_gpu_ms": 0.539249973371625,
+      "median_paired_speed_ratio": 1.0543151832279902
+    },
+    {
+      "cohort": 1,
+      "name": "l15-up",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.5690418183803558,
+      "candidate_gpu_ms": 0.5582084413617849,
+      "median_paired_speed_ratio": 1.0190812812098196
+    },
+    {
+      "cohort": 1,
+      "name": "l15-up",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.1377499904483557,
+      "candidate_gpu_ms": 1.082166563719511,
+      "median_paired_speed_ratio": 1.0515653620763266
+    },
+    {
+      "cohort": 1,
+      "name": "l15-up",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.1377499904483557,
+      "candidate_gpu_ms": 1.1041248217225075,
+      "median_paired_speed_ratio": 1.0286938213300194
+    },
+    {
+      "cohort": 1,
+      "name": "l15-down",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.3095415886491537,
+      "candidate_gpu_ms": 0.30812504701316357,
+      "median_paired_speed_ratio": 1.003270987120869
+    },
+    {
+      "cohort": 1,
+      "name": "l15-down",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.3095415886491537,
+      "candidate_gpu_ms": 0.31133322045207024,
+      "median_paired_speed_ratio": 0.9883731383310229
+    },
+    {
+      "cohort": 1,
+      "name": "l15-down",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.6121667101979256,
+      "candidate_gpu_ms": 0.6032499950379133,
+      "median_paired_speed_ratio": 1.0197542281003142
+    },
+    {
+      "cohort": 1,
+      "name": "l15-down",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.6121667101979256,
+      "candidate_gpu_ms": 0.6118335295468569,
+      "median_paired_speed_ratio": 1.014093153261409
+    },
+    {
+      "cohort": 1,
+      "name": "l15-down",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.232166774570942,
+      "candidate_gpu_ms": 1.241500023752451,
+      "median_paired_speed_ratio": 0.9903677692630549
+    },
+    {
+      "cohort": 1,
+      "name": "l15-down",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.232166774570942,
+      "candidate_gpu_ms": 1.196583267301321,
+      "median_paired_speed_ratio": 1.0243850990706598
+    },
+    {
+      "cohort": 1,
+      "name": "l31-q",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.09074993431568146,
+      "candidate_gpu_ms": 0.08929171599447727,
+      "median_paired_speed_ratio": 1.0028096648284377
+    },
+    {
+      "cohort": 1,
+      "name": "l31-q",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.09074993431568146,
+      "candidate_gpu_ms": 0.09175017476081848,
+      "median_paired_speed_ratio": 0.9909176959014168
+    },
+    {
+      "cohort": 1,
+      "name": "l31-q",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.16816658899188042,
+      "candidate_gpu_ms": 0.16066664829850197,
+      "median_paired_speed_ratio": 1.049221597801886
+    },
+    {
+      "cohort": 1,
+      "name": "l31-q",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.16816658899188042,
+      "candidate_gpu_ms": 0.1602501142770052,
+      "median_paired_speed_ratio": 1.0484244826899978
+    },
+    {
+      "cohort": 1,
+      "name": "l31-q",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.3357499372214079,
+      "candidate_gpu_ms": 0.3103748895227909,
+      "median_paired_speed_ratio": 1.081756123176175
+    },
+    {
+      "cohort": 1,
+      "name": "l31-q",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.3357499372214079,
+      "candidate_gpu_ms": 0.3054998815059662,
+      "median_paired_speed_ratio": 1.0983337696125306
+    },
+    {
+      "cohort": 1,
+      "name": "l31-k",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.03516674041748047,
+      "candidate_gpu_ms": 0.027541769668459892,
+      "median_paired_speed_ratio": 1.2745094734003102
+    },
+    {
+      "cohort": 1,
+      "name": "l31-k",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.03516674041748047,
+      "candidate_gpu_ms": 0.027708476409316063,
+      "median_paired_speed_ratio": 1.27369208275213
+    },
+    {
+      "cohort": 1,
+      "name": "l31-k",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.07049995474517345,
+      "candidate_gpu_ms": 0.04687509499490261,
+      "median_paired_speed_ratio": 1.5013337696594673
+    },
+    {
+      "cohort": 1,
+      "name": "l31-k",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.07049995474517345,
+      "candidate_gpu_ms": 0.04587485454976559,
+      "median_paired_speed_ratio": 1.53173002017458
+    },
+    {
+      "cohort": 1,
+      "name": "l31-k",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.14062505215406418,
+      "candidate_gpu_ms": 0.09087496437132359,
+      "median_paired_speed_ratio": 1.5596152520696283
+    },
+    {
+      "cohort": 1,
+      "name": "l31-k",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.14062505215406418,
+      "candidate_gpu_ms": 0.08466653525829315,
+      "median_paired_speed_ratio": 1.6584747019314732
+    },
+    {
+      "cohort": 1,
+      "name": "l31-gate",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.28416654095053673,
+      "candidate_gpu_ms": 0.28570834547281265,
+      "median_paired_speed_ratio": 0.9950325813349489
+    },
+    {
+      "cohort": 1,
+      "name": "l31-gate",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.28416654095053673,
+      "candidate_gpu_ms": 0.2876250073313713,
+      "median_paired_speed_ratio": 0.9869924398503315
+    },
+    {
+      "cohort": 1,
+      "name": "l31-gate",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.5717917811125517,
+      "candidate_gpu_ms": 0.5393750034272671,
+      "median_paired_speed_ratio": 1.0580322926503627
+    },
+    {
+      "cohort": 1,
+      "name": "l31-gate",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.5717917811125517,
+      "candidate_gpu_ms": 0.5591665394604206,
+      "median_paired_speed_ratio": 1.0179959709454092
+    },
+    {
+      "cohort": 1,
+      "name": "l31-gate",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.1394999455660582,
+      "candidate_gpu_ms": 1.085624797269702,
+      "median_paired_speed_ratio": 1.0503515182523797
+    },
+    {
+      "cohort": 1,
+      "name": "l31-gate",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.1394999455660582,
+      "candidate_gpu_ms": 1.1073332279920578,
+      "median_paired_speed_ratio": 1.029349608284511
+    },
+    {
+      "cohort": 1,
+      "name": "l31-up",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.2851665485650301,
+      "candidate_gpu_ms": 0.28391648083925247,
+      "median_paired_speed_ratio": 1.0036676199909478
+    },
+    {
+      "cohort": 1,
+      "name": "l31-up",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.2851665485650301,
+      "candidate_gpu_ms": 0.28812489472329617,
+      "median_paired_speed_ratio": 0.988695362742073
+    },
+    {
+      "cohort": 1,
+      "name": "l31-up",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.5677500739693642,
+      "candidate_gpu_ms": 0.5407498683780432,
+      "median_paired_speed_ratio": 1.0509261055792267
+    },
+    {
+      "cohort": 1,
+      "name": "l31-up",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.5677500739693642,
+      "candidate_gpu_ms": 0.5606666672974825,
+      "median_paired_speed_ratio": 1.0133272534907436
+    },
+    {
+      "cohort": 1,
+      "name": "l31-up",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.1407916899770498,
+      "candidate_gpu_ms": 1.084416639059782,
+      "median_paired_speed_ratio": 1.048631019439326
+    },
+    {
+      "cohort": 1,
+      "name": "l31-up",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.1407916899770498,
+      "candidate_gpu_ms": 1.10466661863029,
+      "median_paired_speed_ratio": 1.0288739590990963
+    },
+    {
+      "cohort": 1,
+      "name": "l31-down",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.31025009229779243,
+      "candidate_gpu_ms": 0.30912505462765694,
+      "median_paired_speed_ratio": 1.0038099234366544
+    },
+    {
+      "cohort": 1,
+      "name": "l31-down",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.31025009229779243,
+      "candidate_gpu_ms": 0.313999829813838,
+      "median_paired_speed_ratio": 0.9875542752358346
+    },
+    {
+      "cohort": 1,
+      "name": "l31-down",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.6173332221806049,
+      "candidate_gpu_ms": 0.5985000170767307,
+      "median_paired_speed_ratio": 1.0361590378136016
+    },
+    {
+      "cohort": 1,
+      "name": "l31-down",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.6173332221806049,
+      "candidate_gpu_ms": 0.6017501000314951,
+      "median_paired_speed_ratio": 1.0251727583917567
+    },
+    {
+      "cohort": 1,
+      "name": "l31-down",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.2565418146550655,
+      "candidate_gpu_ms": 1.2517082504928112,
+      "median_paired_speed_ratio": 1.01466028188713
+    },
+    {
+      "cohort": 1,
+      "name": "l31-down",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.2565418146550655,
+      "candidate_gpu_ms": 1.2187499087303877,
+      "median_paired_speed_ratio": 1.0346899120890058
+    },
+    {
+      "cohort": 1,
+      "name": "head",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.6332502234727144,
+      "candidate_gpu_ms": 0.6381249986588955,
+      "median_paired_speed_ratio": 1.002315767292005
+    },
+    {
+      "cohort": 1,
+      "name": "head",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.6332502234727144,
+      "candidate_gpu_ms": 0.6388749461621046,
+      "median_paired_speed_ratio": 0.9879132493524369
+    },
+    {
+      "cohort": 1,
+      "name": "head",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 1.2623751536011696,
+      "candidate_gpu_ms": 1.234208233654499,
+      "median_paired_speed_ratio": 1.0227042226504919
+    },
+    {
+      "cohort": 1,
+      "name": "head",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 1.2623751536011696,
+      "candidate_gpu_ms": 1.2672499287873507,
+      "median_paired_speed_ratio": 0.9966397646565023
+    },
+    {
+      "cohort": 1,
+      "name": "head",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 2.529375022277236,
+      "candidate_gpu_ms": 2.57875001989305,
+      "median_paired_speed_ratio": 0.983651192325815
+    },
+    {
+      "cohort": 1,
+      "name": "head",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 2.529375022277236,
+      "candidate_gpu_ms": 2.5590418372303247,
+      "median_paired_speed_ratio": 0.9880853111260276
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k64-n17",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.0019583385437726974,
+      "candidate_gpu_ms": 0.002916669473052025,
+      "median_paired_speed_ratio": 0.681162941367023
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k64-n17",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.0019583385437726974,
+      "candidate_gpu_ms": 0.002874992787837982,
+      "median_paired_speed_ratio": 0.6966677221673776
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k64-n17",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.003125052899122238,
+      "candidate_gpu_ms": 0.002749962732195854,
+      "median_paired_speed_ratio": 1.1363982727965456
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k64-n17",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.003125052899122238,
+      "candidate_gpu_ms": 0.0028333161026239395,
+      "median_paired_speed_ratio": 1.102966554359438
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k64-n17",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.005583278834819794,
+      "candidate_gpu_ms": 0.002874992787837982,
+      "median_paired_speed_ratio": 1.9275996112730807
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k64-n17",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.005583278834819794,
+      "candidate_gpu_ms": 0.003125052899122238,
+      "median_paired_speed_ratio": 1.7972513780865362
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k128-n33",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.001875218003988266,
+      "candidate_gpu_ms": 0.002874992787837982,
+      "median_paired_speed_ratio": 0.6522513767411726
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k128-n33",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.001875218003988266,
+      "candidate_gpu_ms": 0.0029583461582660675,
+      "median_paired_speed_ratio": 0.6428514408876826
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k128-n33",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.0030833762139081955,
+      "candidate_gpu_ms": 0.0028333161026239395,
+      "median_paired_speed_ratio": 1.088257046593804
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k128-n33",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.0030833762139081955,
+      "candidate_gpu_ms": 0.002874992787837982,
+      "median_paired_speed_ratio": 1.0724813735017817
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k128-n33",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.005583511665463448,
+      "candidate_gpu_ms": 0.002791639417409897,
+      "median_paired_speed_ratio": 2.0
+    },
+    {
+      "cohort": 1,
+      "name": "edge-k128-n33",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.005583511665463448,
+      "candidate_gpu_ms": 0.003125052899122238,
+      "median_paired_speed_ratio": 1.7866934883027865
+    },
+    {
+      "cohort": 2,
+      "name": "l0-q",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.08987495675683022,
+      "candidate_gpu_ms": 0.08904165588319302,
+      "median_paired_speed_ratio": 1.0141717610042973
+    },
+    {
+      "cohort": 2,
+      "name": "l0-q",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.08987495675683022,
+      "candidate_gpu_ms": 0.09129173122346401,
+      "median_paired_speed_ratio": 0.987204928018143
+    },
+    {
+      "cohort": 2,
+      "name": "l0-q",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.16799988225102425,
+      "candidate_gpu_ms": 0.15870854258537292,
+      "median_paired_speed_ratio": 1.056925990641821
+    },
+    {
+      "cohort": 2,
+      "name": "l0-q",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.16799988225102425,
+      "candidate_gpu_ms": 0.15887501649558544,
+      "median_paired_speed_ratio": 1.056932957983267
+    },
+    {
+      "cohort": 2,
+      "name": "l0-q",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.33637508749961853,
+      "candidate_gpu_ms": 0.3102084156125784,
+      "median_paired_speed_ratio": 1.0842168073344918
+    },
+    {
+      "cohort": 2,
+      "name": "l0-q",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.33637508749961853,
+      "candidate_gpu_ms": 0.30616670846939087,
+      "median_paired_speed_ratio": 1.097146583880169
+    },
+    {
+      "cohort": 2,
+      "name": "l0-k",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.0352498609572649,
+      "candidate_gpu_ms": 0.026999972760677338,
+      "median_paired_speed_ratio": 1.303485877574555
+    },
+    {
+      "cohort": 2,
+      "name": "l0-k",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.0352498609572649,
+      "candidate_gpu_ms": 0.027541769668459892,
+      "median_paired_speed_ratio": 1.2782743911058632
+    },
+    {
+      "cohort": 2,
+      "name": "l0-k",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.07004174403846264,
+      "candidate_gpu_ms": 0.04708324559032917,
+      "median_paired_speed_ratio": 1.4973745524527786
+    },
+    {
+      "cohort": 2,
+      "name": "l0-k",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.07004174403846264,
+      "candidate_gpu_ms": 0.045458320528268814,
+      "median_paired_speed_ratio": 1.545039932205131
+    },
+    {
+      "cohort": 2,
+      "name": "l0-k",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.14050002209842205,
+      "candidate_gpu_ms": 0.0902500469237566,
+      "median_paired_speed_ratio": 1.5524885899962437
+    },
+    {
+      "cohort": 2,
+      "name": "l0-k",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.14050002209842205,
+      "candidate_gpu_ms": 0.08562486618757248,
+      "median_paired_speed_ratio": 1.6401706525981454
+    },
+    {
+      "cohort": 2,
+      "name": "l0-gate",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.2853749319911003,
+      "candidate_gpu_ms": 0.28512487187981606,
+      "median_paired_speed_ratio": 1.0001436527670509
+    },
+    {
+      "cohort": 2,
+      "name": "l0-gate",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.2853749319911003,
+      "candidate_gpu_ms": 0.2872082404792309,
+      "median_paired_speed_ratio": 0.9918684080919968
+    },
+    {
+      "cohort": 2,
+      "name": "l0-gate",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.5678751040250063,
+      "candidate_gpu_ms": 0.5390832666307688,
+      "median_paired_speed_ratio": 1.0514845223752876
+    },
+    {
+      "cohort": 2,
+      "name": "l0-gate",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.5678751040250063,
+      "candidate_gpu_ms": 0.5591665394604206,
+      "median_paired_speed_ratio": 1.0148328513586853
+    },
+    {
+      "cohort": 2,
+      "name": "l0-gate",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.1367916595190763,
+      "candidate_gpu_ms": 1.0833749547600746,
+      "median_paired_speed_ratio": 1.0494611879374582
+    },
+    {
+      "cohort": 2,
+      "name": "l0-gate",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.1367916595190763,
+      "candidate_gpu_ms": 1.1037499643862247,
+      "median_paired_speed_ratio": 1.029059920625464
+    },
+    {
+      "cohort": 2,
+      "name": "l0-up",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.2847083378583193,
+      "candidate_gpu_ms": 0.2859584055840969,
+      "median_paired_speed_ratio": 0.9953302043718485
+    },
+    {
+      "cohort": 2,
+      "name": "l0-up",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.2847083378583193,
+      "candidate_gpu_ms": 0.2874166239053011,
+      "median_paired_speed_ratio": 0.990286534669188
+    },
+    {
+      "cohort": 2,
+      "name": "l0-up",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.5691251717507839,
+      "candidate_gpu_ms": 0.5411666352301836,
+      "median_paired_speed_ratio": 1.049399649571639
+    },
+    {
+      "cohort": 2,
+      "name": "l0-up",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.5691251717507839,
+      "candidate_gpu_ms": 0.5594165995717049,
+      "median_paired_speed_ratio": 1.0179208642939641
+    },
+    {
+      "cohort": 2,
+      "name": "l0-up",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.140916720032692,
+      "candidate_gpu_ms": 1.0845416691154242,
+      "median_paired_speed_ratio": 1.0520560919182138
+    },
+    {
+      "cohort": 2,
+      "name": "l0-up",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.140916720032692,
+      "candidate_gpu_ms": 1.1078750248998404,
+      "median_paired_speed_ratio": 1.0286221517373044
+    },
+    {
+      "cohort": 2,
+      "name": "l0-down",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.30845822766423225,
+      "candidate_gpu_ms": 0.3067499492317438,
+      "median_paired_speed_ratio": 1.0031165243938451
+    },
+    {
+      "cohort": 2,
+      "name": "l0-down",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.30845822766423225,
+      "candidate_gpu_ms": 0.3112500999122858,
+      "median_paired_speed_ratio": 0.9904083451268602
+    },
+    {
+      "cohort": 2,
+      "name": "l0-down",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.6332083139568567,
+      "candidate_gpu_ms": 0.5949998740106821,
+      "median_paired_speed_ratio": 1.0658143937595053
+    },
+    {
+      "cohort": 2,
+      "name": "l0-down",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.6332083139568567,
+      "candidate_gpu_ms": 0.6032916717231274,
+      "median_paired_speed_ratio": 1.0375681703264952
+    },
+    {
+      "cohort": 2,
+      "name": "l0-down",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.2434166856110096,
+      "candidate_gpu_ms": 1.2367500457912683,
+      "median_paired_speed_ratio": 1.002815099119765
+    },
+    {
+      "cohort": 2,
+      "name": "l0-down",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.2434166856110096,
+      "candidate_gpu_ms": 1.1926249135285616,
+      "median_paired_speed_ratio": 1.0402072650871823
+    },
+    {
+      "cohort": 2,
+      "name": "l15-q",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.0916668213903904,
+      "candidate_gpu_ms": 0.0907916110008955,
+      "median_paired_speed_ratio": 1.0032657082390717
+    },
+    {
+      "cohort": 2,
+      "name": "l15-q",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.0916668213903904,
+      "candidate_gpu_ms": 0.09300000965595245,
+      "median_paired_speed_ratio": 0.9788858793199099
+    },
+    {
+      "cohort": 2,
+      "name": "l15-q",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.17004157416522503,
+      "candidate_gpu_ms": 0.16058352775871754,
+      "median_paired_speed_ratio": 1.0591897780782253
+    },
+    {
+      "cohort": 2,
+      "name": "l15-q",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.17004157416522503,
+      "candidate_gpu_ms": 0.1607916783541441,
+      "median_paired_speed_ratio": 1.0568700956390822
+    },
+    {
+      "cohort": 2,
+      "name": "l15-q",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.3372917417436838,
+      "candidate_gpu_ms": 0.31295837834477425,
+      "median_paired_speed_ratio": 1.0779066340821617
+    },
+    {
+      "cohort": 2,
+      "name": "l15-q",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.3372917417436838,
+      "candidate_gpu_ms": 0.30679162591695786,
+      "median_paired_speed_ratio": 1.0994846631350228
+    },
+    {
+      "cohort": 2,
+      "name": "l15-k",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.0352498609572649,
+      "candidate_gpu_ms": 0.027458416298031807,
+      "median_paired_speed_ratio": 1.291670477885231
+    },
+    {
+      "cohort": 2,
+      "name": "l15-k",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.0352498609572649,
+      "candidate_gpu_ms": 0.027625123038887978,
+      "median_paired_speed_ratio": 1.2779461293671763
+    },
+    {
+      "cohort": 2,
+      "name": "l15-k",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.07087504491209984,
+      "candidate_gpu_ms": 0.04749977961182594,
+      "median_paired_speed_ratio": 1.4817053878691413
+    },
+    {
+      "cohort": 2,
+      "name": "l15-k",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.07087504491209984,
+      "candidate_gpu_ms": 0.046458328142762184,
+      "median_paired_speed_ratio": 1.5190608995487045
+    },
+    {
+      "cohort": 2,
+      "name": "l15-k",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.14245836064219475,
+      "candidate_gpu_ms": 0.09099999442696571,
+      "median_paired_speed_ratio": 1.561472302094201
+    },
+    {
+      "cohort": 2,
+      "name": "l15-k",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.14245836064219475,
+      "candidate_gpu_ms": 0.08591660298407078,
+      "median_paired_speed_ratio": 1.6456359610469729
+    },
+    {
+      "cohort": 2,
+      "name": "l15-gate",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.2846249844878912,
+      "candidate_gpu_ms": 0.28512487187981606,
+      "median_paired_speed_ratio": 0.9973732132998101
+    },
+    {
+      "cohort": 2,
+      "name": "l15-gate",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.2846249844878912,
+      "candidate_gpu_ms": 0.2872499171644449,
+      "median_paired_speed_ratio": 0.9913076561918176
+    },
+    {
+      "cohort": 2,
+      "name": "l15-gate",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.567583367228508,
+      "candidate_gpu_ms": 0.54154172539711,
+      "median_paired_speed_ratio": 1.0467027014012615
+    },
+    {
+      "cohort": 2,
+      "name": "l15-gate",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.567583367228508,
+      "candidate_gpu_ms": 0.558291794732213,
+      "median_paired_speed_ratio": 1.0159038973685846
+    },
+    {
+      "cohort": 2,
+      "name": "l15-gate",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.1407500132918358,
+      "candidate_gpu_ms": 1.0855833534151316,
+      "median_paired_speed_ratio": 1.049041591583955
+    },
+    {
+      "cohort": 2,
+      "name": "l15-gate",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.1407500132918358,
+      "candidate_gpu_ms": 1.1050833854824305,
+      "median_paired_speed_ratio": 1.0308370563094083
+    },
+    {
+      "cohort": 2,
+      "name": "l15-up",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.28466666117310524,
+      "candidate_gpu_ms": 0.28375000692903996,
+      "median_paired_speed_ratio": 1.0032481214399689
+    },
+    {
+      "cohort": 2,
+      "name": "l15-up",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.28466666117310524,
+      "candidate_gpu_ms": 0.2882084809243679,
+      "median_paired_speed_ratio": 0.9898336279049386
+    },
+    {
+      "cohort": 2,
+      "name": "l15-up",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.569458119571209,
+      "candidate_gpu_ms": 0.5408748984336853,
+      "median_paired_speed_ratio": 1.0520356327129297
+    },
+    {
+      "cohort": 2,
+      "name": "l15-up",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.569458119571209,
+      "candidate_gpu_ms": 0.5590415094047785,
+      "median_paired_speed_ratio": 1.0190454726623555
+    },
+    {
+      "cohort": 2,
+      "name": "l15-up",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.137124840170145,
+      "candidate_gpu_ms": 1.0855000000447035,
+      "median_paired_speed_ratio": 1.047090399633409
+    },
+    {
+      "cohort": 2,
+      "name": "l15-up",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.137124840170145,
+      "candidate_gpu_ms": 1.1055001523345709,
+      "median_paired_speed_ratio": 1.0282902025323712
+    },
+    {
+      "cohort": 2,
+      "name": "l15-down",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.3081667236983776,
+      "candidate_gpu_ms": 0.3100000321865082,
+      "median_paired_speed_ratio": 0.9938164693865289
+    },
+    {
+      "cohort": 2,
+      "name": "l15-down",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.3081667236983776,
+      "candidate_gpu_ms": 0.3127916716039181,
+      "median_paired_speed_ratio": 0.9863139513873113
+    },
+    {
+      "cohort": 2,
+      "name": "l15-down",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.6386248860508204,
+      "candidate_gpu_ms": 0.6069999653846025,
+      "median_paired_speed_ratio": 1.0459560930059464
+    },
+    {
+      "cohort": 2,
+      "name": "l15-down",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.6386248860508204,
+      "candidate_gpu_ms": 0.5998332053422928,
+      "median_paired_speed_ratio": 1.0572129579085152
+    },
+    {
+      "cohort": 2,
+      "name": "l15-down",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.2570417020469904,
+      "candidate_gpu_ms": 1.224250067025423,
+      "median_paired_speed_ratio": 1.0213239483865575
+    },
+    {
+      "cohort": 2,
+      "name": "l15-down",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.2570417020469904,
+      "candidate_gpu_ms": 1.2137084268033504,
+      "median_paired_speed_ratio": 1.0456900602133719
+    },
+    {
+      "cohort": 2,
+      "name": "l31-q",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.09200000204145908,
+      "candidate_gpu_ms": 0.09233341552317142,
+      "median_paired_speed_ratio": 0.9951315760193649
+    },
+    {
+      "cohort": 2,
+      "name": "l31-q",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.09200000204145908,
+      "candidate_gpu_ms": 0.09312503971159458,
+      "median_paired_speed_ratio": 0.9981863270336061
+    },
+    {
+      "cohort": 2,
+      "name": "l31-q",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.16979174688458443,
+      "candidate_gpu_ms": 0.16087503172457218,
+      "median_paired_speed_ratio": 1.0548783398499373
+    },
+    {
+      "cohort": 2,
+      "name": "l31-q",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.16979174688458443,
+      "candidate_gpu_ms": 0.16112509183585644,
+      "median_paired_speed_ratio": 1.0559865356538667
+    },
+    {
+      "cohort": 2,
+      "name": "l31-q",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.338749960064888,
+      "candidate_gpu_ms": 0.3122498746961355,
+      "median_paired_speed_ratio": 1.083266472995383
+    },
+    {
+      "cohort": 2,
+      "name": "l31-q",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.338749960064888,
+      "candidate_gpu_ms": 0.3083751071244478,
+      "median_paired_speed_ratio": 1.0983630849999735
+    },
+    {
+      "cohort": 2,
+      "name": "l31-k",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.03474997356534004,
+      "candidate_gpu_ms": 0.027624890208244324,
+      "median_paired_speed_ratio": 1.2667721518987343
+    },
+    {
+      "cohort": 2,
+      "name": "l31-k",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.03474997356534004,
+      "candidate_gpu_ms": 0.027875183150172234,
+      "median_paired_speed_ratio": 1.2500020788464896
+    },
+    {
+      "cohort": 2,
+      "name": "l31-k",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.07087504491209984,
+      "candidate_gpu_ms": 0.04733353853225708,
+      "median_paired_speed_ratio": 1.4991154890433978
+    },
+    {
+      "cohort": 2,
+      "name": "l31-k",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.07087504491209984,
+      "candidate_gpu_ms": 0.046291621401906013,
+      "median_paired_speed_ratio": 1.532083271079237
+    },
+    {
+      "cohort": 2,
+      "name": "l31-k",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.13945833779871464,
+      "candidate_gpu_ms": 0.08316664025187492,
+      "median_paired_speed_ratio": 1.6728453126837217
+    },
+    {
+      "cohort": 2,
+      "name": "l31-k",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.13945833779871464,
+      "candidate_gpu_ms": 0.08158339187502861,
+      "median_paired_speed_ratio": 1.7103368203110254
+    },
+    {
+      "cohort": 2,
+      "name": "l31-gate",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.28525013476610184,
+      "candidate_gpu_ms": 0.28708321042358875,
+      "median_paired_speed_ratio": 0.9991243089548999
+    },
+    {
+      "cohort": 2,
+      "name": "l31-gate",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.28525013476610184,
+      "candidate_gpu_ms": 0.28895819559693336,
+      "median_paired_speed_ratio": 0.9895590829495814
+    },
+    {
+      "cohort": 2,
+      "name": "l31-gate",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.5693749990314245,
+      "candidate_gpu_ms": 0.5411249585449696,
+      "median_paired_speed_ratio": 1.051884953415206
+    },
+    {
+      "cohort": 2,
+      "name": "l31-gate",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.5693749990314245,
+      "candidate_gpu_ms": 0.55891671217978,
+      "median_paired_speed_ratio": 1.0194110765484123
+    },
+    {
+      "cohort": 2,
+      "name": "l31-gate",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.1384999379515648,
+      "candidate_gpu_ms": 1.0889999102801085,
+      "median_paired_speed_ratio": 1.0441279150657663
+    },
+    {
+      "cohort": 2,
+      "name": "l31-gate",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.1384999379515648,
+      "candidate_gpu_ms": 1.1087500024586916,
+      "median_paired_speed_ratio": 1.026904939483126
+    },
+    {
+      "cohort": 2,
+      "name": "l31-up",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.2839167136698961,
+      "candidate_gpu_ms": 0.2847500145435333,
+      "median_paired_speed_ratio": 0.9956171756420127
+    },
+    {
+      "cohort": 2,
+      "name": "l31-up",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.2839167136698961,
+      "candidate_gpu_ms": 0.2883332781493664,
+      "median_paired_speed_ratio": 0.9856527721426008
+    },
+    {
+      "cohort": 2,
+      "name": "l31-up",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.5681249313056469,
+      "candidate_gpu_ms": 0.5419582594186068,
+      "median_paired_speed_ratio": 1.0483337261331127
+    },
+    {
+      "cohort": 2,
+      "name": "l31-up",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.5681249313056469,
+      "candidate_gpu_ms": 0.5594165995717049,
+      "median_paired_speed_ratio": 1.0157879580563571
+    },
+    {
+      "cohort": 2,
+      "name": "l31-up",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.140291802585125,
+      "candidate_gpu_ms": 1.0868750978261232,
+      "median_paired_speed_ratio": 1.0487853296023324
+    },
+    {
+      "cohort": 2,
+      "name": "l31-up",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.140291802585125,
+      "candidate_gpu_ms": 1.1055001523345709,
+      "median_paired_speed_ratio": 1.0307868817482682
+    },
+    {
+      "cohort": 2,
+      "name": "l31-down",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.31041656620800495,
+      "candidate_gpu_ms": 0.30987500213086605,
+      "median_paired_speed_ratio": 1.0025726450650236
+    },
+    {
+      "cohort": 2,
+      "name": "l31-down",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.31041656620800495,
+      "candidate_gpu_ms": 0.31325011514127254,
+      "median_paired_speed_ratio": 0.9919357988343448
+    },
+    {
+      "cohort": 2,
+      "name": "l31-down",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.6177499890327454,
+      "candidate_gpu_ms": 0.5967083852738142,
+      "median_paired_speed_ratio": 1.0441342049839146
+    },
+    {
+      "cohort": 2,
+      "name": "l31-down",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.6177499890327454,
+      "candidate_gpu_ms": 0.6007498595863581,
+      "median_paired_speed_ratio": 1.0262339429509888
+    },
+    {
+      "cohort": 2,
+      "name": "l31-down",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 1.256000017747283,
+      "candidate_gpu_ms": 1.24224997125566,
+      "median_paired_speed_ratio": 1.00756836485443
+    },
+    {
+      "cohort": 2,
+      "name": "l31-down",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 1.256000017747283,
+      "candidate_gpu_ms": 1.2003749143332243,
+      "median_paired_speed_ratio": 1.0432674534504462
+    },
+    {
+      "cohort": 2,
+      "name": "head",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.6313333287835121,
+      "candidate_gpu_ms": 0.6335414946079254,
+      "median_paired_speed_ratio": 0.9974897291159306
+    },
+    {
+      "cohort": 2,
+      "name": "head",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.6313333287835121,
+      "candidate_gpu_ms": 0.6387499161064625,
+      "median_paired_speed_ratio": 0.9887543489626243
+    },
+    {
+      "cohort": 2,
+      "name": "head",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 1.262374920770526,
+      "candidate_gpu_ms": 1.238583354279399,
+      "median_paired_speed_ratio": 1.0181849259105518
+    },
+    {
+      "cohort": 2,
+      "name": "head",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 1.262374920770526,
+      "candidate_gpu_ms": 1.2684999965131283,
+      "median_paired_speed_ratio": 0.9954593006392027
+    },
+    {
+      "cohort": 2,
+      "name": "head",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 2.5437918957322836,
+      "candidate_gpu_ms": 2.589041832834482,
+      "median_paired_speed_ratio": 0.9878094531414803
+    },
+    {
+      "cohort": 2,
+      "name": "head",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 2.5437918957322836,
+      "candidate_gpu_ms": 2.559875138103962,
+      "median_paired_speed_ratio": 0.9919754138477566
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k64-n17",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.002041459083557129,
+      "candidate_gpu_ms": 0.003125052899122238,
+      "median_paired_speed_ratio": 0.6533303531515422
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k64-n17",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.002041459083557129,
+      "candidate_gpu_ms": 0.0029583461582660675,
+      "median_paired_speed_ratio": 0.6805587892898719
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k64-n17",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.003125052899122238,
+      "candidate_gpu_ms": 0.002874992787837982,
+      "median_paired_speed_ratio": 1.1175938861040349
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k64-n17",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.003125052899122238,
+      "candidate_gpu_ms": 0.002916669473052025,
+      "median_paired_speed_ratio": 1.0714456773369523
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k64-n17",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.005708308890461922,
+      "candidate_gpu_ms": 0.002916669473052025,
+      "median_paired_speed_ratio": 1.942095885973437
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k64-n17",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.005708308890461922,
+      "candidate_gpu_ms": 0.002874992787837982,
+      "median_paired_speed_ratio": 1.985584710074506
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k128-n33",
+      "selected_rows": 4,
+      "method": "interleaved",
+      "control_gpu_ms": 0.00200001522898674,
+      "candidate_gpu_ms": 0.003250082954764366,
+      "median_paired_speed_ratio": 0.6154176816162774
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k128-n33",
+      "selected_rows": 4,
+      "method": "row-major",
+      "control_gpu_ms": 0.00200001522898674,
+      "candidate_gpu_ms": 0.003250082954764366,
+      "median_paired_speed_ratio": 0.6281968622394154
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k128-n33",
+      "selected_rows": 8,
+      "method": "interleaved",
+      "control_gpu_ms": 0.0032498501241207123,
+      "candidate_gpu_ms": 0.003125052899122238,
+      "median_paired_speed_ratio": 1.0400089405453732
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k128-n33",
+      "selected_rows": 8,
+      "method": "row-major",
+      "control_gpu_ms": 0.0032498501241207123,
+      "candidate_gpu_ms": 0.003166729584336281,
+      "median_paired_speed_ratio": 1.026321594000441
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k128-n33",
+      "selected_rows": 16,
+      "method": "interleaved",
+      "control_gpu_ms": 0.005708308890461922,
+      "candidate_gpu_ms": 0.003041699528694153,
+      "median_paired_speed_ratio": 1.8749708963911524
+    },
+    {
+      "cohort": 2,
+      "name": "edge-k128-n33",
+      "selected_rows": 16,
+      "method": "row-major",
+      "control_gpu_ms": 0.005708308890461922,
+      "candidate_gpu_ms": 0.0032084062695503235,
+      "median_paired_speed_ratio": 1.7895588235294118
+    }
+  ],
+  "no_runtime_integration": true,
+  "serving_speed_claim": false,
+  "goal_complete": false,
+  "negative_controls_rejected": [
+    "false_fp32_contract",
+    "missing_cohort_case",
+    "wrong_selected_row",
+    "missing_tail_count",
+    "false_exact",
+    "wrong_reference_binding",
+    "false_readonly",
+    "false_gpu_time",
+    "duplicate_timing",
+    "raw_parent_guard_bit"
+  ],
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/plan1.json": "1464fe87689a040aa1ba7f3088ee9c2c6c749a27db803f09b3a0342af0ba6ef5",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/preflight1.json": "b949dc6a401e5fa7cf757a533f8facf1a2999d6878e2192462d23e9a5bc94720",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/screen3.mm": "9944af12e4b4d284960f2c42d4a032edbe10e9cbe7d291c60e42a5c4eca5df8d",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/screen3": "b397490999c6a5d2e37f760c2467d2d39d8cb2a90b1c8f699b2a3faf99c77873",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/prepare1.py": "2c3deb212dbc526e7036c7b4fae60d244b2a068afabd541f7e28f35ff3196876",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/run3-cohort1/result1.json": "ca4fb2012468ed2af341bd7a6831cb6e0236e0fd37bfce69b67a8ce9c5e52a52",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/run3-cohort2/result1.json": "09cfb77801e2e12483f61d75da446757d5a60765586612796f3e7003571bdd18"
+  }
+}

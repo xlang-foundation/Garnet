@@ -1,0 +1,48 @@
+--- original-softmax1.metal
++++ candidate-softmax2.metal
+@@ -1,7 +1,7 @@
+-kernel void chunk_mps_softmax(device float* cacheScores [[buffer(0)]],device const float* liveScores [[buffer(1)]],
++kernel void chunk_mps_softmax_contiguous(device float* cacheScores [[buffer(0)]],device const float* liveScores [[buffer(1)]],
+     device float* liveProb [[buffer(2)]],device const float* slots [[buffer(3)]],device const float* active [[buffer(4)]],
+     constant ChunkAttentionParams& runtime [[buffer(5)]],constant ChunkMPSPitch& pitch [[buffer(6)]],
+-    threadgroup float* scratch [[threadgroup(0)]],threadgroup short* selected [[threadgroup(1)]],
++    threadgroup float* scratch [[threadgroup(0)]],
+     uint query [[threadgroup_position_in_grid]],uint tid [[thread_index_in_threadgroup]],
+     uint lane [[thread_index_in_simdgroup]],uint simd [[simdgroup_index_in_threadgroup]]) {
+     const auto p=chunk_mps_params(runtime);
+@@ -17,18 +17,12 @@
+         return;
+     }
+     uint visible=uint(min(ulong(extent),ulong(slots[b*p.sStride+t])+1));
+-    threadgroup int contiguous;threadgroup float partial[4];
+-    if(tid==0) {
+-        float first=slots[b*p.sStride];int valid=isfinite(first)&&first>=0&&first==floor(first);
+-        for(uint j=0;j<=t;++j)if(active[b*p.aStride+j]==0||slots[b*p.sStride+j]!=first+float(j))valid=0;
+-        contiguous=valid;
+-    }
+-    threadgroup_barrier(mem_flags::mem_threadgroup);
++    // Admitted only after completed native controls prove contiguous active prefixes.
++    const int first=int(slots[b*p.sStride]);
++    threadgroup float partial[4];
+     for(uint s=tid;s<visible;s+=128) {
+         int latest=-1;
+-        if(contiguous) {int candidate=int(s)-int(slots[b*p.sStride]);if(candidate>=0&&candidate<=int(t))latest=candidate;}
+-        else for(uint j=0;j<=t;++j)if(active[b*p.aStride+j]!=0&&slots[b*p.sStride+j]==float(s))latest=int(j);
+-        selected[s]=short(latest);
++        int candidate=int(s)-first;if(candidate>=0&&candidate<=int(t))latest=candidate;
+         scratch[s]=(latest<0?cacheScores[query*pitch.cacheScore+s]:liveScores[query*pitch.liveScore+uint(latest)])*rsqrt(float(p.dim));
+     }
+     threadgroup_barrier(mem_flags::mem_threadgroup);
+@@ -45,10 +39,10 @@
+     // All scratch reads below follow the last writes before the reduction's
+     // threadgroup barrier. Each output probability has one owning thread.
+     for(uint s=tid;s<extent;s+=128)
+-        cacheScores[query*pitch.cacheScore+s]=s<visible&&selected[s]<0?scratch[s]/denominator:0;
++        cacheScores[query*pitch.cacheScore+s]=s<visible&&(int(s)<first||int(s)>first+int(t))?scratch[s]/denominator:0;
+     for(uint j=tid;j<p.chunk;j+=128) {
+         float position=slots[b*p.sStride+j];
+         bool valid=j<=t&&active[b*p.aStride+j]!=0&&isfinite(position)&&position>=0&&position<float(visible)&&position==floor(position);
+-        liveProb[query*pitch.liveScore+j]=valid&&selected[uint(position)]==short(j)?scratch[uint(position)]/denominator:0;
++        liveProb[query*pitch.liveScore+j]=valid?scratch[uint(position)]/denominator:0;
+     }
+ }

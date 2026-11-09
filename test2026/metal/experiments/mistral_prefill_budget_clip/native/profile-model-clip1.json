@@ -1,0 +1,259 @@
+{
+  "profile_id": "mistral-budget-clip-clip-state32-v1",
+  "model_family": "mistral_7b",
+  "batch": 4,
+  "capacity": 4096,
+  "prefill_chunk": 128,
+  "prefill_schedule": "chunked",
+  "global_prefill_token_budget": 512,
+  "dense_prefill_max_tokens": 512,
+  "prefix_cache": false,
+  "require_mpp": true,
+  "mpp_operand_dtype": "float16",
+  "mpp_tile_k": 64,
+  "mpp_relaxed": false,
+  "mpp_n_major": false,
+  "mpp_registers": true,
+  "bounded_affine_kernel_profiles": true,
+  "affine_profile_index_bits": 32,
+  "affine_profile_max_threads": 0,
+  "compiled_engine_close_bytes_limit": 4194304,
+  "expected_body_affine_projections": 224,
+  "expected_head_affine_projections": 1,
+  "indexed_projections": true,
+  "active_decode_projections": true,
+  "expected_body_indexed_decode_projections": 224,
+  "expected_head_indexed_decode_projections": 1,
+  "retire_nonresident_packs": true,
+  "retire_prefill_hidden_inputs": true,
+  "require_attention_prefix": true,
+  "mixed_forward": false,
+  "trace_stage_latency": false,
+  "chunk_attention_index32": true,
+  "chunk_attention_mps": true,
+  "chunk_attention_buckets": true,
+  "expected_chunk_attention_dispatches": 32,
+  "expected_attention_mps_plan_count": 24,
+  "expected_attention_mps_scratch_bytes": 1885120512,
+  "expected_attention_mps_bucket_count": 144,
+  "require_reuse64": true,
+  "reuse64_min_outputs": 4096,
+  "reuse64_relaxed": false,
+  "expected_body_reuse64_projections": 160,
+  "chunk_attention_active_rows": true,
+  "mistral_decode_reuse": true,
+  "chunk_kv_scatter": true,
+  "expected_chunk_kv_scatter_dispatches": 64,
+  "chunk_layout_vector4": true,
+  "expected_chunk_layout_vector_dispatches": 256,
+  "compact_owner_prefill": true,
+  "expected_compact_prefill_family_count": 17,
+  "chunk_attention_scratch": true,
+  "wide_owner_prefill": true,
+  "chunk_flash_attention": false,
+  "require_reuse128": true,
+  "reuse128_min_rows": 128,
+  "reuse128_threadgroup_threads": 256,
+  "reuse128_even64_tiles": true,
+  "mistral_packed_prefill": true,
+  "packed_prefill_min_rows": 128,
+  "packed_prefill_plans": 3,
+  "packed_prefill_scratch_bytes": 14680064,
+  "prefill_alias_groups": true,
+  "prefill_hidden_pool": true,
+  "require_lifetime_reuse": true,
+  "expected_prefill_alias_layout": [
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 83886080
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    },
+    {
+      "groups": 1,
+      "slots": 2,
+      "reused_bytes": 228597760
+    }
+  ],
+  "scope": "Untimed new32-output control/state qualification. All three residual budgets; no serving speed claim.",
+  "native_cached_chunks": false,
+  "prefix_entries": 0,
+  "prefix_host_bytes": 0,
+  "mistral_grouped_value_context": false,
+  "prefix_identity": [
+    "mistral7b-a4b8f870-fp16g64",
+    "mistral7b-native-qo-wave-1-ordinary",
+    "mistral-v03-native-tokenizer",
+    "text_zero_based_3axis_v1",
+    "native-qo-no-retention",
+    "text"
+  ],
+  "prefix_shared_blocks": true,
+  "prefix_direct_capture": true,
+  "affine_weight_residency_budget_bytes": 0,
+  "split_decode_scores": true,
+  "split_score_profile32": true,
+  "value_profile32": true,
+  "paired_prefill": false,
+  "silu_profile32": false,
+  "native_leased_bulk_chunks": 0,
+  "native_bulk_kv": false,
+  "native_bulk_qo": false,
+  "half_attention_policy": true,
+  "prefix_capture_policy": "prefill_only_v1",
+  "fused_mlp_prefill": true,
+  "prefill_completion_priority": true,
+  "maximum_owner_prefill_chunk": 512,
+  "diagnostic_fixture": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-budget-clip1/fixture-model1.json",
+  "memory_inventory_path": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-budget-clip1/engine-inventory-clip1.json",
+  "prefill_budget_clip": true
+}

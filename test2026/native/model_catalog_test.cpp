@@ -21,7 +21,8 @@ int main(int argc, char** argv)
         "GPT-OSS-120B", "Qwen3-1.7B", "Qwen3-ASR-0.6B",
         "Qwen3-TTS-12Hz-0.6B-CustomVoice",
         "Qwen3-TTS-12Hz-1.7B-CustomVoice",
-        "Qwen3-VL-2B-Instruct", "Qwen3.5-2B", "Qwen3.5-4B"};
+        "Qwen3-VL-2B-Instruct", "Qwen3.5-2B", "Qwen3.5-4B",
+        "FLUX.2-klein-4B"};
     const auto catalog = nlohmann::json::parse(
         Garnet::EnumerateAvailableModelsJson(argv[1]));
     if (catalog.value("schema_version", 0) != 1 ||
@@ -46,6 +47,18 @@ int main(int argc, char** argv)
     if (ids != expectedIds) {
         std::cerr << "unexpected model ids\n";
         return 1;
+    }
+
+    const auto flux = Garnet::ResolveGenerationRoute(argv[1], "flux2-klein-4b", "");
+    if (flux.module != "xModel.flux2.klein_4b.pipeline" || flux.function != "generate") {
+        std::cerr << "generation entrypoints do not match the installed manifests\n";
+        return 1;
+    }
+    try {
+        Garnet::ResolveGenerationRoute(argv[1], "flux2-klein-4b", "unknown");
+        std::cerr << "generation accepted an undeclared mode\n";
+        return 1;
+    } catch (const std::exception&) {
     }
 
     const auto missing = nlohmann::json::parse(

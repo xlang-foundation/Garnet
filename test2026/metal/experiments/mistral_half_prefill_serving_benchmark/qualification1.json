@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "scope": "Saved HTTP serving collection integrity; no model-quality or goal admission.",
+  "study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-half-serving2",
+  "predecessor_checkpoint": "d25bff2a15f5cdfada49a6f9436ac4ee0477b83b",
+  "audit_sha256": "b9a911f2da4365abe017e32bb2e86b56738f28a1a950d7af0f6086841fcff7f0",
+  "comparison_sha256": "83b1beb385ffb8e9bdfc07fa9c78ab415cce150230f82e9f520656d58eab585f",
+  "preflight_sha256": "d99f02bc94c1e01b4ffa70da211739523b99704f69b44f42367d52e5e6a861e8",
+  "postflight_sha256": "339c2c2f653c6724c204029457a8af92391b35756af8cb0660de7b8c8549e70c",
+  "packaged_auditor_exact_report": true,
+  "requests": 30,
+  "output_tokens": 3840,
+  "all_tokens_text_exact_saved_fp32": true,
+  "negative_controls": [
+    "wrong_token",
+    "wrong_prompt",
+    "fake_cache_hit",
+    "wrong_epoch",
+    "missing_half_dispatch",
+    "mps_fallback",
+    "owner_leak",
+    "false_ttft",
+    "false_decode",
+    "false_occupancy"
+  ],
+  "native_coding_quality": "0/8",
+  "full_goal_complete": false,
+  "quality_gate_passed": false,
+  "targets_met": {
+    "vllm-metal": {
+      "single_request_decode_2x": false,
+      "aggregate_throughput_2x": false,
+      "half_ttft_c1": false,
+      "half_ttft_c4": false
+    },
+    "sglang-mlx": {
+      "single_request_decode_2x": false,
+      "aggregate_throughput_2x": false,
+      "half_ttft_c1": false,
+      "half_ttft_c4": false
+    }
+  }
+}

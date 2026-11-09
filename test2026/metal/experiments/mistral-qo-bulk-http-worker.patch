@@ -1,0 +1,34 @@
+diff --git a/test2026/metal/local_coder_batch_worker.py b/test2026/metal/local_coder_batch_worker.py
+--- a/test2026/metal/local_coder_batch_worker.py
++++ b/test2026/metal/local_coder_batch_worker.py
+@@ -30,6 +30,10 @@
+     batch=profile['batch'];capacity=profile['capacity'];chunk=profile['prefill_chunk'];prefix=profile.get('prefix_cache',False)
+     if type(prefix) is not bool:raise ValueError('Explicit boolean prefix policy required')
+     bulk_chunks=profile.get('native_leased_bulk_chunks',0)
++    bulk_kv=profile['native_bulk_kv']
++    bulk_qo=profile['native_bulk_qo']
++    if type(bulk_qo) is not bool or (bulk_qo and not bulk_kv):raise ValueError('Q/O requires explicit native K/V grouping')
++    if type(bulk_kv) is not bool or (bulk_kv and not bulk_chunks):raise ValueError('K/V bulk requires an explicit grouped native profile')
+     if type(bulk_chunks) is not int or bulk_chunks not in (0,16):raise ValueError('Bulk study requires explicit zero or16 prepared chunks')
+     if bulk_chunks and (family!='mistral_7b' or batch!=4 or chunk!=128 or 'native_leased_bulk_prefill_scheduler' not in garnet.backend_info()):raise ValueError('Native grouped scheduler requires the bounded B4/T128 Mistral extension')
+     tracked_rows=prefix or bulk_chunks>0
+@@ -327,7 +331,9 @@
+             emit(dict(event='native_split_score_prepared',enabled=split_scores,chunk=128,minimum_visible=512))
+         if bulk_chunks:
+             if not decoder.session.diagnostic_layer_bulk_prepare(graphs,bulk_chunks):raise ValueError('Native bulk profile preparation failed')
+-            emit(dict(event='native_bulk_prefill_prepared',maximum_chunks=bulk_chunks,chunk_tokens=128,physical_rows=4))
++            if not decoder.session.diagnostic_bulk_kv_set_enabled(bulk_kv):raise ValueError('Native K/V profile selector rejected before admission')
++            if not decoder.session.diagnostic_bulk_qo_set_enabled(bulk_qo):raise ValueError('Native Q/O selector rejected before admission')
++            emit(dict(event='native_bulk_prefill_prepared',maximum_chunks=bulk_chunks,chunk_tokens=128,physical_rows=4,kv_enabled=bulk_kv,qo_enabled=bulk_qo))
+         policy=garnet.continuous_scheduler();policy.initialize(decoder.session,16)
+         if family=='mistral_7b':
+             native_maximum=512 if wide_owner else dense_limit//batch
+@@ -686,7 +692,7 @@
+                         hidden.append(embedding(ids,True))
+                     began=time.monotonic();predicted=policy.run_bulk_prefill(hidden,plan['bulk_ticket']);ended=time.monotonic()
+                     stats=json.loads(decoder.session.diagnostic_layer_bulk_stats_json())
+-                    if stats['chunks']!=n or stats['rows']!=n*512 or stats['appended']!=[n*128]*4 or stats['bulk_calls']!=96 or stats['silu_half_calls']!=32:raise ValueError('Native bulk route differs from scheduled execution')
++                    if stats['chunks']!=n or stats['rows']!=n*512 or stats['appended']!=[n*128]*4 or stats['packed_calls']!=(0 if bulk_qo else 1024) or stats['qo_bulk_enabled'] is not bulk_qo or stats['qo_bulk_calls']!=(64 if bulk_qo else 0) or stats['qo_input_ops_skipped']!=(2560 if bulk_qo else 0) or stats['bulk_calls']!=(224 if bulk_qo else 160 if bulk_kv else 96) or stats['kv_bulk_calls']!=(64 if bulk_kv else 0) or stats['kv_bulk_enabled'] is not bulk_kv or stats['workspace_bytes']!=1909522432 or stats['silu_half_calls']!=32:raise ValueError('Native bulk route differs from scheduled execution')
+                     emit(dict(event='native_bulk_prefill_execution',ticket=plan['bulk_ticket'],chunks=n,stats=stats,began_monotonic=began,ended_monotonic=ended,run_wall_ms=(ended-began)*1000))
+                     for request in plan['requests']:
+                         final=request['prefill_offset']+request['prefill_tokens']==len(jobs[request['id']]['prompt'])

@@ -1,0 +1,37 @@
+{
+  "status": "planned_not_built_or_measured",
+  "scope": "Screen compiled decode threadgroup geometry while preserving FP32 arithmetic and SIMD reduction.",
+  "base_engine_provenance_sha256": "3dd125f8f9ed9bef0a944cdb14eca7ff0f7af3b0bc19f818fc884763d99a9411",
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_blocked_decode_shader.h": "be2541686a691294107d8db11ae2f1a9b58f627649ce38bed08c6d5ef3882521",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_indexed_decode_shader.h": "69de156174806e4496c61f5392f3a64ce31066ca3dcfaf22897c7ff50dbd37e3",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/metal_context.mm": "66b623403fba71d0d536b7b3371d3a3c9ec70d67508130f02f0240d3cf80a4a3",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-decode-reuse-operator2/audit2.json": "a22152171488629ad840e0c3a910bd44c7faf512cc006b91585442f533c4199f",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-medusa-shared-head1/generation-audit2.json": "f3a3e54a1f118995f6c785833319c980dd4901015330a27094ff0e2e12ae7c37",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-medusa-generation1/audit3.json": "0aa3d9ed83f20e75804de347d384be5d0947ccc893fd7259220e72d34c7003f6",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-speculative-feasibility1/prompt-lookup-replay2.json": "9b3c4e9dbf9bd49ff9808e0abe0fd51b6e2048828f43bb5474b77b698c8593d8"
+  },
+  "observed_existing_implementation": "Four SIMD groups per threadgroup; four adjacent output columns per SIMD group; indexed active row variants. Input vectorization and per-channel reuse are already implemented.",
+  "candidate": "Keep four columns per SIMD group and the exact lane-word/FMA order. Compare 2/4/8 SIMD groups per threadgroup, binding group output stride to group width; control is four.",
+  "not_implemented": true,
+  "prior_screens_not_repeated": [
+    "unchanged columns2/4 operator screen",
+    "unchanged single-path Medusa generation",
+    "unchanged history-only ngram replay",
+    "all comparator inference"
+  ],
+  "required_before_timing": [
+    "Compile from frozen headers in an isolated directory, never dirty root",
+    "All selected-row masks and row-padded/input-output guard parents exact to four-SIMD control",
+    "Independent fixed FP64 error bound on real trained Mistral operands",
+    "No contraction, reduction or precision-policy change",
+    "No profile with maximum threads exceeding actual device capability"
+  ],
+  "timing_if_correct": "Serial fresh operator processes, paired order counterbalanced, all samples retained, pressure and warm cohorts distinguished. No whole-model inference until operator gain is reproducible.",
+  "scope_limits": [
+    "This is an untested proposal, not an optimization result.",
+    "Saved B1 speculative feasibility is not the B4 HTTP benchmark.",
+    "Single-token ordinary kernel tuning alone has not established the 2x goal."
+  ],
+  "goal_complete": false
+}

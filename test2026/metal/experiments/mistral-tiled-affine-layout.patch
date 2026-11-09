@@ -1,0 +1,583 @@
+diff --git a/cmake/GarnetMetal.cmake b/cmake/GarnetMetal.cmake
+index 356659b7c50e25e6e151fb4468d3e7f63ba55ee0..03593ac6f64fcfaa252775fe5bbdf294203bae9e 100644
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -26,6 +26,16 @@ if(GARNET_METAL_AFFINE_FP16_COEFFICIENTS)
+     endif()
+     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_AFFINE_FP16_COEFFICIENTS=1)
+ endif()
++option(GARNET_METAL_AFFINE_TILED_WEIGHTS "Experimental single-copy native64x64 INT4/FP16 coefficient layout" OFF)
++if(GARNET_METAL_AFFINE_TILED_WEIGHTS)
++    if(NOT GARNET_METAL_AFFINE_FP16_COEFFICIENTS OR NOT GARNET_METAL_AFFINE_PROFILE OR
++       NOT GARNET_METAL_AFFINE_PROFILE_INDEX32 OR NOT GARNET_METAL_MPP_AFFINE_FP16)
++        message(FATAL_ERROR "Tiled affine weights require FP16 coefficients/operands and bounded index32 profiles")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_AFFINE_TILED_WEIGHTS=1)
++    add_executable(garnet_affine_tiled_layout_test test2026/metal/affine_tiled_layout_test.cpp)
++    add_test(NAME metal_affine_tiled_layout_host COMMAND garnet_affine_tiled_layout_test)
++endif()
+ if(GARNET_METAL_MLX_AFFINE_INT4)
+     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_MLX_AFFINE_INT4=1)
+ endif()
+diff --git a/src/backends/metal/affine_int4_blocked_decode_shader.h b/src/backends/metal/affine_int4_blocked_decode_shader.h
+index a96b1de06c9e02ff77c61f92d422b83b4a4db115..4b0e3e2e3d6bce6e21a044a7fba3397783489c0b 100644
+--- a/src/backends/metal/affine_int4_blocked_decode_shader.h
++++ b/src/backends/metal/affine_int4_blocked_decode_shader.h
+@@ -40,8 +40,8 @@ kernel void affine_q4_blocked(device const float* a [[buffer(0)]],
+         }
+ #pragma clang loop unroll(full)
+         for(uint column=0;column<GARNET_BLOCKED_COLUMNS;++column)if(first+column<p.columns) {
+-            const AffineIndex n=first+column,coefficient=n*(p.inner/64)+word/8;
+-            const uint values=packed[n*(p.inner/8)+word];
++            const AffineIndex n=first+column,coefficient=garnet_affine_coefficient_offset(n,word/8,p.inner);
++            const uint values=packed[garnet_affine_word_offset(n,word,p.inner)];
+             const float scale=garnet_affine_coefficient(scales[coefficient]);
+             const float bias=garnet_affine_coefficient(biases[coefficient]);
+ #pragma clang loop unroll(full)
+diff --git a/src/backends/metal/affine_int4_indexed_decode_shader.h b/src/backends/metal/affine_int4_indexed_decode_shader.h
+index f07ac937f177059e8c5cef21f0c0f03e1a0771fc..3ef925c6d5e327c593bf713a1e9d155c61973424 100644
+--- a/src/backends/metal/affine_int4_indexed_decode_shader.h
++++ b/src/backends/metal/affine_int4_indexed_decode_shader.h
+@@ -22,8 +22,8 @@ kernel void affine_q4_indexed_decode(device const float* a [[buffer(0)]],
+     const AffineIndex r2=selected_decode_rows>2?indices[2]:0,r3=selected_decode_rows>3?indices[3]:0;
+     float sum0=0,sum1=0,sum2=0,sum3=0;
+     for(AffineIndex word=lane;word<p.inner/8;word+=32) {
+-        const uint values=packed[n*(p.inner/8)+word];
+-        const AffineIndex coefficient=n*(p.inner/64)+word/8;
++        const uint values=packed[garnet_affine_word_offset(n,word,p.inner)];
++        const AffineIndex coefficient=garnet_affine_coefficient_offset(n,word/8,p.inner);
+         const float scale=indexed_decode_bf16(scales[coefficient]),bias=indexed_decode_bf16(biases[coefficient]);
+         for(uint j=0;j<8;++j) {
+             const float weight=fma(float((values>>(4*j))&15u),scale,bias);
+diff --git a/src/backends/metal/affine_int4_indexed_shader.h b/src/backends/metal/affine_int4_indexed_shader.h
+index 8c2cb953116e17219eb72775b2fbd07f788a407f..08c4ece8a68227ad20a56195ba8f2e416dabd13e 100644
+--- a/src/backends/metal/affine_int4_indexed_shader.h
++++ b/src/backends/metal/affine_int4_indexed_shader.h
+@@ -52,8 +52,8 @@ kernel void affine_q4_indexed(device const float* input [[buffer(0)]],
+                 const AffineIndex k=block+local+fragmentColumn;
+                 uint word=0;float scale=0.0f,bias=0.0f;
+                 if(n<p.columns&&k<p.inner) {
+-                    word=packed[n*(p.inner/8)+k/8];
+-                    const AffineIndex coefficient=n*(p.inner/64)+k/64;
++                    word=packed[garnet_affine_word_offset(n,k/8,p.inner)];
++                    const AffineIndex coefficient=garnet_affine_coefficient_offset(n,k/64,p.inner);
+                     scale=garnet_affine_coefficient(scales[coefficient]);
+                     bias=garnet_affine_coefficient(biases[coefficient]);
+                 }
+diff --git a/src/backends/metal/affine_int4_mpp_shader.h b/src/backends/metal/affine_int4_mpp_shader.h
+index 6f7365d8ce97592047cf517ee6dfb0ef52cdcf64..6fa39559bfe6dbdf5e74c68f1bf0789af58370c0 100644
+--- a/src/backends/metal/affine_int4_mpp_shader.h
++++ b/src/backends/metal/affine_int4_mpp_shader.h
+@@ -67,8 +67,8 @@ kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
+                 const AffineIndex k=block+local+fragmentColumn;
+                 uint word=0;float scale=0.0f,bias=0.0f;
+                 if(n<p.columns&&k<p.inner) {
+-                    word=packed[n*(p.inner/8)+k/8];
+-                    const AffineIndex coefficient=n*(p.inner/64)+k/64;
++                    word=packed[garnet_affine_word_offset(n,k/8,p.inner)];
++                    const AffineIndex coefficient=garnet_affine_coefficient_offset(n,k/64,p.inner);
+                     scale=garnet_affine_coefficient(scales[coefficient]);
+                     bias=garnet_affine_coefficient(biases[coefficient]);
+                 }
+@@ -128,8 +128,8 @@ kernel void affine_q4_mpp(device const float* input [[buffer(0)]],
+             const AffineIndex n=AffineIndex(group.x)*32+localN,k=base+localK;
+             uint values=0;float scale=0,bias=0;
+             if(n<p.columns&&k<p.inner) {
+-                const AffineIndex coefficient=n*(p.inner/64)+k/64;
+-                values=packed[n*(p.inner/8)+k/8];
++                const AffineIndex coefficient=garnet_affine_coefficient_offset(n,k/64,p.inner);
++                values=packed[garnet_affine_word_offset(n,k/8,p.inner)];
+                 scale=garnet_affine_coefficient(scales[coefficient]);
+                 bias=garnet_affine_coefficient(biases[coefficient]);
+             }
+diff --git a/src/backends/metal/affine_int4_profile_shader.h b/src/backends/metal/affine_int4_profile_shader.h
+index 15d55cb17dd822ef4fea11641dea36926a73c3ff..fb26cb145bc6b6eeeff69e11039efc7f497ef415 100644
+--- a/src/backends/metal/affine_int4_profile_shader.h
++++ b/src/backends/metal/affine_int4_profile_shader.h
+@@ -23,6 +23,20 @@ struct BoundedAffineParams {uint rows,inner,columns,aStride,oStride;};
+ #else
+ using AffineIndex=ulong;
+ #endif
++inline AffineIndex garnet_affine_word_offset(AffineIndex n,AffineIndex word,AffineIndex inner) {
++#ifdef GARNET_AFFINE_TILED_WEIGHTS
++    return ((n/64)*(inner/64)+word/8)*512+(n%64)*8+word%8;
++#else
++    return n*(inner/8)+word;
++#endif
++}
++inline AffineIndex garnet_affine_coefficient_offset(AffineIndex n,AffineIndex group,AffineIndex inner) {
++#ifdef GARNET_AFFINE_TILED_WEIGHTS
++    return ((n/64)*(inner/64)+group)*64+n%64;
++#else
++    return n*(inner/64)+group;
++#endif
++}
+ #ifdef GARNET_AFFINE_PROFILE
+ constant uint affine_profile_inner [[function_constant(10)]];
+ constant uint affine_profile_columns [[function_constant(11)]];
+diff --git a/src/backends/metal/affine_int4_reuse128_shader.h b/src/backends/metal/affine_int4_reuse128_shader.h
+index 18533b605d45b55e08c1a140219ef80128d0c4e6..dd1fc4b1ba657c8568b064b9785675a7f8f3efd4 100644
+--- a/src/backends/metal/affine_int4_reuse128_shader.h
++++ b/src/backends/metal/affine_int4_reuse128_shader.h
+@@ -45,8 +45,8 @@ kernel void affine_q4_reuse128(device const float* input [[buffer(0)]],
+             const AffineIndex n=AffineIndex(group.x)*64+localN,k=base+localK;
+             uint values=0;float scale=0.0f,bias=0.0f;
+             if(n<p.columns&&k<p.inner) {
+-                values=packed[n*(p.inner/8)+k/8];
+-                const AffineIndex coefficient=n*(p.inner/64)+k/64;
++                values=packed[garnet_affine_word_offset(n,k/8,p.inner)];
++                const AffineIndex coefficient=garnet_affine_coefficient_offset(n,k/64,p.inner);
+                 scale=garnet_affine_coefficient(scales[coefficient]);
+                 bias=garnet_affine_coefficient(biases[coefficient]);
+             }
+diff --git a/src/backends/metal/affine_int4_reuse64_shader.h b/src/backends/metal/affine_int4_reuse64_shader.h
+index 48c7dbd779ace00e01b0e943aea08855f045a615..af8433797ff138e68365667f9fb7bf2869774fb0 100644
+--- a/src/backends/metal/affine_int4_reuse64_shader.h
++++ b/src/backends/metal/affine_int4_reuse64_shader.h
+@@ -45,8 +45,8 @@ kernel void affine_q4_reuse64(device const float* input [[buffer(0)]],
+             const AffineIndex n=AffineIndex(group.x)*64+localN,k=base+localK;
+             uint values=0;float scale=0.0f,bias=0.0f;
+             if(n<p.columns&&k<p.inner) {
+-                values=packed[n*(p.inner/8)+k/8];
+-                const AffineIndex coefficient=n*(p.inner/64)+k/64;
++                values=packed[garnet_affine_word_offset(n,k/8,p.inner)];
++                const AffineIndex coefficient=garnet_affine_coefficient_offset(n,k/64,p.inner);
+                 scale=garnet_affine_coefficient(scales[coefficient]);
+                 bias=garnet_affine_coefficient(biases[coefficient]);
+             }
+diff --git a/src/backends/metal/affine_int4_shader.h b/src/backends/metal/affine_int4_shader.h
+index cc2aae0492001a3e1596298886564c9c4f19a0cd..4d58e28d7a1e7d9500028a27278c978534ebea86 100644
+--- a/src/backends/metal/affine_int4_shader.h
++++ b/src/backends/metal/affine_int4_shader.h
+@@ -18,8 +18,8 @@ kernel void affine_q4_decode(device const float* a [[buffer(0)]],
+     if(n>=p.columns)return;
+     float sum0=0,sum1=0,sum2=0,sum3=0;
+     for(AffineIndex word=lane;word<p.inner/8;word+=32) {
+-        const uint values=packed[n*(p.inner/8)+word];
+-        const AffineIndex coefficient=n*(p.inner/64)+word/8;
++        const uint values=packed[garnet_affine_word_offset(n,word,p.inner)];
++        const AffineIndex coefficient=garnet_affine_coefficient_offset(n,word/8,p.inner);
+         const float scale=q4_bf16(scales[coefficient]),bias=q4_bf16(biases[coefficient]);
+         for(uint j=0;j<8;++j) {
+             const float weight=fma(float((values>>(4*j))&15u),scale,bias);
+@@ -52,8 +52,8 @@ kernel void affine_q4_gemm(device const float* a [[buffer(0)]],
+         const AffineIndex n=AffineIndex(group.x)*32+localN,k=base+localK;
+         uint values=0;float scale=0,bias=0;
+         if(n<p.columns&&k<p.inner) {
+-            const AffineIndex coefficient=n*(p.inner/64)+k/64;
+-            values=packed[n*(p.inner/8)+k/8];
++            const AffineIndex coefficient=garnet_affine_coefficient_offset(n,k/64,p.inner);
++            values=packed[garnet_affine_word_offset(n,k/8,p.inner)];
+             scale=q4_bf16(scales[coefficient]);bias=q4_bf16(biases[coefficient]);
+         }
+         for(uint j=0;j<8;++j) {
+diff --git a/src/backends/metal/affine_int4_tall_shader.h b/src/backends/metal/affine_int4_tall_shader.h
+index ee48f119634306f47b1758f6218bff0b18822718..c190772634f1d44f8637179f2b7e557ac0c7cc43 100644
+--- a/src/backends/metal/affine_int4_tall_shader.h
++++ b/src/backends/metal/affine_int4_tall_shader.h
+@@ -21,8 +21,8 @@ inline void affine_q4_tall(device const float* a,device const uint* packed,
+         const ulong n=ulong(group.x)*32+localN,k=base+localK;
+         uint values=0;float scale=0,bias=0;
+         if(n<p.columns&&k<p.inner) {
+-            const ulong coefficient=n*(p.inner/64)+k/64;
+-            values=packed[n*(p.inner/8)+k/8];
++            const ulong coefficient=garnet_affine_coefficient_offset(n,k/64,p.inner);
++            values=packed[garnet_affine_word_offset(n,k/8,p.inner)];
+             scale=q4_bf16(scales[coefficient]);bias=q4_bf16(biases[coefficient]);
+         }
+         #pragma unroll
+diff --git a/src/backends/metal/affine_int4_tiled_decode_shader.h b/src/backends/metal/affine_int4_tiled_decode_shader.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..02a61a5434aad10331871e04046d410816f6b64c
+--- /dev/null
++++ b/src/backends/metal/affine_int4_tiled_decode_shader.h
+@@ -0,0 +1,83 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++namespace Garnet {
++// Stage32 output channels and256 inner elements from tiled storage. Every output
++// retains the original word/lane order, FP32 dequantization/FMA and SIMD sum.
++inline constexpr const char* kAffineInt4TiledDecodeShader=R"METAL(
++struct TiledDecodeParams {ulong rows,inner,columns,aStride,oStride;};
++kernel void affine_q4_tiled_decode(device const float* a [[buffer(0)]],
++ device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
++ device const ushort* biases [[buffer(3)]],device float* out [[buffer(4)]],
++ constant TiledDecodeParams& runtime [[buffer(5)]],
++#ifdef GARNET_TILED_INDEXED
++ constant uint* indices [[buffer(6)]],
++#endif
++ uint group [[threadgroup_position_in_grid]],uint lane [[thread_index_in_simdgroup]],
++ uint simd [[simdgroup_index_in_threadgroup]],uint tid [[thread_index_in_threadgroup]]) {
++    GARNET_AFFINE_PARAMETERS(TiledDecodeParams);
++    threadgroup uint words[32*32];
++    threadgroup ushort tileScales[32*4],tileBiases[32*4];
++    const AffineIndex first=AffineIndex(group)*32,localFirst=AffineIndex(simd)*8;
++    AffineIndex physical[4];float sums[4][8];
++    #pragma clang loop unroll(full)
++    for(uint row=0;row<4;++row) {
++#ifdef GARNET_TILED_INDEXED
++        physical[row]=row<GARNET_TILED_ROWS?indices[row]:0;
++#else
++        physical[row]=row;
++#endif
++        #pragma clang loop unroll(full)
++        for(uint column=0;column<8;++column)sums[row][column]=0.0f;
++    }
++    for(AffineIndex base=0;base<p.inner;base+=256) {
++        for(uint i=tid;i<1024;i+=128) {
++            const uint kGroup=i/256,nLocal=(i%256)/8,kWord=i%8;
++            const AffineIndex n=first+nLocal,word=base/8+kGroup*8+kWord;
++            words[nLocal*32+kGroup*8+kWord]=(n<p.columns&&word<p.inner/8)?packed[garnet_affine_word_offset(n,word,p.inner)]:0;
++        }
++        const uint kGroup=tid/32,nLocal=tid%32;
++        const AffineIndex n=first+nLocal,coefficientGroup=base/64+kGroup;
++        ushort scale=0,bias=0;
++        if(n<p.columns&&coefficientGroup<p.inner/64) {
++            const AffineIndex index=garnet_affine_coefficient_offset(n,coefficientGroup,p.inner);
++            scale=scales[index];bias=biases[index];
++        }
++        tileScales[nLocal*4+kGroup]=scale;tileBiases[nLocal*4+kGroup]=bias;
++        threadgroup_barrier(mem_flags::mem_threadgroup);
++        const AffineIndex word=base/8+lane;
++        if(word<p.inner/8) {
++            float4 low[4],high[4];
++            #pragma clang loop unroll(full)
++            for(uint row=0;row<4;++row)if(row<GARNET_TILED_ROWS) {
++                const AffineIndex at=physical[row]*p.aStride+word*8;
++                low[row]=float4(*reinterpret_cast<device const packed_float4*>(a+at));
++                high[row]=float4(*reinterpret_cast<device const packed_float4*>(a+at+4));
++            }
++            #pragma clang loop unroll(full)
++            for(uint column=0;column<8;++column)if(first+localFirst+column<p.columns) {
++                const uint nLocal=uint(localFirst)+column;
++                const uint values=words[nLocal*32+lane];
++                const float scale=garnet_affine_coefficient(tileScales[nLocal*4+lane/8]);
++                const float bias=garnet_affine_coefficient(tileBiases[nLocal*4+lane/8]);
++                #pragma clang loop unroll(full)
++                for(uint j=0;j<8;++j) {
++                    const float weight=fma(float((values>>(4*j))&15u),scale,bias);
++                    #pragma clang loop unroll(full)
++                    for(uint row=0;row<4;++row)if(row<GARNET_TILED_ROWS)
++                        sums[row][column]=fma(j<4?low[row][j]:high[row][j-4],weight,sums[row][column]);
++                }
++            }
++        }
++        threadgroup_barrier(mem_flags::mem_threadgroup);
++    }
++    #pragma clang loop unroll(full)
++    for(uint column=0;column<8;++column)if(first+localFirst+column<p.columns) {
++        #pragma clang loop unroll(full)
++        for(uint row=0;row<4;++row)if(row<GARNET_TILED_ROWS) {
++            const float total=simd_sum(sums[row][column]);
++            if(lane==0)out[physical[row]*p.oStride+first+localFirst+column]=total;
++        }
++    }
++}
++)METAL";
++}
+diff --git a/src/backends/metal/affine_tiled_weight_layout.h b/src/backends/metal/affine_tiled_weight_layout.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..5aacb2d48a6e7f20f7c0c6b57dba5d3a56ddbd86
+--- /dev/null
++++ b/src/backends/metal/affine_tiled_weight_layout.h
+@@ -0,0 +1,55 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++#include <cstddef>
++#include <cstdint>
++#include <cstring>
++#include <stdexcept>
++#include <array>
++namespace Garnet {
++// Native GPU representation only; checkpoint payloads retain MLX row-major order.
++class AffineTiledWeightLayout {
++    size_t rows_,inner_,padded_,weights_,coefficients_;
++    AffineTiledWeightLayout(size_t n,size_t k,size_t padded):rows_(n),inner_(k),padded_(padded),weights_(padded*(k/8)*4),coefficients_(padded*(k/64)*2){}
++public:
++    struct Source {const void* data;size_t bytes;};
++    struct Destination {void* data;size_t bytes;};
++    static AffineTiledWeightLayout Create(size_t rows,size_t inner) {
++        if(!rows||!inner||inner%64||rows>SIZE_MAX-63)throw std::invalid_argument("Tiled affine requires nonempty group64 dimensions");
++        const size_t padded=((rows+63)/64)*64;
++        if(padded>SIZE_MAX/inner)throw std::overflow_error("Tiled affine padded elements overflow");
++        return AffineTiledWeightLayout(rows,inner,padded);
++    }
++    size_t PaddedRows()const{return padded_;}
++    size_t WeightBytes()const{return weights_;}
++    size_t CoefficientBytes()const{return coefficients_;}
++    size_t WordIndex(size_t n,size_t word)const {
++        if(n>=padded_||word>=inner_/8)throw std::out_of_range("Tiled affine word index");
++        return ((n/64)*(inner_/64)+word/8)*512+(n%64)*8+word%8;
++    }
++    size_t CoefficientIndex(size_t n,size_t group)const {
++        if(n>=padded_||group>=inner_/64)throw std::out_of_range("Tiled affine coefficient index");
++        return ((n/64)*(inner_/64)+group)*64+n%64;
++    }
++    bool Index32Fits()const{return weights_/4<=UINT32_MAX&&coefficients_/2<=UINT32_MAX;}
++    void Pack(Source weights,Source scales,Source biases,Destination outWeights,Destination outScales,Destination outBiases)const {
++        const std::array<Source,3> source{weights,scales,biases};const std::array<Destination,3> dest{outWeights,outScales,outBiases};
++        const size_t sourceSizes[3]{rows_*(inner_/8)*4,rows_*(inner_/64)*2,rows_*(inner_/64)*2};
++        const size_t destSizes[3]{weights_,coefficients_,coefficients_};
++        auto end=[](const void* p,size_t bytes) {
++            const auto begin=reinterpret_cast<uintptr_t>(p);
++            if(!p||bytes>UINTPTR_MAX-begin)throw std::invalid_argument("Invalid tiled affine byte range");
++            return begin+bytes;
++        };
++        // Validate every range and overlap before the first destination write.
++        for(size_t i=0;i<3;++i){if(source[i].bytes!=sourceSizes[i]||dest[i].bytes!=destSizes[i])throw std::invalid_argument("Tiled affine payload length mismatch");end(source[i].data,source[i].bytes);end(dest[i].data,dest[i].bytes);}
++        auto overlaps=[&](const void* a,size_t an,const void* b,size_t bn){return reinterpret_cast<uintptr_t>(a)<end(b,bn)&&reinterpret_cast<uintptr_t>(b)<end(a,an);};
++        for(size_t i=0;i<3;++i){for(size_t j=0;j<3;++j)if(overlaps(dest[i].data,dest[i].bytes,source[j].data,source[j].bytes))throw std::invalid_argument("Tiled affine source/destination overlap");for(size_t j=0;j<i;++j)if(overlaps(dest[i].data,dest[i].bytes,dest[j].data,dest[j].bytes))throw std::invalid_argument("Tiled affine destination overlap");}
++        for(size_t n=0;n<padded_;++n)for(size_t group=0;group<inner_/64;++group) {
++            const size_t offsets[3]{WordIndex(n,group*8)*4,CoefficientIndex(n,group)*2,CoefficientIndex(n,group)*2};
++            const size_t lengths[3]{32,2,2};
++            const size_t from[3]{(n*(inner_/8)+group*8)*4,(n*(inner_/64)+group)*2,(n*(inner_/64)+group)*2};
++            for(size_t i=0;i<3;++i){auto out=static_cast<unsigned char*>(dest[i].data)+offsets[i];if(n<rows_)std::memcpy(out,static_cast<const unsigned char*>(source[i].data)+from[i],lengths[i]);else std::memset(out,0,lengths[i]);}
++        }
++    }
++};
++}
+diff --git a/src/backends/metal/metal_context.mm b/src/backends/metal/metal_context.mm
+index 25b87657573545a37028428aca7cde63e8524366..8b7c9cc5e895b883b0ed6bee3ff4e20a4300ffa3 100644
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -27,6 +27,10 @@
+ #ifdef GARNET_METAL_MLX_AFFINE_INT4
+ #include "affine_int4_shader.h"
+ #include "affine_int4_profile_shader.h"
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++#include "affine_tiled_weight_layout.h"
++#include "affine_int4_tiled_decode_shader.h"
++#endif
+ #ifdef GARNET_METAL_AFFINE_PROFILE_INDEX32
+ #include "affine_profile_index_bounds.h"
+ #endif
+@@ -476,7 +480,13 @@ size_t AffineDecodeColumns(size_t inner,size_t columns,size_t rows) {
+ id<MTLComputePipelineState> SelectAffineProfile(MetalPipelines& kernels,AffineProfileRoute route,
+     size_t rows,size_t inner,size_t columns,size_t aStride,size_t oStride,size_t decodeRows,
+     id<MTLComputePipelineState> fallback,size_t& dispatches,size_t& misses,size_t& maxThreads,size_t* decodeColumns=nullptr,bool requirePrepared=false) {
+-    if(decodeColumns)*decodeColumns=1;
++    if(decodeColumns) {
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++        *decodeColumns=(route==AffineProfileRoute::Decode||route==AffineProfileRoute::IndexedDecode)?8:1;
++#else
++        *decodeColumns=1;
++#endif
++    }
+     const AffineProfileKey key{size_t(route),inner,columns,aStride,oStride,decodeRows};
+     std::shared_lock<std::shared_mutex> lock(kernels.affineProfileMutex);
+     auto found=kernels.affineProfiles.find(key);
+@@ -1786,6 +1796,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
+         affineOptions.languageVersion=MTLLanguageVersion3_1;affineOptions.fastMathEnabled=NO;
+         auto affineSourceWithProfile=[](NSString* source) {
+             NSString* prefix=[NSString stringWithUTF8String:kAffineInt4ProfilePrelude];
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++            prefix=[@"#define GARNET_AFFINE_TILED_WEIGHTS 1\n" stringByAppendingString:prefix];
++#endif
+ #ifdef GARNET_METAL_AFFINE_FP16_COEFFICIENTS
+             prefix=[@"#define GARNET_AFFINE_FP16_COEFFICIENTS 1\n" stringByAppendingString:prefix];
+ #endif
+@@ -1808,6 +1821,10 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
+ #endif
+ #ifdef GARNET_METAL_AFFINE_TALL_TILES
+         affineSource=[affineSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4TallShader]];
++#endif
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++        affineSource=[affineSource stringByAppendingString:@"\n#define GARNET_TILED_ROWS affine_decode_rows\n"];
++        affineSource=[affineSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4TiledDecodeShader]];
+ #endif
+         auto affineLibrary=[impl_->device newLibraryWithSource:affineSource options:affineOptions error:&error];
+         if(!affineLibrary)throw std::runtime_error("Cannot compile affine INT4 kernels: "+std::string(error.localizedDescription.UTF8String));
+@@ -1820,7 +1837,11 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
+         for(uint32_t rows=1;rows<=4;++rows) {
+             auto constants=[MTLFunctionConstantValues new];
+             [constants setConstantValue:&rows type:MTLDataTypeUInt atIndex:0];
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++            auto function=[affineLibrary newFunctionWithName:@"affine_q4_tiled_decode" constantValues:constants error:&error];
++#else
+             auto function=[affineLibrary newFunctionWithName:@"affine_q4_decode" constantValues:constants error:&error];
++#endif
+             if(!function)throw std::runtime_error("Cannot specialize affine INT4 decode rows");
+             auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+             if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+@@ -1832,6 +1853,10 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
+ #ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+         indexedDecodeSource=[indexedDecodeSource stringByAppendingString:[NSString stringWithFormat:@"\n#define GARNET_BLOCKED_COLUMNS %u\n#define GARNET_BLOCKED_ROWS selected_decode_rows\n#define GARNET_BLOCKED_INDEXED 1\n",decodeColumns]];
+         indexedDecodeSource=[indexedDecodeSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4BlockedDecodeShader]];
++#endif
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++        indexedDecodeSource=[indexedDecodeSource stringByAppendingString:@"\n#define GARNET_TILED_ROWS selected_decode_rows\n#define GARNET_TILED_INDEXED 1\n"];
++        indexedDecodeSource=[indexedDecodeSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4TiledDecodeShader]];
+ #endif
+         auto indexedDecodeLibrary=[impl_->device newLibraryWithSource:indexedDecodeSource options:affineOptions error:&error];
+         if(!indexedDecodeLibrary)throw std::runtime_error("Cannot compile indexed FP32 decode: "+std::string(error.localizedDescription.UTF8String));
+@@ -1844,7 +1869,11 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
+         for(uint32_t rows=1;rows<=4;++rows) {
+             auto constants=[MTLFunctionConstantValues new];
+             [constants setConstantValue:&rows type:MTLDataTypeUInt atIndex:0];
++            #ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++            auto function=[indexedDecodeLibrary newFunctionWithName:@"affine_q4_tiled_decode" constantValues:constants error:&error];
++#else
+             auto function=[indexedDecodeLibrary newFunctionWithName:@"affine_q4_indexed_decode" constantValues:constants error:&error];
++#endif
+             if(!function)throw std::runtime_error("Cannot specialize indexed FP32 decode");
+             auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+             if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+@@ -2202,6 +2231,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
+            !HasMPPAffine()||!HasIndexedAffine()||!HasIndexedDecodeAffine())return false;
+ #ifdef GARNET_METAL_AFFINE_PROFILE_INDEX32
+         if(!AffineProfileIndex32Fits(maximumRows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4))return false;
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++        if(!AffineTiledWeightLayout::Create(o.columns,a.columns).Index32Fits())return false;
++#endif
+ #endif
+         std::unique_lock<std::shared_mutex> lock(impl_->kernels->affineProfileMutex);
+         auto prepare=[&](AffineProfileRoute route,size_t decodeRows) {
+@@ -2221,6 +2253,11 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
+                 decodeColumns=AffineDecodeColumns(a.columns,o.columns,decodeRows);
+                 if(decodeColumns>1)names[size_t(route)]=@"affine_q4_blocked";
+             }
++#endif
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++            if(route==AffineProfileRoute::Decode||route==AffineProfileRoute::IndexedDecode) {
++                decodeColumns=8;names[size_t(route)]=@"affine_q4_tiled_decode";
++            }
+ #endif
+             auto library=impl_->kernels->affineProfileLibraries[size_t(route)];NSError* error=nil;
+             auto function=[library newFunctionWithName:names[size_t(route)] constantValues:constants error:&error];
+@@ -2326,9 +2363,31 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
+                 throw std::invalid_argument("Nonfinite/overflowing affine INT4 coefficient");
+         }
+         auto value=std::make_shared<MetalAffineInt4Weight::Impl>();value->rows=rows;value->columns=columns;
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++        if(impl_->command||impl_->submitted.count)throw std::logic_error("Prepare tiled affine weights in a closed, drained context");
++        const auto tiled=AffineTiledWeightLayout::Create(rows,columns);
++        if(!tiled.Index32Fits()||tiled.WeightBytes()>impl_->device.maxBufferLength||tiled.CoefficientBytes()>impl_->device.maxBufferLength)
++            throw std::invalid_argument("Tiled affine weight exceeds native buffer/index limits");
++        constexpr size_t reserve=256*1024*1024,alignment=64*1024;
++        size_t charge=0;
++        for(size_t bytes:{tiled.WeightBytes(),tiled.CoefficientBytes(),tiled.CoefficientBytes()}) {
++            if(bytes>SIZE_MAX-(alignment-1))throw std::overflow_error("Tiled affine charge overflow");
++            const size_t rounded=(bytes+alignment-1)&~(alignment-1);
++            if(charge>SIZE_MAX-rounded)throw std::overflow_error("Tiled affine total overflow");charge+=rounded;
++        }
++        const size_t used=impl_->device.currentAllocatedSize,limit=impl_->device.recommendedMaxWorkingSetSize;
++        if(limit<=reserve||used>limit-reserve||charge>limit-reserve-used)throw std::runtime_error("Tiled affine weights exceed recommended working set minus256MiB");
++        value->packed=[impl_->device newBufferWithLength:tiled.WeightBytes() options:MTLResourceStorageModeShared];
++        value->scales=[impl_->device newBufferWithLength:tiled.CoefficientBytes() options:MTLResourceStorageModeShared];
++        value->biases=[impl_->device newBufferWithLength:tiled.CoefficientBytes() options:MTLResourceStorageModeShared];
++        if(!value->packed||!value->scales||!value->biases)throw std::runtime_error("Cannot allocate tiled affine INT4 weights");
++        tiled.Pack({packed,packedBytes},{scales,scaleBytes},{biases,biasBytes},
++            {value->packed.contents,tiled.WeightBytes()},{value->scales.contents,tiled.CoefficientBytes()},{value->biases.contents,tiled.CoefficientBytes()});
++#else
+         value->packed=[impl_->device newBufferWithBytes:packed length:packedBytes options:MTLResourceStorageModeShared];
+         value->scales=[impl_->device newBufferWithBytes:scales length:scaleBytes options:MTLResourceStorageModeShared];
+         value->biases=[impl_->device newBufferWithBytes:biases length:biasBytes options:MTLResourceStorageModeShared];
++#endif
+         if(!value->packed||!value->scales||!value->biases)throw std::runtime_error("Cannot allocate packed affine INT4 weights");
+         return MetalAffineInt4Weight(std::move(value));
+     }
+@@ -2375,6 +2434,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
+         }
+ #endif
+         size_t decodeColumns=1;
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++        if(a.rows<=4)decodeColumns=8;
++#endif
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+         pipeline=SelectAffineProfile(*impl_->kernels,a.rows<=4?AffineProfileRoute::Decode:AffineProfileRoute::MPP,
+             a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,a.rows<=4?a.rows:0,
+@@ -2435,6 +2497,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
+             if(!encoder)throw std::runtime_error("Cannot encode indexed FP32 decode");
+             auto pipeline=impl_->kernels->indexedDecodeAffine[indices.size()-1];
+             size_t decodeColumns=1;
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++            decodeColumns=8;
++#endif
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+             pipeline=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::IndexedDecode,
+                 a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,indices.size(),
+@@ -2574,7 +2639,11 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
+     @autoreleasepool {
+         std::vector<MetalBufferInfo> result;if(!weight.impl_)return result;
+         auto add=[&](id<MTLBuffer> buffer,const char* kind){if(buffer)result.push_back({reinterpret_cast<uintptr_t>((__bridge void*)buffer),uint64_t(buffer.allocatedSize),uint64_t(buffer.length),kind});};
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++        add(weight.impl_->packed,"affine_int4_tiled64x64_payload");add(weight.impl_->scales,"affine_int4_tiled64x64_fp16_scales");add(weight.impl_->biases,"affine_int4_tiled64x64_fp16_biases");
++#else
+         add(weight.impl_->packed,"affine_int4_payload");add(weight.impl_->scales,"affine_int4_bf16_scales");add(weight.impl_->biases,"affine_int4_bf16_biases");
++#endif
+         return result;
+     }
+ }
+diff --git a/src/entry/metal_main.cpp b/src/entry/metal_main.cpp
+index d4123d3f8ae566d60bd0a37bfa30b05a896058b7..166fbcff01246614aa5882d05e24239d44ff75dd 100644
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -205,6 +205,9 @@ public:
+     info+="; mpp_affine_reuse64_optional; mpp_affine_reuse64_min_outputs="+std::to_string(int(GARNET_METAL_REUSE64_MIN_OUTPUTS));
+     info+="; mpp_affine_reuse64_relaxed="+std::to_string(int(GARNET_METAL_REUSE64_RELAXED_VALUE));
+ #endif
++#ifdef GARNET_METAL_AFFINE_TILED_WEIGHTS
++    info+="; affine_int4_tiled64x64_single_copy; affine_tiled_decode_fp32_ordered32";
++#endif
+ #ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+     info+="; mpp_affine_reuse128_optional; mpp_affine_reuse128_min_rows=128; mpp_affine_reuse128_threads=256; mpp_affine_reuse128_even64_tiles=1";
+ #ifdef GARNET_METAL_VERIFY_ATTENTION
+@@ -217,7 +220,7 @@ public:
+ #ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
+     info+="; active_decode_projections";
+ #endif
+-#ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
++#if defined(GARNET_METAL_MISTRAL_DECODE_REUSE)&&!defined(GARNET_METAL_AFFINE_TILED_WEIGHTS)
+     info+="; mistral_decode_reuse_four_rows";
+ #endif
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+diff --git a/test2026/metal/affine_tiled_layout_test.cpp b/test2026/metal/affine_tiled_layout_test.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..854e42ef460d239f47673d8855d0d00f3bb26779
+--- /dev/null
++++ b/test2026/metal/affine_tiled_layout_test.cpp
+@@ -0,0 +1,44 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "../../src/backends/metal/affine_tiled_weight_layout.h"
++#include <vector>
++#include <array>
++#include <iostream>
++#include <limits>
++using Garnet::AffineTiledWeightLayout;
++namespace {
++size_t cases=0,bytes=0,rejections=0;
++void Need(bool v){if(!v)throw std::runtime_error("Tiled affine host oracle mismatch");}
++template<class F>void Reject(F f){bool bad=false;try{f();}catch(const std::exception&){bad=true;}Need(bad);++rejections;}
++void Case(size_t n,size_t k){
++ auto layout=AffineTiledWeightLayout::Create(n,k);const size_t padded=(n+63)/64*64;
++ Need(layout.PaddedRows()==padded&&layout.WeightBytes()==padded*k/2&&layout.CoefficientBytes()==padded*k/32);
++ std::array<std::vector<unsigned char>,3> input,output;
++ const size_t sourceBytes[3]{n*k/2,n*k/32,n*k/32},destBytes[3]{padded*k/2,padded*k/32,padded*k/32};
++ for(size_t part=0;part<3;++part){input[part].resize(sourceBytes[part]+1);for(size_t i=0;i<sourceBytes[part];++i)input[part][i+1]=static_cast<unsigned char>(i*137+part*43+11);output[part].assign(destBytes[part]+2,0xcd);}
++ layout.Pack({input[0].data()+1,sourceBytes[0]},{input[1].data()+1,sourceBytes[1]},{input[2].data()+1,sourceBytes[2]},
++  {output[0].data()+1,destBytes[0]},{output[1].data()+1,destBytes[1]},{output[2].data()+1,destBytes[2]});
++ // Independently decode destination tile coordinates; do not call address helpers.
++ for(size_t part=0;part<3;++part){
++  Need(output[part].front()==0xcd&&output[part].back()==0xcd);
++  const size_t blockBytes=part?128:2048,rowBytes=part?2:32;
++  for(size_t pos=0;pos<destBytes[part];++pos){const size_t tile=pos/blockBytes,within=pos%blockBytes,row=(tile/(k/64))*64+within/rowBytes,group=tile%(k/64),element=within%rowBytes;const auto expected=row<n?input[part][1+row*(part?k/32:k/2)+group*rowBytes+element]:0;Need(output[part][pos+1]==expected);++bytes;}
++ }
++ Need(layout.Index32Fits());++cases;
++}
++void Guards(){
++ for(auto dims:std::array<std::array<size_t,2>,6>{{{0,64},{1,0},{1,63},{1,96},{SIZE_MAX,64},{SIZE_MAX/64,128}}})Reject([&]{AffineTiledWeightLayout::Create(dims[0],dims[1]);});
++ auto layout=AffineTiledWeightLayout::Create(1,64);Reject([&]{layout.WordIndex(64,0);});Reject([&]{layout.WordIndex(0,8);});Reject([&]{layout.CoefficientIndex(64,0);});Reject([&]{layout.CoefficientIndex(0,1);});
++ std::vector<unsigned char> w(32,1),s(2,2),b(2,3),ow(2048,0xcd),os(128,0xcd),ob(128,0xcd);auto original=ow;
++ auto pack=[&](AffineTiledWeightLayout::Source wi,AffineTiledWeightLayout::Source si,AffineTiledWeightLayout::Source bi,AffineTiledWeightLayout::Destination wo,AffineTiledWeightLayout::Destination so,AffineTiledWeightLayout::Destination bo){layout.Pack(wi,si,bi,wo,so,bo);};
++ Reject([&]{pack({w.data(),31},{s.data(),2},{b.data(),2},{ow.data(),2048},{os.data(),128},{ob.data(),128});});
++ Reject([&]{pack({w.data(),32},{s.data(),2},{b.data(),2},{ow.data(),2048},{os.data(),127},{ob.data(),128});});
++ Reject([&]{pack({nullptr,32},{s.data(),2},{b.data(),2},{ow.data(),2048},{os.data(),128},{ob.data(),128});});
++ Reject([&]{pack({w.data(),32},{s.data(),2},{b.data(),2},{ow.data(),2048},{nullptr,128},{ob.data(),128});});
++ Reject([&]{pack({ow.data(),32},{s.data(),2},{b.data(),2},{ow.data(),2048},{os.data(),128},{ob.data(),128});});
++ Reject([&]{pack({w.data(),32},{s.data(),2},{b.data(),2},{ow.data(),2048},{ow.data()+32,128},{ob.data(),128});});
++ Reject([&]{pack({reinterpret_cast<const void*>(UINTPTR_MAX-1),32},{s.data(),2},{b.data(),2},{ow.data(),2048},{os.data(),128},{ob.data(),128});});
++ Need(ow==original);for(auto value:os)Need(value==0xcd);for(auto value:ob)Need(value==0xcd);
++ const auto large=AffineTiledWeightLayout::Create(65537,524288);Need(!large.Index32Fits());
++}
++}
++int main(){try{for(size_t n:{size_t(1),size_t(31),size_t(63),size_t(64),size_t(65),size_t(127),size_t(128),size_t(129)})for(size_t k:{size_t(64),size_t(128),size_t(192)})Case(n,k);Guards();std::cout<<"tiled_affine_host PASS cases="<<cases<<" bytes="<<bytes<<" rejections="<<rejections<<'\n';return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

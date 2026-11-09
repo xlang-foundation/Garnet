@@ -544,6 +544,33 @@ void CUDATensorIO::SliceInto(X::Value source,int64_t start,X::Value destination)
 X::Value CUDATensorIO::Slice(X::Value source,int64_t start,X::Value shape){
     auto result=TensorHelper::CreateGPU(Host(),X3_TENSOR_FLOAT32,Shape(shape));SliceInto(source,start,result);return result;
 }
+X::Value CUDATensorIO::CropPlanes(X::Value source,int64_t top,int64_t left,int64_t height,int64_t width){
+    X::Tensor input(source);
+    const auto info=input.Info();
+    Require(info,X3_TENSOR_FLOAT32);
+    if(info.rank<2||top<0||left<0||height<=0||width<=0)
+        throw X::Error("CUDA plane crop requires a positive rectangle");
+    auto shape=Dimensions(info);
+    const auto rows=shape[shape.size()-2],columns=shape.back();
+    if(top>rows||left>columns||height>rows-top||width>columns-left)
+        throw X::Error("CUDA plane crop exceeds source dimensions");
+    const size_t rowBytes=size_t(columns)*sizeof(float);
+    const size_t planeCount=LogicalBytes(info)/(size_t(rows)*rowBytes);
+    const size_t cropBytes=size_t(width)*sizeof(float);
+    shape[shape.size()-2]=height;
+    shape.back()=width;
+    auto output=TensorHelper::CreateGPU(Host(),X3_TENSOR_FLOAT32,shape);
+    auto use=TensorHelper::AcquireGPU({{input,X3_TENSOR_READ},{output,X3_TENSOR_WRITE}});
+    cudaMemcpy3DParms copy{};
+    copy.srcPtr=make_cudaPitchedPtr(info.data,rowBytes,rowBytes,size_t(rows));
+    copy.srcPos=make_cudaPos(size_t(left)*sizeof(float),size_t(top),0);
+    copy.dstPtr=make_cudaPitchedPtr(output.Info().data,cropBytes,cropBytes,size_t(height));
+    copy.extent=make_cudaExtent(cropBytes,size_t(height),planeCount);
+    copy.kind=cudaMemcpyDeviceToDevice;
+    Check(cudaMemcpy3DAsync(&copy,CurrentExecutionStream()));
+    use.Finish();
+    return output;
+}
 X::Value CUDATensorIO::VisualToken(X::Value source,int64_t token){
     X::Tensor src(source);auto a=src.Info();Require(a,X3_TENSOR_FLOAT32);
     if(a.rank!=3||token<0||token>=a.shape[1])throw X::Error("visual token index/rank invalid");

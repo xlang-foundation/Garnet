@@ -1,0 +1,18 @@
+{
+  "source": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/source1",
+  "source_bindings_sha256": "526dc9c21c529573a90e232791527e92548a72b2568fa133b25a4b95528db687",
+  "library": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/build-on1/libgarnet.dylib",
+  "library_sha256": "1a628947a7770705673634e2c432af02299e85964332a9ac2e7aa2c8ff8177ab",
+  "source_changed": false,
+  "metadata_label_correction": {
+    "scope": "Metadata label correction only; runtime and audit evidence unchanged.",
+    "raw_decision_sha256": "b7a0ab36fa9a717ab8f6364f13a8638a92705c80d4c8181629dcfdd0d6281c60",
+    "field": "native_matching",
+    "original_label": "C++ PrefixCache via MetalNativeRowAllocator::Reserve and MetalDecoderSession::RestoreTokenPrefix",
+    "correct_label": "C++ PrefixCache via MetalContinuousScheduler::RowAllocator::Reserve and MetalDecoderSession::RestoreTokenPrefix",
+    "source_files_sha256": {
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/source1/src/backends/metal/continuous_scheduler.cpp": "213048565164c087e5c443e4a58f39573667e2f8413bb189481a7c2aa38eaa84",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/source1/src/backends/metal/token_prefix_session.cpp": "4913b3737ec67589a26b1368e4cf24f4bf97fbdc15a08ca8675f6ad515cd82aa"
+    }
+  }
+}

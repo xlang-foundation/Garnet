@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <set>
+#include <stdexcept>
 #include <vector>
 
 #if defined(_WIN32)
@@ -74,6 +75,20 @@ namespace Garnet
             return true;
         }
 
+        void ValidateGenerationEntry(const fs::path& root, const json& entry,
+            const std::string& label, std::vector<std::string>& issues)
+        {
+            if (!entry.is_object() || !entry.contains("file") || !entry["file"].is_string() ||
+                !entry.contains("function") || !entry["function"].is_string() ||
+                entry["function"].get_ref<const std::string&>().empty() ||
+                !entry.contains("runtime") || entry["runtime"] != "xlang3" ||
+                (entry.contains("allow_engine_pool") && !entry["allow_engine_pool"].is_boolean())) {
+                issues.push_back(label + " requires a file, function and xlang3 runtime");
+                return;
+            }
+            ValidateReferencedFile(root, entry["file"].get<std::string>(), issues);
+        }
+
         json InspectManifest(const fs::path& manifestPath)
         {
             const fs::path packageRoot = manifestPath.parent_path();
@@ -100,6 +115,16 @@ namespace Garnet
             }
             if (!manifest.contains("task") || !manifest["task"].is_string()) {
                 issues.push_back("task must be a string");
+            }
+            if (manifest.contains("pipeline"))
+                ValidateGenerationEntry(packageRoot, manifest["pipeline"], "pipeline", issues);
+            if (manifest.contains("modes")) {
+                if (!manifest.contains("pipeline") || !manifest["modes"].is_object()) {
+                    issues.push_back("generation modes require a pipeline and a mode object");
+                } else {
+                    for (const auto& mode : manifest["modes"].items())
+                        ValidateGenerationEntry(packageRoot, mode.value(), "mode " + mode.key(), issues);
+                }
             }
             if (!manifest.contains("entrypoints") ||
                 !manifest["entrypoints"].is_object()) {
@@ -280,5 +305,49 @@ namespace Garnet
                 return left.value("id", "") < right.value("id", "");
             });
         return response.dump();
+    }
+
+    GenerationRoute ResolveGenerationRoute(const std::filesystem::path& packageRoot,
+        const std::string& model, const std::string& mode)
+    {
+        const auto catalog = json::parse(EnumerateAvailableModelsJson(packageRoot));
+        const json* match = nullptr;
+        for (const auto& entry : catalog["models"]) {
+            if (entry.value("id", "") != model &&
+                (!entry.contains("slug") || entry["slug"] != model)) continue;
+            if (match) throw std::runtime_error("ambiguous generation model: " + model);
+            match = &entry;
+        }
+        if (!match || !match->value("available", false) || !match->contains("pipeline"))
+            throw std::runtime_error("generation model is unavailable: " + model);
+
+        const json* route = &match->at("pipeline");
+        if (!mode.empty()) {
+            if (!match->contains("modes") || !match->at("modes").contains(mode))
+                throw std::runtime_error("unsupported generation mode for " + model + ": " + mode);
+            route = &match->at("modes").at(mode);
+        }
+        const auto root = fs::canonical(packageRoot);
+        auto file = fs::canonical(fs::u8path(match->at("package_root").get<std::string>()) /
+            fs::u8path(route->at("file").get<std::string>()));
+        auto relative = file.lexically_relative(root);
+        if (!IsSafePackagePath(relative) || relative.extension() != ".py")
+            throw std::runtime_error("generation entry must be a Python source inside the xModel package");
+        relative.replace_extension();
+        const auto identifier = [](const std::string& value) {
+            static const std::string letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+            static const std::string characters = letters + "0123456789";
+            return !value.empty() && letters.find(value[0]) != std::string::npos &&
+                value.find_first_not_of(characters) == std::string::npos;
+        };
+        std::string module = "xModel";
+        for (const auto& component : relative) {
+            const auto name = component.u8string();
+            if (!identifier(name)) throw std::runtime_error("invalid generation module name: " + name);
+            module += "." + name;
+        }
+        const auto function = route->at("function").get<std::string>();
+        if (!identifier(function)) throw std::runtime_error("invalid generation entry function");
+        return {std::move(file), std::move(module), function, route->value("allow_engine_pool", true)};
     }
 }

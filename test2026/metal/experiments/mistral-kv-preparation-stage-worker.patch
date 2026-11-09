@@ -1,0 +1,52 @@
+--- a/test2026/metal/local_coder_batch_worker.py
++++ b/test2026/metal/local_coder_batch_worker.py
+@@ -31,6 +31,8 @@
+     if type(prefix) is not bool:raise ValueError('Explicit boolean prefix policy required')
+     bulk_chunks=profile.get('native_leased_bulk_chunks',0)
+     bulk_kv=profile['native_bulk_kv']
++    bulk_prepare=profile['native_bulk_prepare_chunks']
++    if type(bulk_prepare) is not int or bulk_prepare not in (0,16) or bulk_prepare<bulk_chunks:raise ValueError('Prepared bulk profile must cover its execution policy')
+     if type(bulk_kv) is not bool or (bulk_kv and not bulk_chunks):raise ValueError('K/V bulk requires an explicit grouped native profile')
+     if type(bulk_chunks) is not int or bulk_chunks not in (0,16):raise ValueError('Bulk study requires explicit zero or16 prepared chunks')
+     if bulk_chunks and (family!='mistral_7b' or batch!=4 or chunk!=128 or 'native_leased_bulk_prefill_scheduler' not in garnet.backend_info()):raise ValueError('Native grouped scheduler requires the bounded B4/T128 Mistral extension')
+@@ -327,10 +329,11 @@
+         if split_capable:
+             decoder.session.split_score_set_enabled(split_scores)
+             emit(dict(event='native_split_score_prepared',enabled=split_scores,chunk=128,minimum_visible=512))
+-        if bulk_chunks:
+-            if not decoder.session.diagnostic_layer_bulk_prepare(graphs,bulk_chunks):raise ValueError('Native bulk profile preparation failed')
++        if bulk_prepare:
++            if not decoder.session.diagnostic_layer_bulk_prepare(graphs,bulk_prepare):raise ValueError('Native bulk profile preparation failed')
+             if not decoder.session.diagnostic_bulk_kv_set_enabled(bulk_kv):raise ValueError('Native K/V profile selector rejected before admission')
+-            emit(dict(event='native_bulk_prefill_prepared',maximum_chunks=bulk_chunks,chunk_tokens=128,physical_rows=4,kv_enabled=bulk_kv))
++            if bulk_chunks:emit(dict(event='native_bulk_prefill_prepared',maximum_chunks=bulk_chunks,chunk_tokens=128,physical_rows=4,kv_enabled=bulk_kv))
++            else:emit(dict(event='native_bulk_workspace_prepared',maximum_chunks=bulk_prepare,chunk_tokens=128,physical_rows=4,kv_enabled=False,execution_enabled=False))
+         policy=garnet.continuous_scheduler();policy.initialize(decoder.session,16)
+         if family=='mistral_7b':
+             native_maximum=512 if wide_owner else dense_limit//batch
+@@ -677,6 +680,7 @@
+                     if not bulk_chunks or n!=bulk_chunks or plan_chunk!=128 or len(plans)!=1 or plan['stage']!='prefill' or plan.get('execution')!='native_leased_bulk':raise ValueError('Grouped scheduler plan violates profile/fairness contract')
+                     requests={request['row']:request for request in plan['requests']}
+                     if set(requests)!=set(range(4)):raise ValueError('Grouped scheduler must cover all four leased rows')
++                    group_embedding_began=time.monotonic() if trace_stages else 0
+                     hidden=[]
+                     for c in range(n):
+                         ids=[]
+@@ -687,10 +691,17 @@
+                             ids.extend(job['prompt'][request['prefill_offset']+c*128:request['prefill_offset']+(c+1)*128])
+                         if len(ids)!=512:raise ValueError('Grouped embedding tokens do not cover the live group')
+                         hidden.append(embedding(ids,True))
++                    group_embedding_ended=time.monotonic() if trace_stages else 0
+                     began=time.monotonic();predicted=policy.run_bulk_prefill(hidden,plan['bulk_ticket']);ended=time.monotonic()
+                     stats=json.loads(decoder.session.diagnostic_layer_bulk_stats_json())
+                     if stats['chunks']!=n or stats['rows']!=n*512 or stats['appended']!=[n*128]*4 or stats['bulk_calls']!=(160 if bulk_kv else 96) or stats['kv_bulk_calls']!=(64 if bulk_kv else 0) or stats['kv_bulk_enabled'] is not bulk_kv or stats['workspace_bytes']!=1909522432 or stats['silu_half_calls']!=32:raise ValueError('Native bulk route differs from scheduled execution')
+                     emit(dict(event='native_bulk_prefill_execution',ticket=plan['bulk_ticket'],chunks=n,stats=stats,began_monotonic=began,ended_monotonic=ended,run_wall_ms=(ended-began)*1000))
++                    if trace_stages:
++                        emit(dict(event='native_stage_trace',stage='grouped_prefill',ticket=plan['bulk_ticket'],chunks=n,
++                            embedding_began_monotonic=group_embedding_began,embedding_ended_monotonic=group_embedding_ended,
++                            embedding_wall_ms=(group_embedding_ended-group_embedding_began)*1000,
++                            began_monotonic=began,ended_monotonic=ended,run_wall_ms=(ended-began)*1000,
++                            gpu_ms=stats['gpu_ms'],native_body_wall_ms=stats['body_wall_ms'],physical_rows=n*512,active_tokens=n*512))
+                     for request in plan['requests']:
+                         final=request['prefill_offset']+request['prefill_tokens']==len(jobs[request['id']]['prompt'])
+                         if final:deliver(request,predicted[request['row']],'prefill')

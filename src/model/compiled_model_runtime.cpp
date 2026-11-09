@@ -8,11 +8,14 @@
 #include "compiled_graph_capture.h"
 #include "graph_capture.h"
 #include "md5.h"
+#include "../backends/common/streamed_bf16_projection.h"
 #include "trt_builder.h"
 #include "weight_streaming_policy.h"
 #include "openvino_builder.h"
 #include "garnet_tensor.h"
 #include "tensor_helper.h"
+#include "../backends/common/cuda_device_scope.h"
+#include "cuda_engine_pool.h"
 #include "qwen_vl_compiled_frontend.h"
 #include "qwen_text_compiled_frontend.h"
 #include "qwen_asr_compiled_frontend.h"
@@ -34,6 +37,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <regex>
 #include <random>
 #include <sstream>
@@ -177,9 +181,20 @@ namespace
             {"enable_preferred_boundaries", partitionOptions.enablePreferredBoundaries},
             {"preferred_min_operations", partitionOptions.preferredMinOperations},
             {"max_atomic_regions_per_partition", partitionOptions.maxAtomicRegionsPerPartition},
+            {"devices", partitionOptions.partitionDevices},
             {"builder_workspace_bytes", partitionOptions.builderWorkspaceBytes},
             {"builder_optimization_level", partitionOptions.builderOptimizationLevel}
         };
+        if(!partitionOptions.linearKernelProvider.empty()) {
+            plan["planner_options"]["linear_kernel_provider"]=partitionOptions.linearKernelProvider;
+            plan["cuda_graph_policy"]="disabled_for_streamed_checkpoint_projection";
+        }
+
+        if(!partitionOptions.partitionDevices.empty()){
+            plan["cross_partition_synchronization"]="producer_completion_fences";
+            plan["intermediate_host_copies"]=true;
+            plan["device_transfer_policy"]="peer_copy_when_available_else_host_staging";
+        }
 
         int maxPartition = 0;
         for (const auto& region : regions) {
@@ -232,6 +247,7 @@ namespace
         for (const auto& partition : enginePartitions) {
             nlohmann::json partitionJson = {
                 {"id", partition.id},
+                {"device_id", partition.deviceId},
                 {"engine_path", partition.enginePath},
                 {"inputs", nlohmann::json::array()},
                 {"outputs", nlohmann::json::array()}
@@ -249,6 +265,11 @@ namespace
                     {"tensor_id", binding.tensorId},
                     {"terminal", binding.terminalOutput}
                 });
+            }
+            if(!partition.inputShapeRanges.empty()){
+                partitionJson["input_shape_profiles"]=nlohmann::json::array();
+                for(const auto& range:partition.inputShapeRanges)
+                    partitionJson["input_shape_profiles"].push_back({{"min",range.minShape},{"opt",range.optShape},{"max",range.maxShape}});
             }
             plan["engine_partitions"].push_back(std::move(partitionJson));
         }
@@ -270,6 +291,7 @@ namespace
             for (const auto& partitionJson : plan["engine_partitions"]) {
                 Garnet::EnginePartitionSpec partition;
                 partition.id = partitionJson.at("id").get<int>();
+                partition.deviceId = partitionJson.value("device_id",-1);
                 partition.enginePath = partitionJson.at("engine_path").get<std::string>();
                 for (const auto& inputJson : partitionJson.at("inputs")) {
                     Garnet::EnginePartitionBinding binding;
@@ -284,6 +306,19 @@ namespace
                     binding.tensorId = outputJson.at("tensor_id").get<unsigned long long>();
                     binding.terminalOutput = outputJson.at("terminal").get<bool>();
                     partition.outputs.push_back(std::move(binding));
+                }
+                if(partitionJson.contains("input_shape_profiles")){
+                    for(const auto& value:partitionJson.at("input_shape_profiles")){
+                        Garnet::TensorInputShapeRange range;
+                        range.minShape=value.at("min").get<std::vector<int>>();
+                        range.optShape=value.at("opt").get<std::vector<int>>();
+                        range.maxShape=value.at("max").get<std::vector<int>>();
+                        if(range.minShape.empty()||range.minShape.size()!=range.optShape.size()||range.optShape.size()!=range.maxShape.size())return false;
+                        for(size_t i=0;i<range.minShape.size();++i)
+                            if(range.minShape[i]<1||range.minShape[i]>range.optShape[i]||range.optShape[i]>range.maxShape[i])return false;
+                        partition.inputShapeRanges.push_back(std::move(range));
+                    }
+                    if(partition.inputShapeRanges.size()!=partition.inputs.size())return false;
                 }
                 partitions.push_back(std::move(partition));
             }
@@ -378,45 +413,67 @@ namespace
 
         const std::string source = ReadFile(normalized);
         static const std::regex fromImport(
-            R"(^\s*from\s+([A-Za-z0-9_.]+)\s+import\s+)",
+            R"(^\s*from\s+([A-Za-z0-9_.]+)\s+import\s+([^#;]+))",
             std::regex::ECMAScript);
         static const std::regex plainImport(
             R"(^\s*import\s+([A-Za-z0-9_.]+))",
             std::regex::ECMAScript);
-        static const std::regex localImport(
-            R"(^\s*from\s+\.\s+import\s+([A-Za-z0-9_]+))",
-            std::regex::ECMAScript);
+        static const std::regex importedName(R"(^\s*\(?\s*([A-Za-z_][A-Za-z0-9_]*))");
         static const std::regex explicitDependency(
             R"(^\s*#\s*garnet-dependency:\s*([^\s]+\.py)\s*$)",
             std::regex::ECMAScript);
         std::istringstream lines(source);
         std::string line;
+        auto collectIfPresent = [&](const std::filesystem::path& candidate) {
+            std::error_code error;
+            if (std::filesystem::is_regular_file(candidate, error))
+                CollectXModelDependencies(candidate, dependencies);
+        };
         while (std::getline(lines, line)) {
             std::smatch match;
             if (std::regex_search(line, match, explicitDependency)) {
                 const auto candidate = normalized.parent_path() / match[1].str();
-                if (std::filesystem::is_regular_file(candidate)) {
-                    CollectXModelDependencies(candidate, dependencies);
-                }
+                collectIfPresent(candidate);
                 continue;
             }
-            if (std::regex_search(line, match, localImport)) {
-                const auto candidate = normalized.parent_path() /
-                    (match[1].str() + ".py");
-                if (std::filesystem::is_regular_file(candidate)) {
-                    CollectXModelDependencies(candidate, dependencies);
-                }
-                continue;
-            }
-            if (!std::regex_search(line, match, fromImport) &&
-                !std::regex_search(line, match, plainImport)) {
-                continue;
-            }
+            const bool from = std::regex_search(line, match, fromImport);
+            if (!from && !std::regex_search(line, match, plainImport)) continue;
             std::string module = match[1].str();
+            const std::string imports = from ? match[2].str() : std::string();
+            auto base = normalized.parent_path();
+            const auto relativeDepth = module.find_first_not_of('.');
+            const size_t leadingDots = relativeDepth == std::string::npos ? module.size() : relativeDepth;
+            if (leadingDots) {
+                // One dot names the current package; each additional dot names
+                // its parent. Never turn these dots into a Windows UNC path.
+                for (size_t level = 1; level < leadingDots; ++level) base = base.parent_path();
+                module.erase(0, leadingDots);
+            } else {
+                // Absolute package imports start outside the topmost package.
+                // Standalone local modules retain their source-directory root.
+                std::error_code error;
+                while (std::filesystem::is_regular_file(base / "__init__.py", error)) {
+                    const auto parent = base.parent_path();
+                    if (parent == base) break;
+                    base = parent;
+                }
+            }
             std::replace(module.begin(), module.end(), '.', '/');
-            const auto candidate = normalized.parent_path() / (module + ".py");
-            if (std::filesystem::is_regular_file(candidate)) {
-                CollectXModelDependencies(candidate, dependencies);
+            const auto modulePath = module.empty() ? base : base / module;
+            if (!module.empty()) collectIfPresent(base / (module + ".py"));
+            collectIfPresent(modulePath / "__init__.py");
+            if (from) {
+                // `from ..common import ops as O` imports a child module, while
+                // `from ..common.ops import helper` names a symbol. Only real
+                // source files/packages are collected in either case.
+                std::istringstream names(imports);
+                std::string item;
+                while (std::getline(names, item, ',')) {
+                    std::smatch name;
+                    if (!std::regex_search(item, name, importedName)) continue;
+                    collectIfPresent(modulePath / (name[1].str() + ".py"));
+                    collectIfPresent(modulePath / name[1].str() / "__init__.py");
+                }
             }
         }
     }
@@ -507,6 +564,15 @@ namespace
         for (const auto& dataType : inputDataTypes) {
             material << "dtype:" << dataType << '\n';
         }
+        for(const int placedDevice:partitionOptions.partitionDevices){
+            cudaDeviceProp properties{};
+            const auto status=cudaGetDeviceProperties(&properties,placedDevice);
+            if(status!=cudaSuccess)throw std::runtime_error("invalid partition CUDA device");
+            material<<"partition.device:"<<placedDevice<<':'<<properties.major<<'.'<<properties.minor<<'\n';
+        }
+        if(!inputShapeRanges.empty())material<<"dynamic_partition_shapes_v1\n";
+        if(!partitionOptions.linearKernelProvider.empty())
+            material<<"linear_kernel_provider:"<<partitionOptions.linearKernelProvider<<":v1\n";
         for (size_t input = 0; input < inputShapeRanges.size(); ++input) {
             material << "input_profile:" << input << '\n';
             material << "batch_axis:" << inputShapeRanges[input].batchAxis << '\n';
@@ -675,9 +741,48 @@ namespace Garnet
         catch (...) { }
     }
 
+    void CompiledModelRuntime::TrimExecutionContexts(bool keepContexts,bool keepDeviceCache)
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+#if !defined(GARNET_CPU_ONLY) && !defined(GARNET_METAL)
+        if (m_backend != "tensorrt" || !CUDAEnginePool::Active())
+            throw std::runtime_error("trim_execution_contexts requires an active native CUDA engine pool");
+        std::string error;
+        if (!m_ready || !CompletePreparation(error))
+            throw std::runtime_error(error.empty() ? "compiled model is not ready" : error);
+        // Idle slots fence their outstanding CUDA work before destruction.
+        // Immutable engines, the graph and checkpoint registrations remain owned.
+        if (!keepContexts) TRTBuilder::RetireResidentContexts(m_trtExecutions);
+        if (!keepDeviceCache && m_partitionOptions.linearKernelProvider == "registered_bf16") {
+            std::set<std::filesystem::path> paths;
+            for (const auto& weight : m_weightIndex.Entries())
+                paths.insert(weight.second.filePath);
+            std::vector<std::string> files;
+            for(const auto& path:paths)files.push_back(std::filesystem::weakly_canonical(path).u8string());
+            ClearStreamedProjectionDeviceCache(files);
+        }
+        // Retained contexts may hold graph bindings to the reusable output.
+        if (!keepContexts) m_reusableExecutionOutput = X::Value();
+        m_state = keepContexts ? "engine_contexts_retained" : "engine_contexts_trimmed";
+#else
+        throw std::runtime_error("trim_execution_contexts requires the native CUDA backend");
+#endif
+    }
+
     void CompiledModelRuntime::ReleaseDeviceMemory()
     {
         std::lock_guard<std::mutex> guard(m_mutex);
+        // The index and native package must outlive background refitting.
+        // Workers never acquire m_mutex or access XLang values.
+        if(m_pendingPreparation.valid())m_pendingPreparation.get();
+        TRTBuilder::RetireResidentContexts(m_trtExecutions);
+        if(!m_trtExecutions.empty()&&m_partitionOptions.linearKernelProvider=="registered_bf16") {
+            std::set<std::filesystem::path> paths;
+            for(const auto& weight:m_weightIndex.Entries())paths.insert(weight.second.filePath);
+            std::vector<std::string> files;
+            for(const auto& path:paths)files.push_back(std::filesystem::weakly_canonical(path).u8string());
+            ClearStreamedProjectionDeviceCache(files);
+        }
         m_trtExecutions.clear();
         std::atomic_store(&m_operatorExecutionRequirements,
             std::shared_ptr<const OperatorProviderRows>{});
@@ -740,6 +845,7 @@ namespace Garnet
     {
         auto* host = m_host;
         std::lock_guard<std::mutex> guard(m_mutex);
+        if(m_pendingPreparation.valid())m_pendingPreparation.get();
         m_trtExecutions.clear();
         // Failed initialization must not keep engines alive until DLL teardown.
         auto cleanupEngines = [](CompiledModelRuntime* runtime) noexcept {
@@ -855,6 +961,11 @@ namespace Garnet
         }
 
         m_weightIndexError.clear();
+        if(!m_partitionOptions.linearKernelProvider.empty()&&
+            (m_backend!="tensorrt"||m_precision!="bf16"||(m_partitionOptions.linearKernelProvider!="streamed_bf16"&&m_partitionOptions.linearKernelProvider!="registered_bf16"))) {
+            m_state="failed";m_errorCode="unsupported_linear_kernel_provider";
+            m_errorMessage="native checkpoint projections require TensorRT/CUDA with precision='bf16'";return false;
+        }
         if (!m_weightsLocation.empty()) {
             std::filesystem::path weightsPath(m_weightsLocation);
             if (!m_weightIndex.Open(weightsPath, m_weightIndexError)) {
@@ -1077,6 +1188,49 @@ namespace Garnet
                 }
             }
             else {
+                if(m_partitionOptions.prepareAsync&&(m_frontend.empty()||m_frontend=="generic")){
+                    auto parts=m_enginePartitions;
+                    if(parts.size()<2){EnginePartitionSpec part;part.enginePath=m_enginePath;parts={std::move(part)};}
+                    int currentDevice=0;
+                    if(cudaGetDevice(&currentDevice)!=cudaSuccess){m_errorCode="engine_preparation_failed";m_errorMessage="CUDA device query failed";return false;}
+                    for(auto& part:parts)if(part.deviceId<0)part.deviceId=currentDevice;
+                    auto* weights=&m_weightIndex;
+                    const bool validateArtifact=CUDAEnginePool::Active();
+                    m_pendingPreparation=std::async(std::launch::async,[parts=std::move(parts),weights,validateArtifact](){
+                        PreparedEngines result;
+                        const auto began=std::chrono::steady_clock::now();
+                        try{
+                            std::map<int,std::vector<std::pair<size_t,std::string>>> groups;
+                            for(size_t i=0;i<parts.size();++i)groups[parts[i].deviceId].emplace_back(i,parts[i].enginePath);
+                            using GroupResult=std::pair<std::vector<std::pair<size_t,std::shared_ptr<void>>>,std::string>;
+                            std::vector<std::future<GroupResult>> futures;
+                            for(const auto& group:groups){
+                                futures.push_back(std::async(std::launch::async,[device=group.first,entries=group.second,weights,validateArtifact](){
+                                    GroupResult loaded;
+                                    try{
+                                        CUDADeviceScope deviceScope(device);
+                                        for(const auto& entry:entries){
+                                            auto owner=TRTBuilder::RetainCachedEngine(entry.second,weights,loaded.second,validateArtifact);
+                                            if(!owner)break;
+                                            loaded.first.emplace_back(entry.first,std::move(owner));
+                                        }
+                                    }catch(const std::exception& exception){loaded.second=exception.what();}
+                                    return loaded;
+                                }));
+                            }
+                            result.owners.resize(parts.size());
+                            for(auto& future:futures){
+                                auto loaded=future.get();
+                                if(!loaded.second.empty()&&result.error.empty())result.error=std::move(loaded.second);
+                                for(auto& owner:loaded.first)result.owners[owner.first]=std::move(owner.second);
+                            }
+                        }catch(const std::exception& exception){result.error=exception.what();}
+                        result.milliseconds=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-began).count();
+                        return result;
+                    });
+                    m_state="engine_cache_preparing";
+                    return true;
+                }
                 std::vector<std::shared_ptr<void>> owners;
                 auto retain = [&](const std::string& path) {
                     auto owner = TRTBuilder::RetainCachedExecution(path, &m_weightIndex, preparationError);
@@ -1087,6 +1241,7 @@ namespace Garnet
                 prepared = true;
                 if (m_enginePartitions.size() > 1) {
                     for (const auto& partition : m_enginePartitions) {
+                        CUDADeviceScope deviceScope(partition.deviceId);
                         if (!retain(partition.enginePath)) {
                             prepared = false;
                             break;
@@ -1223,7 +1378,7 @@ namespace Garnet
                 m_errorMessage = exception.what(); return false;
             }
             m_cudaGraphEnabled =
-                ExecutionPlanRequestsCudaGraph(m_executionPlanJson);
+                m_partitionOptions.linearKernelProvider.empty()&&ExecutionPlanRequestsCudaGraph(m_executionPlanJson);
             bool partitionCacheValid = pluginCacheUnchanged && ParseEnginePartitions(
                 m_executionPlanJson, m_enginePartitions);
             for (const auto& partition : m_enginePartitions) {
@@ -1508,10 +1663,12 @@ namespace Garnet
                     partitionCount = std::max(
                         partitionCount, operation.candidatePartition + 1);
                 }
-                if (!m_inputShapeRanges.empty() && partitionCount > 1) {
-                    m_state = "failed";
-                    m_errorCode = "dynamic_input_shape_partition_unsupported";
-                    m_errorMessage = "dynamic input profiles require a single compiled TensorRT partition";
+                if(!m_partitionOptions.partitionDevices.empty()&&
+                    (m_backend!="tensorrt"||partitionCount<2||
+                     m_partitionOptions.partitionDevices.size()!=static_cast<size_t>(partitionCount))){
+                    m_state="failed";
+                    m_errorCode="partition_device_placement_invalid";
+                    m_errorMessage="CUDA placement requires exactly one device for each of at least two TensorRT graph partitions";
                     return false;
                 }
                 m_executionPlanJson = BuildExecutionPlanJson(
@@ -1537,6 +1694,8 @@ namespace Garnet
                 else {
                     TRTBuilder builder(host);
                     builder.SetCapturedWeightProfile(m_precision);
+                    builder.SetCapturedLinearKernelProvider(m_partitionOptions.linearKernelProvider);
+                    builder.SetCapturedPartitionDevices(m_partitionOptions.partitionDevices);
                     builder.SetCapturedWorkspaceBytes(
                         m_partitionOptions.builderWorkspaceBytes);
                     builder.SetCapturedOptimizationLevel(
@@ -1551,7 +1710,7 @@ namespace Garnet
                             m_enginePath,
                             GetCapturedTensorOperations(),
                             m_enginePartitions,
-                            m_errorMessage)
+                            m_errorMessage,m_inputShapeRanges)
                         : builder.BuildCapturedGraph(
                             m_graph,
                             m_rootFunction,
@@ -1573,7 +1732,7 @@ namespace Garnet
                     m_enginePartitions,
                     m_partitionOptions);
                 m_cudaGraphEnabled =
-                    ExecutionPlanRequestsCudaGraph(m_executionPlanJson);
+                    m_partitionOptions.linearKernelProvider.empty()&&ExecutionPlanRequestsCudaGraph(m_executionPlanJson);
                 if (!resolvedOperatorPlugins.empty()) {
                     auto plan = nlohmann::json::parse(m_executionPlanJson);
                     plan["operator_plugins"] = resolvedOperatorPlugins;
@@ -1659,6 +1818,10 @@ namespace Garnet
         partitionOptions.SetItem(
             "builder_optimization_level",
             NativeValue(host, m_partitionOptions.builderOptimizationLevel));
+        if(!m_partitionOptions.linearKernelProvider.empty()) {
+            partitionOptions.SetItem("linear_kernel_provider",NativeValue(host,m_partitionOptions.linearKernelProvider));
+            status.SetItem("streamed_projection_stats_json",NativeValue(host,StreamedBF16ProjectionStats()));
+        }
         status.SetItem("partition_options", partitionOptions);
         status.SetItem("weight_tensor_count", NativeValue(host, static_cast<long long>(m_weightIndex.TensorCount())));
         status.SetItem("weight_tensor_bytes", NativeValue(host, static_cast<long long>(m_weightIndex.TensorBytes())));
@@ -1666,6 +1829,7 @@ namespace Garnet
         status.SetItem("loaded_weight_count", NativeValue(host, static_cast<long long>(m_loadedWeights.size())));
         status.SetItem("loaded_weight_bytes", NativeValue(host, m_loadedWeightBytes));
         status.SetItem("engines_prepared", NativeValue(host, m_enginesPrepared));
+        status.SetItem("engine_preparation_pending",NativeValue(host,m_pendingPreparation.valid()));
         status.SetItem("engine_prepare_ms", NativeValue(host, m_enginePreparationMs));
         status.SetItem("frontend_prepared", NativeValue(host, m_frontendPrepared));
         status.SetItem("frontend_prepare_ms", NativeValue(host, m_frontendPreparationMs));
@@ -1682,6 +1846,21 @@ namespace Garnet
         counters.SetItem("graph_cache_misses", NativeValue(host, m_diagnostics.graphCacheMisses));
         status.SetItem("forbidden_path_counters", counters);
         return status;
+    }
+
+    bool CompiledModelRuntime::CompletePreparation(std::string& error){
+        if(!m_pendingPreparation.valid())return true;
+        try{
+            auto prepared=m_pendingPreparation.get();
+            m_enginePreparationMs=prepared.milliseconds;
+            if(!prepared.error.empty())throw std::runtime_error(prepared.error);
+            for(size_t i=0;i<prepared.owners.size();++i){
+                if(!prepared.owners[i])throw std::runtime_error("background engine preparation returned an empty owner");
+                CUDAEnginePool::Retain(m_enginePartitions.size()>1?m_enginePartitions[i].enginePath:m_enginePath,prepared.owners[i]);
+            }
+            m_trtExecutions=std::move(prepared.owners);m_enginesPrepared=true;m_state="engine_cache_loaded";
+            error.clear();return true;
+        }catch(const std::exception& exception){m_errorCode="engine_preparation_failed";m_errorMessage=exception.what();m_ready=false;m_state="failed";error=m_errorMessage;return false;}
     }
 
     X::Value CompiledModelRuntime::Forward(X::Value request)
@@ -1704,6 +1883,11 @@ namespace Garnet
         std::lock_guard<std::mutex> guard(m_mutex);
         const auto requestStart = std::chrono::steady_clock::now();
         X::Value result = X::Value::Dict(host);
+        std::string preparationError;
+        if(!CompletePreparation(preparationError)){
+            result.SetItem("status",NativeValue(host,"error"));result.SetItem("error_code",NativeValue(host,m_errorCode));
+            result.SetItem("error_message",NativeValue(host,preparationError));return result;
+        }
         if (!m_ready) {
             result.SetItem("status", NativeValue(host, "error"));
             result.SetItem("error_code", NativeValue(host, "compiled_graph_not_ready"));
@@ -2063,8 +2247,10 @@ namespace Garnet
 
             X::Value activeInputs(inputs);
             X::Value packed = output;
-            std::vector<int64_t> codes;
-            codes.reserve(static_cast<size_t>(maxFrames) * 16);
+            constexpr int codecGroups = 16;
+            auto codecCodes = TensorHelper::CreateGPU(
+                host, X3_TENSOR_INT64, {1, codecGroups, profileFrames});
+            int frameCount = 0;
             const auto decodeStart = std::chrono::steady_clock::now();
             for (int frame = 0; frame < maxFrames; ++frame) {
                 long long firstCode = -1;
@@ -2107,21 +2293,29 @@ namespace Garnet
                     result.SetItem("error_code", NativeValue(host, "compiled_tts_predictor_output_invalid"));
                     return result;
                 }
-                int64_t hostCodes[16]{};
                 X::Tensor frameCodeTensor(frameCodes);
-                auto frameUse = TensorHelper::AcquireGPU(frameCodeTensor);
-                cudaError_t copyStatus = cudaMemcpyAsync(
-                    hostCodes, TensorHelper::GetGPUMemory(frameCodeTensor),
-                    sizeof(hostCodes), cudaMemcpyDeviceToHost, CurrentExecutionStream());
-                const cudaError_t copyCompletion = cudaStreamSynchronize(CurrentExecutionStream());
-                if (copyStatus == cudaSuccess) copyStatus = copyCompletion;
+                if (frameCodeTensor.Info().dtype != X3_TENSOR_INT64 ||
+                    frameCodeTensor.Info().byte_size < codecGroups * sizeof(int64_t)) {
+                    result.SetItem("status", NativeValue(host, "error"));
+                    result.SetItem("error_code", NativeValue(host, "compiled_tts_predictor_output_invalid"));
+                    return result;
+                }
+                // The predictor emits one contiguous frame. Store it in the
+                // codec's group-major tensor without a host read between frames.
+                auto frameUse = TensorHelper::AcquireGPU(
+                    {{frameCodeTensor, X3_TENSOR_READ}, {codecCodes, X3_TENSOR_WRITE}});
+                auto* destination = static_cast<int64_t*>(TensorHelper::GetGPUMemory(codecCodes));
+                const cudaError_t copyStatus = cudaMemcpy2DAsync(
+                    destination + frame, static_cast<size_t>(profileFrames) * sizeof(int64_t),
+                    TensorHelper::GetGPUMemory(frameCodeTensor), sizeof(int64_t),
+                    sizeof(int64_t), codecGroups, cudaMemcpyDeviceToDevice, CurrentExecutionStream());
                 frameUse.Finish();
                 if (copyStatus != cudaSuccess) {
                     result.SetItem("status", NativeValue(host, "error"));
-                    result.SetItem("error_code", NativeValue(host, "compiled_tts_code_download_failed"));
+                    result.SetItem("error_code", NativeValue(host, "compiled_tts_codec_input_copy_failed"));
                     return result;
                 }
-                codes.insert(codes.end(), hostCodes, hostCodes + 16);
+                ++frameCount;
                 if (frame + 1 >= maxFrames) break;
 
                 const int slot = frontendPromptTokenCount + frame;
@@ -2155,25 +2349,13 @@ namespace Garnet
                 if (Lookup(talkerResult, "status").ToString() != "ok") return talkerValue;
                 packed = Lookup(talkerResult, "output");
             }
-            if (codes.empty()) {
+            if (!frameCount) {
                 result.SetItem("status", NativeValue(host, "error"));
                 result.SetItem("error_code", NativeValue(host, "compiled_tts_generated_no_audio"));
                 return result;
             }
-            const int frameCount = static_cast<int>(codes.size() / 16);
-            std::vector<int64_t> paddedCodes(
-                static_cast<size_t>(16 * profileFrames), 0);
-            for (int frame = 0; frame < frameCount; ++frame) {
-                for (int group = 0; group < 16; ++group) {
-                    paddedCodes[static_cast<size_t>(group * profileFrames + frame)] =
-                        codes[static_cast<size_t>(frame * 16 + group)];
-                }
-            }
-            X::Value codecInput = MakeCudaTensorFromHost(host,
-                X3_TENSOR_INT64, {1, 16, profileFrames},
-                paddedCodes.data(), paddedCodes.size() * sizeof(int64_t));
             X::Value codecInputs = X::Value::List(host);
-            codecInputs.Append(codecInput);
+            codecInputs.Append(NativeValue(host, codecCodes));
             X::Value codecRequest = X::Value::Dict(host);
             codecRequest.SetItem("inputs", NativeValue(host, codecInputs));
             X::Value codecValue = m_codecRuntime->Forward(codecRequest);
@@ -2212,7 +2394,7 @@ namespace Garnet
             result.SetItem("audio_frame_count", NativeValue(host, frameCount));
             result.SetItem("audio_sample_count", NativeValue(host, validSamples));
             result.SetItem("audio_duration_seconds", NativeValue(host, frameCount / 12.5));
-            result.SetItem("codec_codes", NativeValue(host, static_cast<long long>(codes.size())));
+            result.SetItem("codec_codes", NativeValue(host, static_cast<long long>(frameCount) * codecGroups));
             result.SetItem("prompt_token_count", NativeValue(host, frontendPromptTokenCount));
             result.SetItem("decode_ms", NativeValue(host, std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - decodeStart).count()));

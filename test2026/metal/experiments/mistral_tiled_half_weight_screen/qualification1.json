@@ -1,0 +1,438 @@
+{
+  "scope": "Exact prepared FP16 weights with unchanged strict MPP consumer; no runtime replacement selected.",
+  "decision": {
+    "passed": true,
+    "scope": "Exact prepared FP16 weights with unchanged strict MPP consumer; no runtime replacement selected.",
+    "parent_checkpoint": "bf640c64fdf9a64598a861f4da26461ab743e948",
+    "reason": "Every prepared candidate regresses on the largest real gate/down cells under both ordinary replay and the separately timed explicit256MiB read/write pressure condition.",
+    "largest_contiguous_control_over_candidate": {
+      "timing": {
+        "gate": {
+          "0": [
+            0.9989393264972288,
+            1.0003065544869385
+          ],
+          "1": [
+            0.9707201958504709,
+            0.9736827581714148
+          ],
+          "2": [
+            0.9642932162966963,
+            0.965661166105539
+          ],
+          "3": [
+            0.9811130059819898,
+            0.9820657007031658
+          ]
+        },
+        "down": {
+          "0": [
+            1.000731756685932,
+            1.0002990979857016
+          ],
+          "1": [
+            0.9426066786688965,
+            0.9402217881100357
+          ],
+          "2": [
+            0.8609712934689615,
+            0.863702838832223
+          ],
+          "3": [
+            0.9562767008464269,
+            0.9294032400066186
+          ]
+        },
+        "gate-prefix-proxy": {
+          "0": [
+            0.9981521654443204,
+            1.014662592127339
+          ],
+          "1": [
+            0.8557198242339373,
+            0.8665318109203721
+          ],
+          "2": [
+            0.8329770656297008,
+            0.8609762588539442
+          ],
+          "3": [
+            0.8568716357605047,
+            0.87265365592864
+          ]
+        }
+      },
+      "pressure": {
+        "gate": {
+          "0": [
+            1.0007894705799933,
+            1.0022504563514538
+          ],
+          "1": [
+            0.9750969790907242,
+            0.9760384054339133
+          ],
+          "2": [
+            0.9649875211546701,
+            0.9688754990787076
+          ],
+          "3": [
+            0.9813945986715331,
+            0.9855295878544637
+          ]
+        },
+        "down": {
+          "0": [
+            1.002198699742876,
+            1.0018391684321124
+          ],
+          "1": [
+            0.9583984741197528,
+            0.9562875999465641
+          ],
+          "2": [
+            0.959043487781984,
+            0.9573787016356226
+          ],
+          "3": [
+            0.980581716729344,
+            0.9842652024748137
+          ]
+        },
+        "gate-prefix-proxy": {
+          "0": [
+            1.0034688428076737,
+            0.99924396205839
+          ],
+          "1": [
+            0.8807748750985338,
+            0.8721087861900593
+          ],
+          "2": [
+            0.8493430470388795,
+            0.8575136197757312
+          ],
+          "3": [
+            0.8467724229851951,
+            0.8448677572982399
+          ]
+        }
+      }
+    },
+    "measured_samples": 7200,
+    "selection_changed": false,
+    "native_runtime_changed": false,
+    "comparator_inference_rerun": false,
+    "serving_speed_claim": false,
+    "quality_gate_passed": false,
+    "goal_complete": false,
+    "next_evidence_needed": "Inspect the frozen reference scheduling/chunk configuration and pinned MLX dispatch conditions; separate concurrency/shape selection from projection-kernel execution before another native change. Kernel availability alone does not prove frozen runtime selection.",
+    "unchanged_serving_comparison_sha256": "77e292129403f717399cadfd413612a0b800a3636d4ce31c470b0fcf3913f548",
+    "original_dirty_files_preserved": 11
+  },
+  "correctness": {
+    "complete_parent_words": 6228593280,
+    "writer_words": 6228593280,
+    "maximum_fp64_fraction": 0.018898931018960546,
+    "prepared_weights": {
+      "prepared_half_words": 830473344,
+      "preparation_writer_words": 830472768,
+      "prepared_arrays": 18,
+      "raw_prepared_arrays": 6,
+      "all_prepared_bits_independently_reconstructed": true,
+      "physical_allocation_peak_proven": false
+    },
+    "raw_prepared_arrays": {
+      "prepared-layer0-gate-layout0.u16": "ea68bb7e3712f2ea3ad311a54c00656222130d4aa9009365b649ab691853deec",
+      "prepared-layer0-gate-layout1.u16": "5dae8ef35956a933903041fe0e56f0346af9b5f5495ebc1e0537f18b4a2645a4",
+      "prepared-layer0-down-layout0.u16": "0d30b65dec75f6c71181bb1c428fc5a22e1d791bae5acf4b9bdb10cb247f1a7f",
+      "prepared-layer0-down-layout1.u16": "277e46e68ee34995f7480a84662eaea1bd487a19d4013d82d8008a3bcd745fc8",
+      "prepared-layer0-gate-prefix-proxy-layout0.u16": "69a6e05b8d5f11999a4eae4262c12f6af3f74f34b257b0655c5d76820ea547d0",
+      "prepared-layer0-gate-prefix-proxy-layout1.u16": "a50a2146996ea815092fdf78b824e89fa4db4010b469b700d7c382e82b4558ba"
+    },
+    "passed": true,
+    "scope": "Independent cache half bits, full-parent results, writer maps and FP64 checks.",
+    "cases": 1620,
+    "layers": [
+      0,
+      15,
+      31
+    ],
+    "shapes": [
+      "gate",
+      "down",
+      "gate-prefix-proxy"
+    ],
+    "independent_fp64_samples": 243,
+    "all_complete_parent_and_writer_hashes_independently_reconstructed": true,
+    "retained_raw_arrays": {
+      "layer-0-gate-rows512-tile256-mode0-output.u32": "825ea443ab3f87281cf40d9db9c71c9f57544f01f0ea38e51c06ac71944b963f",
+      "layer-0-gate-rows512-tile256-mode0-writers.u32": "c5c4328c0b530da254ddcfa9da5cd68cef55ec51c5fbf9704591c9c8eea7446a",
+      "layer-0-gate-rows512-tile256-mode1-output.u32": "825ea443ab3f87281cf40d9db9c71c9f57544f01f0ea38e51c06ac71944b963f",
+      "layer-0-gate-rows512-tile256-mode1-writers.u32": "c5c4328c0b530da254ddcfa9da5cd68cef55ec51c5fbf9704591c9c8eea7446a",
+      "layer-0-gate-rows512-tile256-mode2-output.u32": "825ea443ab3f87281cf40d9db9c71c9f57544f01f0ea38e51c06ac71944b963f",
+      "layer-0-gate-rows512-tile256-mode2-writers.u32": "c5c4328c0b530da254ddcfa9da5cd68cef55ec51c5fbf9704591c9c8eea7446a",
+      "layer-0-gate-rows512-tile256-mode3-output.u32": "825ea443ab3f87281cf40d9db9c71c9f57544f01f0ea38e51c06ac71944b963f",
+      "layer-0-gate-rows512-tile256-mode3-writers.u32": "c5c4328c0b530da254ddcfa9da5cd68cef55ec51c5fbf9704591c9c8eea7446a",
+      "layer-31-down-rows129-tile128-mode0-output.u32": "6f7838f06ee6e89713221d93e38965079406e7d918dd39cb8785cc27e36e8ed4",
+      "layer-31-down-rows129-tile128-mode0-writers.u32": "b634bd83a0cf0558aadae5afb7be23618b07c2f3aa36a217cbe089a6920aeedb",
+      "layer-31-down-rows129-tile128-mode1-output.u32": "6f7838f06ee6e89713221d93e38965079406e7d918dd39cb8785cc27e36e8ed4",
+      "layer-31-down-rows129-tile128-mode1-writers.u32": "b634bd83a0cf0558aadae5afb7be23618b07c2f3aa36a217cbe089a6920aeedb",
+      "layer-31-down-rows129-tile128-mode2-output.u32": "6f7838f06ee6e89713221d93e38965079406e7d918dd39cb8785cc27e36e8ed4",
+      "layer-31-down-rows129-tile128-mode2-writers.u32": "b634bd83a0cf0558aadae5afb7be23618b07c2f3aa36a217cbe089a6920aeedb",
+      "layer-31-down-rows129-tile128-mode3-output.u32": "6f7838f06ee6e89713221d93e38965079406e7d918dd39cb8785cc27e36e8ed4",
+      "layer-31-down-rows129-tile128-mode3-writers.u32": "b634bd83a0cf0558aadae5afb7be23618b07c2f3aa36a217cbe089a6920aeedb"
+    },
+    "negative_controls_rejected": [
+      "wrong_prepared_half",
+      "wrong_preparation_writer",
+      "wrong_cache_size",
+      "missing_prepared_weight",
+      "wrong_output",
+      "wrong_expected_and_actual_output",
+      "wrong_writers",
+      "missing_case",
+      "duplicate_case",
+      "wrong_tile",
+      "wrong_guard_flag",
+      "wrong_total",
+      "wrong_FP64",
+      "wrong_shared_size"
+    ],
+    "result_sha256": "a3b5327db81261f4566fc37f3618d38ae352c1ea03cb70afeb3892dfe72bb5fd",
+    "preflight_sha256": "39f2188f909d4c369307fa2033621927cd1c57e3c05bbc4a69e6ee92c9b98136",
+    "binary_sha256": "55290f89bb5f7e62fdecc806158583af38cea3a774d5f8692bae98dab4a45c8d",
+    "combined_sha256": "49ef7a4d49965ac4a980440cc35797d49ca7b3da62b3c7a00fceea350c6b712a",
+    "proxy_is_actual_QO": false,
+    "native_runtime_changed": false,
+    "serving_speed_claim": false,
+    "quality_qualified": false,
+    "goal_complete": false
+  },
+  "normal_preparation": {
+    "prepared_half_words": 830473344,
+    "preparation_writer_words": 830472768,
+    "prepared_arrays": 18,
+    "raw_prepared_arrays": {
+      "prepared-layer0-gate-layout0.u16": "ea68bb7e3712f2ea3ad311a54c00656222130d4aa9009365b649ab691853deec",
+      "prepared-layer0-gate-layout1.u16": "5dae8ef35956a933903041fe0e56f0346af9b5f5495ebc1e0537f18b4a2645a4",
+      "prepared-layer0-down-layout0.u16": "0d30b65dec75f6c71181bb1c428fc5a22e1d791bae5acf4b9bdb10cb247f1a7f",
+      "prepared-layer0-down-layout1.u16": "277e46e68ee34995f7480a84662eaea1bd487a19d4013d82d8008a3bcd745fc8",
+      "prepared-layer0-gate-prefix-proxy-layout0.u16": "69a6e05b8d5f11999a4eae4262c12f6af3f74f34b257b0655c5d76820ea547d0",
+      "prepared-layer0-gate-prefix-proxy-layout1.u16": "a50a2146996ea815092fdf78b824e89fa4db4010b469b700d7c382e82b4558ba"
+    },
+    "all_prepared_bits_independently_reconstructed": true,
+    "physical_allocation_peak_proven": false,
+    "passed": true,
+    "scope": "Verify the uninstrumented preparation produces the same exact half bits.",
+    "normal_and_counted_half_bits_exact": true,
+    "qualified_shader_sha256": "49ef7a4d49965ac4a980440cc35797d49ca7b3da62b3c7a00fceea350c6b712a",
+    "result_sha256": "48d232c1c0f4e6459480b46adbcb47a27db6dcb8c8d9b08e01fd802df04f4efd",
+    "normal_host_sha256": "7e34add750a36db3bf744d85c40f519d271de5983ca7aedc36d31ae709a05480",
+    "normal_binary_sha256": "e9d62edde732e4790cfc69cffc1fafb1f4d071ee93ee786b36840c06b73ed350",
+    "native_runtime_changed": false,
+    "serving_speed_claim": false,
+    "goal_complete": false
+  },
+  "timing": {
+    "passed": true,
+    "scope": "Audit prepared-weight operator timings, including explicit cache pressure.",
+    "largest_contiguous_control_over_candidate": {
+      "timing": {
+        "gate": {
+          "0": [
+            0.9989393264972288,
+            1.0003065544869385
+          ],
+          "1": [
+            0.9707201958504709,
+            0.9736827581714148
+          ],
+          "2": [
+            0.9642932162966963,
+            0.965661166105539
+          ],
+          "3": [
+            0.9811130059819898,
+            0.9820657007031658
+          ]
+        },
+        "down": {
+          "0": [
+            1.000731756685932,
+            1.0002990979857016
+          ],
+          "1": [
+            0.9426066786688965,
+            0.9402217881100357
+          ],
+          "2": [
+            0.8609712934689615,
+            0.863702838832223
+          ],
+          "3": [
+            0.9562767008464269,
+            0.9294032400066186
+          ]
+        },
+        "gate-prefix-proxy": {
+          "0": [
+            0.9981521654443204,
+            1.014662592127339
+          ],
+          "1": [
+            0.8557198242339373,
+            0.8665318109203721
+          ],
+          "2": [
+            0.8329770656297008,
+            0.8609762588539442
+          ],
+          "3": [
+            0.8568716357605047,
+            0.87265365592864
+          ]
+        }
+      },
+      "pressure": {
+        "gate": {
+          "0": [
+            1.0007894705799933,
+            1.0022504563514538
+          ],
+          "1": [
+            0.9750969790907242,
+            0.9760384054339133
+          ],
+          "2": [
+            0.9649875211546701,
+            0.9688754990787076
+          ],
+          "3": [
+            0.9813945986715331,
+            0.9855295878544637
+          ]
+        },
+        "down": {
+          "0": [
+            1.002198699742876,
+            1.0018391684321124
+          ],
+          "1": [
+            0.9583984741197528,
+            0.9562875999465641
+          ],
+          "2": [
+            0.959043487781984,
+            0.9573787016356226
+          ],
+          "3": [
+            0.980581716729344,
+            0.9842652024748137
+          ]
+        },
+        "gate-prefix-proxy": {
+          "0": [
+            1.0034688428076737,
+            0.99924396205839
+          ],
+          "1": [
+            0.8807748750985338,
+            0.8721087861900593
+          ],
+          "2": [
+            0.8493430470388795,
+            0.8575136197757312
+          ],
+          "3": [
+            0.8467724229851951,
+            0.8448677572982399
+          ]
+        }
+      }
+    },
+    "measured_samples": 7200,
+    "warmup_samples": 1800,
+    "measured_rounds_per_mode_cell_process": 20,
+    "each_mode_sample_positions": {
+      "0": 4,
+      "1": 4,
+      "2": 4,
+      "3": 4,
+      "4": 4
+    },
+    "negative_controls_rejected": [
+      "missing_sample",
+      "duplicate_sample",
+      "wrong_tile",
+      "wrong_order",
+      "nonfinite_duration",
+      "negative_duration",
+      "duration_not_from_clocks",
+      "reversed_operator_clock",
+      "overlapping_operator_clock",
+      "wrong_qualified_resources",
+      "counted_preparation",
+      "wrong_preparation_bytes",
+      "missing_preparation",
+      "preparation_clock_mismatch",
+      "pressure_inside_operator",
+      "wrong_pressure_bytes",
+      "reversed_pressure_clock",
+      "timing_half_hash_observation"
+    ],
+    "mode_names": {
+      "-1": "unaltered native inline-Q4 kernel",
+      "0": "copied inline-Q4 kernel with disabled writer observer",
+      "1": "prepared row-major half weights, original K16 schedule",
+      "2": "prepared padded tiled half weights, original K16 schedule",
+      "3": "prepared padded tiled half weights, vector/K32 schedule"
+    },
+    "numerical_gate_sha256": "d70ce3b838e911e6ae60ecb1b1544ea7754bee1bd660410428b26c5f1fdb6450",
+    "normal_preparation_gate_sha256": "5fa7e6afcf9908a369998d4453f370d04a31b8d3f5b42081e6cb11ef2426268a",
+    "sample_result_sha256": {
+      "timing-a1": "f363c29efcbb8e9682cbdac51f723afcb0bada17806031ffd833af8b20da587d",
+      "timing-b1": "cdf24ff2071a410b989ee6c040956514c529db9473af270bef2affe848d9773f",
+      "pressure-a1": "adc0f69fd53df94c7db1d4efcc2a1187afedf5d07750d2fed1dcba48e138c5f3",
+      "pressure-b1": "ad494a620d7fcdede6b4475aee352df8376183f434db9b8bdec189612a3cce55"
+    },
+    "preflight_sha256": {
+      "timing": "6bcf879b1e2582d1d9b90fa7cf8d5202407c407c78b266ce605678f6be43a113",
+      "pressure": "b5f833919aecfbd66d638ba5d335318f2179dc27e16d1d6324a7c7aa1478c685"
+    },
+    "selection_changed": false,
+    "timings_are_operator_gpu_durations_only": true,
+    "absolute_gpu_start_end_timestamps_retained": true,
+    "pressure_sweep_outside_operator_interval": true,
+    "pressure_is_not_proof_of_all_hardware_caches_cold": true,
+    "reported_allocation_bytes_are_requested_buffer_lengths": true,
+    "full_model_cache_budget_qualified": false,
+    "proxy_is_actual_QO": false,
+    "baseline_per_operator_kernel_selection_proven": false,
+    "native_runtime_changed": false,
+    "serving_speed_claim": false,
+    "goal_complete": false
+  },
+  "frozen_studies": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tiled-half-weight-screen1": {
+      "provenance_sha256": "66b3acefc92cb71a3a5189391e0c9bd3152fef732fa81c73353ed0c210900b6e",
+      "files": 103
+    },
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tiled-half-weight-replay-preparation1": {
+      "provenance_sha256": "1903dc1d0418657db41bbc6fbdf3d34edfa5458e06a4a5302245aa043d0a71f6",
+      "files": 29
+    },
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tiled-half-weight-replay-source1": {
+      "provenance_sha256": "642b13caef7a88c8a596285e0e75a1656fc5cfea294981f1de62085ad27d3885",
+      "files": 19
+    }
+  },
+  "packaged_audits_exact": true,
+  "prepared_sources_exact": true,
+  "original_dirty_files_preserved": 11,
+  "selection_changed": false,
+  "native_runtime_changed": false,
+  "serving_speed_claim": false,
+  "quality_gate_passed": false,
+  "goal_complete": false
+}

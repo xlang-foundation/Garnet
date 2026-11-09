@@ -207,6 +207,18 @@ verified properties:
   Runtime status reports `engines_prepared`, `engine_prepare_ms`,
   `frontend_prepared`, and `frontend_prepare_ms`; the real VLM test rejects a
   ready model that performs lazy engine preparation during its first request.
+- Generic TensorRT models can explicitly select `compile.prepare_async=true`.
+  Graph capture and compilation still finish on the XLang calling thread;
+  native workers deserialize and refit independent device partitions without
+  invoking XLang or creating execution contexts. The default and the Qwen
+  frontends retain eager serving readiness. In this opt-in mode, `ready` means
+  graph initialization succeeded; `engine_preparation_pending` remains true
+  until the first forward joins preparation. That forward reports deferred
+  failures as `engine_preparation_failed`. Reinitialization and release also
+  join workers before destroying checkpoint metadata. Execution contexts are
+  allocated when needed, and this loading policy does not change graph-cache
+  identity. Callers must bound simultaneous model preparations: refitted
+  weights and temporary source mappings can consume substantial host RAM.
 - The balanced production profile now has a dedicated regression using the
   original 1920x1080 JPEG, Qwen smart resize to 1312x736, 3,772 vision patches,
   943 merged visual tokens, a 1,024-token text profile, and 80 KV pages. The

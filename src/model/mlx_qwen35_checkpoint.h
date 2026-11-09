@@ -13,29 +13,33 @@ namespace Garnet {
 // names stay unchanged; packed dimensions never masquerade as logical shapes.
 class MlxQwen35Checkpoint {
     bool enabled_=false;
-    bool denseMistral_=false;
+    enum class DenseFamily {None,Mistral,Qwen3,Qwen2};
+    DenseFamily denseFamily_=DenseFamily::None;
     AffineInt4CoefficientType coefficientType_=AffineInt4CoefficientType::BF16;
 public:
     void Open(const SafeTensorsIndex& index) {
-        enabled_=false;denseMistral_=false;coefficientType_=AffineInt4CoefficientType::BF16;
+        enabled_=false;denseFamily_=DenseFamily::None;coefficientType_=AffineInt4CoefficientType::BF16;
         const auto* embedding=index.Find("language_model.model.embed_tokens.weight");
         const auto* dense=index.Find("model.embed_tokens.weight");
         if(!embedding&&dense&&dense->dataType=="U32") {
             std::ifstream stream(index.FilePath().parent_path()/"config.json");nlohmann::json config;
             if(!stream)throw std::invalid_argument("Packed dense checkpoint requires config.json");
             stream>>config;
-            if(config.value("model_type","")!="mistral"||!config.contains("quantization"))
+            const auto family=config.value("model_type","");
+            if((family!="mistral"&&family!="qwen3"&&family!="qwen2")||!config.contains("quantization"))
                 throw std::invalid_argument("Unsupported packed dense architecture/quantization");
             const auto& quant=config.at("quantization");
             if(quant.value("bits",0)!=4||quant.value("group_size",0)!=64||quant.value("mode","affine")!="affine")
-                throw std::invalid_argument("Native Mistral requires affine INT4/group64");
+                throw std::invalid_argument("Native packed dense checkpoint requires affine INT4/group64");
             const auto* scales=index.Find("model.embed_tokens.scales");
             if(!scales||(scales->dataType!="F16"&&scales->dataType!="BF16"))
-                throw std::invalid_argument("Mistral affine coefficient type is unsupported");
+                throw std::invalid_argument("Packed dense affine coefficient type is unsupported");
             if(index.Find("model.language_model.embed_tokens.weight"))
                 throw std::invalid_argument("Ambiguous dense/hybrid checkpoint roots");
             coefficientType_=scales->dataType=="F16"?AffineInt4CoefficientType::FP16:AffineInt4CoefficientType::BF16;
-            denseMistral_=true;enabled_=true;return;
+            denseFamily_=family=="mistral"?DenseFamily::Mistral:
+                family=="qwen2"?DenseFamily::Qwen2:DenseFamily::Qwen3;
+            enabled_=true;return;
         }
         if(!embedding)return;
         if(index.Find("model.language_model.embed_tokens.weight"))
@@ -57,12 +61,15 @@ public:
         enabled_=true;
     }
     bool Enabled() const {return enabled_;}
-    bool DenseMistral() const {return enabled_&&denseMistral_;}
+    bool DenseMistral() const {return enabled_&&denseFamily_==DenseFamily::Mistral;}
+    bool DenseQwen3() const {return enabled_&&denseFamily_==DenseFamily::Qwen3;}
+    bool DenseQwen2() const {return enabled_&&denseFamily_==DenseFamily::Qwen2;}
+    bool DensePacked() const {return enabled_&&denseFamily_!=DenseFamily::None;}
     AffineInt4CoefficientType CoefficientType() const {return coefficientType_;}
     std::string PhysicalName(const std::string& canonical) const {
         if(!enabled_)return canonical;
         const std::string prefix="model.language_model.";
-        if(denseMistral_) {
+        if(DensePacked()) {
             if(canonical.compare(0,prefix.size(),prefix)==0)return "model."+canonical.substr(prefix.size());
             return canonical;
         }
@@ -78,12 +85,12 @@ public:
     }
     bool ConvertedConvolution(const std::string& name,const SafeTensorMetadata& metadata) const {
         const std::string suffix=".linear_attn.conv1d.weight";
-        return enabled_&&!denseMistral_&&name.size()>=suffix.size()&&
+        return enabled_&&!DensePacked()&&name.size()>=suffix.size()&&
             name.compare(name.size()-suffix.size(),suffix.size(),suffix)==0&&
             metadata.shape.size()==3&&metadata.shape[1]==4&&metadata.shape[2]==1;
     }
     bool ConvertedVisionPatch(const std::string& name,const SafeTensorMetadata& metadata) const {
-        if(!enabled_||denseMistral_||name!="model.visual.patch_embed.proj.weight")return false;
+        if(!enabled_||DensePacked()||name!="model.visual.patch_embed.proj.weight")return false;
         if(metadata.dataType!="BF16"||metadata.shape.size()!=5||metadata.shape[0]<=0||
            metadata.shape[1]!=2||metadata.shape[2]!=16||metadata.shape[3]!=16||metadata.shape[4]!=3)
             throw std::invalid_argument("Unsupported converted Qwen vision patch layout");

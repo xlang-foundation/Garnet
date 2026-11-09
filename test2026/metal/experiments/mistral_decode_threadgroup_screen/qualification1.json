@@ -1,0 +1,48 @@
+{
+  "scope": "Strict FP32 decode geometry screen on trained Mistral operators; no whole-model speed result.",
+  "engine_provenance_sha256": "3dd125f8f9ed9bef0a944cdb14eca7ff0f7af3b0bc19f818fc884763d99a9411",
+  "correctness_audit_sha256": "70d3996a83c24d868341be76031b9c86f716bf384ba49cfd7ce6d3afcb8680de",
+  "timing_audit_sha256": "688a8c82e9ed2f1f7c8d777fd3bdfd5d9ac29a1b40f84d1542f9cad65d7bbb4d",
+  "reproduced_source_sha256": {
+    "ordinary1.metal": "4ab855d7b84d9b7a9023895495c5c8ec729d27b0f6fb87b3413b25770709b37e",
+    "indexed1.metal": "3c193e488eea53970c3f5c00edf45dd59c0c6bb37c08e6f6cc723708f21c8f4c",
+    "preparation1.json": "2a9512543bcd33cbbf4e22140bffa7df81df2f497537bfb18a377c90caa11429",
+    "screen1.mm": "c3dbe5a15f555a6aceab2755d2d6555a39b4e29c72d9f639747ae52734a021f3",
+    "screen2.mm": "4e8fdacbd7405c80ddb0d91688d0768811a1fd8559a900ace6ecf33a6919100d",
+    "screen3.mm": "0a28950bd40ae288aa4d3f979d3087b35fe3b171b079063e280d4c510c83877f"
+  },
+  "additional_source_header_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_profile_shader.h": "dbaf2b94613564d2ac44f708307f7783970fd10652fbd5631321f154e8c9ffde",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_shader.h": "dc7298d270e8472c7373aa0ecff1209a088cd0b0bd6c7a29f59b1485812449ae",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_blocked_decode_shader.h": "be2541686a691294107d8db11ae2f1a9b58f627649ce38bed08c6d5ef3882521",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_indexed_decode_shader.h": "69de156174806e4496c61f5392f3a64ce31066ca3dcfaf22897c7ff50dbd37e3"
+  },
+  "decisions": {
+    "2": {
+      "qualified_for_native_integration_screen": false,
+      "minimum_c1_three_projection_ratio": 0.9926537844359665,
+      "maximum_c1_three_projection_ratio": 1.104596816768608,
+      "worst_individual_projection_ratio": 0.9750503715660198
+    },
+    "8": {
+      "qualified_for_native_integration_screen": false,
+      "minimum_c1_three_projection_ratio": 0.9950160002236796,
+      "maximum_c1_three_projection_ratio": 1.0994094097138258,
+      "worst_individual_projection_ratio": 0.9862046257153068
+    }
+  },
+  "cases": 2520,
+  "compared_parent_words": 47375280,
+  "independent_fp64_checks": 5292,
+  "measured_samples": 5040,
+  "negative_correctness_controls": 14,
+  "negative_timing_controls": 15,
+  "original_dirty_paths_unchanged": 11,
+  "prior_goal_turn_classification": "progress:4a8833462 native prefix lifecycle checkpoint",
+  "current_goal_turn_classification": "progress: distinct geometry candidates measured and rejected; default preserved",
+  "no_runtime_integration": true,
+  "no_comparator_inference": true,
+  "serving_speed_claim": false,
+  "coding_quality_qualified": false,
+  "goal_complete": false
+}

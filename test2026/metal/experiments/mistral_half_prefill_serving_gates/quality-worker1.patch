@@ -1,0 +1,52 @@
+--- a/local_coder_batch_worker.py
++++ b/local_coder_batch_worker.py
+@@ -71,6 +71,9 @@
+     if split_scores and not split_capable:raise ValueError('Compiled split-score extension required')
+     active_chunk=profile.get('linear_chunk_active_only',False)
+     backend=garnet.backend_info()
++    half_policy=profile.get('half_attention_policy',False)
++    if type(half_policy) is not bool or half_policy!=('fp16_prefill_all_p16_gpupack_v1' in backend):raise ValueError('Half-prefill profile differs from compiled engine')
++    if 'committed_kv_mps_fp32_v1' in backend:raise ValueError('Quality study excludes committed-MPS policy')
+     if type(active_chunk) is not bool or active_chunk!=('linear_chunk_active_only' in backend):
+         raise ValueError('Frozen profile requires its explicit native active-only chunk policy')
+     if active_chunk and (not chunked or any(tag not in backend for tag in ('linear_chunk_conv','linear_chunk_delta'))):
+@@ -360,6 +363,9 @@
+                 buckets=decoder.session.chunk_attention_mps_bucket_count
+                 if buckets!=profile.get('expected_attention_mps_bucket_count'):raise ValueError('Compiled context-bucket coverage differs')
+                 emit(dict(event='native_chunk_attention_buckets_prepared',bucket_count=buckets))
++        half_scratch=decoder.session.chunk_half_attention_scratch_bytes
++        if half_scratch!=(71303552 if half_policy else 0):raise ValueError('Half-prefill scratch differs')
++        emit(dict(event='native_chunk_half_attention_prepared',enabled=half_policy,scratch_bytes=half_scratch))
+         if packed:
+             decoder.session.prefill_set_packed_affine(True)
+             inv=json.loads(garnet.memory_inventory_json([],decoder.session))
+@@ -450,13 +456,19 @@
+             if attention_index32:
+                 count=decoder.session.chunk_attention_index32_dispatches
+                 expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch and not attention_mps else 0
+-                if attention_buckets:expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch and attention_valid<=8 else 0
++                if attention_buckets:expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch and attention_valid<=8 and not half_policy else 0
+                 emit(dict(event='native_chunk_attention_index32',stage='prefill' if len(ids)>batch else 'decode',dispatches=count,active_tokens=attention_valid))
+                 if count!=expected:raise ValueError('Native attention index coverage differs from the profile')
+             if attention_mps:
+                 count=decoder.session.chunk_attention_mps_dispatches
+                 expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch else 0
+                 if attention_buckets and attention_valid<=8:expected=0
++                if half_policy:
++                    half_count=decoder.session.chunk_half_attention_dispatches
++                    half_expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch else 0
++                    emit(dict(event='native_chunk_half_attention',stage='prefill' if len(ids)>batch else 'decode',dispatches=half_count,active_tokens=attention_valid))
++                    if half_count!=half_expected:raise ValueError('Half-prefill route coverage differs')
++                    expected=0
+                 if attention_flash:
+                     flash_count=decoder.session.chunk_flash_attention_dispatches
+                     emit(dict(event='native_chunk_flash_attention',stage='prefill' if len(ids)>batch else 'decode',
+@@ -484,7 +496,7 @@
+                 extent=decoder.session.chunk_attention_bucket_capacity;unknown=decoder.session.chunk_attention_unknown_controls
+                 buckets=decoder.session.chunk_attention_mps_bucket_count
+                 expected=profile['expected_chunk_attention_dispatches'] if len(ids)>batch else 0
+-                expected_tail=expected if attention_valid<=8 else 0;expected_extent=0
++                expected_tail=expected if attention_valid<=8 and not half_policy else 0;expected_extent=0
+                 if expected and not expected_tail:
+                     visible=max([int(position)+1 for position,flag in zip(slots.tolist(),active.tolist()) if flag!=0])
+                     expected_extent=min(128,capacity)

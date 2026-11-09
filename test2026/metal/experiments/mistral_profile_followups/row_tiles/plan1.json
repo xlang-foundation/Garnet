@@ -1,0 +1,72 @@
+{
+  "scope": "Six bounded learned-input operator variants,512 actual dense rows. No runtime/model/HTTP admission.",
+  "base_operator_root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1",
+  "base_provenance_sha256": "67d05d8b1a7ac678cf39698721a141e70b6f2c3b0f606af7ae43c5731c8820ec",
+  "base_native_root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-helper1",
+  "trained_assets": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-trained1/assets1",
+  "trained_captures": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-trained1/captures1",
+  "trained_provenance_sha256": "191c7098368d3a1d2fdfdac3bafad93c3f897d8c8674cba96e8e4c83b843b04a",
+  "control_source_sha256": "fe5505941ae89e475a2cafc0b983bb5cda433e999cb74c81809234cfca3096f8",
+  "shader_sha256": "9b15e5178c6deb5705eb6df71e15bfa24e84afb535b4fcd56ebd25a3c0ea1215",
+  "variant_sha256": "60a04fa7397f52113db3f57e95cddf7008ced994576d78fc0d7d7dadffb1b3b7",
+  "shapes": [
+    "gate4096x14336",
+    "down14336x4096"
+  ],
+  "rows": 512,
+  "methods": [
+    {
+      "name": "inline",
+      "function": "half_m256k128",
+      "rows_per_group": 256,
+      "columns_per_group": 64,
+      "threads": 256,
+      "shared_bytes": 17408
+    },
+    {
+      "name": "tensor256",
+      "function": "shared_tensor_m256",
+      "rows_per_group": 256,
+      "columns_per_group": 64,
+      "threads": 256,
+      "shared_bytes": 17408
+    },
+    {
+      "name": "row512n64",
+      "function": "row512n64",
+      "rows_per_group": 512,
+      "columns_per_group": 64,
+      "threads": 256,
+      "shared_bytes": 17408
+    },
+    {
+      "name": "row512n32",
+      "function": "row512n32",
+      "rows_per_group": 512,
+      "columns_per_group": 32,
+      "threads": 256,
+      "shared_bytes": 8704
+    },
+    {
+      "name": "row256n64t128",
+      "function": "row256n64t128",
+      "rows_per_group": 256,
+      "columns_per_group": 64,
+      "threads": 128,
+      "shared_bytes": 17408
+    },
+    {
+      "name": "row256n32t128",
+      "function": "row256n32t128",
+      "rows_per_group": 256,
+      "columns_per_group": 32,
+      "threads": 128,
+      "shared_bytes": 8704
+    }
+  ],
+  "no_weight_expansion_for_any_executed_method": true,
+  "no_extra_scatter": true,
+  "requires_exact_full_parent_and_unchanged_fp64_bound": true,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

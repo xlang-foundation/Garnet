@@ -1,0 +1,110 @@
+{
+  "passed": true,
+  "profiles": {
+    "16": {
+      "summary": [
+        {
+          "case_id": "p2048-c1-o128",
+          "mode": "base",
+          "base_tps": 35.46934343597039,
+          "candidate_tps": 35.46934343597039,
+          "ratio": 1.0,
+          "accepted": 80,
+          "proposed": 138,
+          "target_calls": 47,
+          "draft_steps": 76,
+          "early_margin_stops": 0,
+          "draft_seconds": 1.0043434584513307,
+          "target_seconds": 2.574654125375673
+        }
+      ],
+      "initial_prefill_chunks": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "actual_initial_helper_tokens": 222,
+      "initial_helper_prefill_gpu_ms": 125.71333325468004,
+      "initial_helper_prefill_wall_seconds": 0.17288575018756092,
+      "helper_graphs": 96,
+      "prepared_metal_bytes": 5744869376,
+      "full_target_digest_pairs": 130,
+      "output_ids": 256
+    },
+    "256": {
+      "summary": [
+        {
+          "case_id": "p2048-c1-o128",
+          "mode": "base",
+          "base_tps": 36.27365934633144,
+          "candidate_tps": 36.27365934633144,
+          "ratio": 1.0,
+          "accepted": 80,
+          "proposed": 138,
+          "target_calls": 47,
+          "draft_steps": 76,
+          "early_margin_stops": 0,
+          "draft_seconds": 0.9127484599594027,
+          "target_seconds": 2.5869461656548083
+        }
+      ],
+      "initial_prefill_chunks": [
+        256
+      ],
+      "actual_initial_helper_tokens": 222,
+      "initial_helper_prefill_gpu_ms": 65.54070813581347,
+      "initial_helper_prefill_wall_seconds": 0.07974108285270631,
+      "helper_graphs": 192,
+      "prepared_metal_bytes": 5815107584,
+      "full_target_digest_pairs": 130,
+      "output_ids": 256
+    }
+  },
+  "full_target_output_ids": 512,
+  "full_target_state_digest_pairs": 260,
+  "all_target_commits_exact_ordinary": true,
+  "helper_state_bits_equal_across_profiles_required": false,
+  "helper_proposals_independently_audited": true,
+  "all_graph_families_precompiled": true,
+  "native_prefix_retention_without_host_snapshots": true,
+  "negative_controls_rejected": [
+    "wrong bound",
+    "wrong graph family",
+    "wrong target output",
+    "wrong target KV",
+    "future helper prefix",
+    "fake acceptance",
+    "missing native token witness",
+    "padded tokens tracked",
+    "false active tokens",
+    "unprepared chunk",
+    "host KV copy",
+    "false decode speed"
+  ],
+  "performance_admitted": false,
+  "http_or_quality_admitted": false,
+  "no_comparator_execution": true,
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/audit_qualification1.py": "9771bb7f76fcc8506ccb14f0908269a7ab037e68923c2b5bd8da24db6bc1a4ee",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/audit_common1.py": "1768425825326e7cae3eecc853a31d86e7cef2188c9194156d3a551432e5b641",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/audit_bounded1.py": "6fbe2ade21516836d1877fdd216b41a41c8846fb7fbda36ddebb28641c25e626",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/plan1.json": "6e86959fb53cbb53131adf90eb319d224405100d8388b024943398f59af96245",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/input1.json": "354848b3b21f4136b0346f169fa70b1f780b673f73a7edd32d922006384674f2",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/qualification1-preflight.json": "2c0dece39ea4c9039c25927b689f52c96b7a5c1f2099f6bd53e5d059ce83e225",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/qualification1-postflight.json": "78e58923cdc73a56ebbcf772827fa7b6a88d63490a15562099ea5d77c53dd999",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/cap16-result1.json": "2393540ea2d63c3679de0dce9a598343a7615ca830f5631a3691b9ddb8abdcfc",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-helper-prefill-profile1/cap256-result1.json": "19f1a8d8b046c76707035e920a7b7afc77927aae022de569d7d0126d67832d10"
+  }
+}

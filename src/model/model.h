@@ -44,6 +44,8 @@ namespace Garnet
             APISET().AddVarFunc("debug_probe", &Model::DebugProbe);
             APISET().AddVarFunc("runtime_status", &Model::RuntimeStatus);
             APISET().AddVarFunc("release_runtime", &Model::ReleaseRuntime);
+            APISET().AddVarFunc("trim_execution_contexts", &Model::TrimExecutionContexts);
+            APISET().AddVarFunc("trim_runtime", &Model::TrimExecutionContexts);
             APISET().AddVarFunc("forward", &Model::Forward);
             APISET().AddVarFunc("forward_request", &Model::ForwardRequest);
             APISET().AddVarFunc("create_device_kv_cache", &Model::CreateDeviceKVCache);
@@ -91,6 +93,7 @@ namespace Garnet
         }
         X::Value RuntimeStatus(const X::ARGS& params, const X::KWARGS& kwParams);
         X::Value ReleaseRuntime(const X::ARGS& params, const X::KWARGS& kwParams);
+        X::Value TrimExecutionContexts(const X::ARGS& params, const X::KWARGS& kwParams);
 
         X::Value Forward(const X::ARGS& params, const X::KWARGS& kwParams);
         X::Value ForwardRequest(const X::ARGS& params, const X::KWARGS& kwParams);

@@ -1,0 +1,36 @@
+{
+  "status": "planned_not_implemented",
+  "scope": "Fill residual actual-token budget using an already compiled up-to512 profile; no larger workspace or changed model operators.",
+  "base_engine_provenance_sha256": "3dd125f8f9ed9bef0a944cdb14eca7ff0f7af3b0bc19f818fc884763d99a9411",
+  "source_files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/prefill_profile_policy.h": "f010505c7aec1e7d92bf43e8beedb8f4b0edb6dd2c617e662586ac2312589182",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/compact_prefill_session.cpp": "e5cd979c961a7f8ae95123bbf54c89d9663a94d70330d32251a5a305fc441ce6",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/continuous_scheduler.cpp": "41de47bc0a9055fbb597cc5cdd7822e094322862988904501f0a279a32669589",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/runtime/scheduler/continuous_batch_scheduler.cpp": "166dfbd21cc1cc0c99737c67e35da9041f17876186c578df5420cfac1a0c3be8",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/runtime/scheduler/continuous_batch_scheduler.h": "6e2fad0ee726fe374570f0536e12d80eaf3b404b27fc0d4e0851f6b230661922"
+  },
+  "observed_trace": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-decode-n4-native1/admission1/observed/server/worker-stdout.jsonl",
+  "observed_trace_sha256": "a5e9e579b9e073f7613082c28e1385ab2c9fcb9a2b07ce113eaf5415340156b9",
+  "observed_large_backlog_overlap_histogram": {
+    "(1, 256, 257)": 21,
+    "(2, 256, 258)": 21,
+    "(3, 256, 259)": 21
+  },
+  "unused_actual_token_budget_across_three_waves": 16002,
+  "finding": "With1/2/3 ready decode rows, the policy drops the prepared512 shape to256 because min(remaining,512) exceeds the remaining511/510/509 actual-token budget. The existing core also rejects a profile size whose unclipped actual count exceeds that budget.",
+  "proposed": "Optional native policy selects the up-to prepared shape and separately clips actual prefill work to min(remaining,prepared_chunk,residual_global_budget). Start with one completion-first owner. Keep decode scheduled first, actual per-tick<=512 and effective GPU workspace<=512.",
+  "example": "3 decode tokens +509 prefill tokens in a prepared512-row compact-owner profile, rather than3+256.",
+  "gates": [
+    "Default-off native option; existing conservative selector behavior unchanged when off.",
+    "Separate prepared extent and actual quantum in native scheduler; no Python-side plan mutation.",
+    "Budget/overflow/zero/full-cache-hit/multitenant lease/cancel/retry portable tests.",
+    "Half attention/MLP full parent and unused-suffix tests for509/510/511 active rows, original bounds unchanged.",
+    "Full32-layer KV/hidden/output parity vs saved native FP32 controls, including partial and final owner chunks.",
+    "Prefix-cache return/append/edit and three live survivors; account actual captured offsets.",
+    "Serial native admission against saved inputs; no comparator rerun."
+  ],
+  "initial_trial_excludes_n4_cache": true,
+  "reason_for_base": "Isolate the scheduler change from the extra2.95GiB N4 weight-cache cost.",
+  "performance_gain_unproven": true,
+  "goal_complete": false
+}

@@ -1,0 +1,84 @@
+{
+  "passed": true,
+  "cases": {
+    "on-enabled": {
+      "exact_output_ids": 128,
+      "full_four_row_digest_pairs": 12740,
+      "routes": {
+        "prefill_calls": 17,
+        "selected": 16,
+        "fallback": 1,
+        "compact_selected": 0
+      }
+    },
+    "on-disabled": {
+      "exact_output_ids": 128,
+      "full_four_row_digest_pairs": 12740,
+      "routes": {
+        "prefill_calls": 17,
+        "selected": 0,
+        "fallback": 17,
+        "compact_selected": 0
+      }
+    },
+    "off-disabled": {
+      "exact_output_ids": 128,
+      "full_four_row_digest_pairs": 12740,
+      "routes": {
+        "prefill_calls": 17,
+        "selected": 0,
+        "fallback": 17,
+        "compact_selected": 0
+      }
+    },
+    "lifecycle-on": {
+      "exact_output_ids": 110,
+      "full_four_row_digest_pairs": 2600,
+      "routes": {
+        "prefill_calls": 37,
+        "selected": 20,
+        "fallback": 17,
+        "compact_selected": 4
+      }
+    }
+  },
+  "negative_controls_rejected": [
+    "published output",
+    "KV state",
+    "hidden state",
+    "missing route",
+    "false selected route",
+    "wrong active count",
+    "wrong library",
+    "native memory leak",
+    "reused owner epoch",
+    "cancel state",
+    "late owner state"
+  ],
+  "reference_outputs_read_during_generation": false,
+  "performance_claim": false,
+  "http_qualified": false,
+  "quality_suite_qualified": false,
+  "xmodel_operator_changes": false,
+  "no_comparator_execution": true,
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/qualification-plan1.json": "a86d92d33a01f48b261a4c2e0bf6c57433c66d17340161894b57020240610bb5",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/ordinary_worker1.py": "96a65f9f0d826b7fd145b49f93fd19225c39ffb81e0dfa210cc7c2ced3d59bf7",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/lifecycle_worker1.py": "a22af38186873dbce67273542bf8aa7db1fd6e3021d4bee128d0a2377af81d78",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/qualification1-preflight.json": "cb444fb8687397df8350895be9026890324645c16e7e82a0edda11b93d5250c3",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/qualification1-postflight.json": "f0c305cf999bb3d217bc85c78ba3430f19b3f223585cacf36d25378ed0446584",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/source-bindings1.json": "17b8f250574d9141a7ef38078daf786018ab107b4006a508ca7d47ae3a1996be",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/build-audit1.json": "a2b687cd81ba2680d65fb88742a9bf2c86f076ad513e5f26472aa3f8b0c30ac6",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/audit_qualification1.py": "7b87a0f41bfa7585d0d432ffe0e28d5dda06576c47ead55f7224539ac78ff8f1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/on-enabled-result1.json": "797ee1578f346c476a66bc3c7d5cf4bf90379872b659b5297de0fb02dbb3b093",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/on-disabled-result1.json": "9f7c1affd7c7993497e0f17a8df1ed53d61d528fae5176e2066c06dcaa739dbb",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/off-disabled-result1.json": "74bd5e98467134ec8069ca1d2a1a4173b6b79df26e6806fac9dce04aca7ffccb",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-down-tensor-native1/lifecycle-on-result1.json": "2bd4076d41f7412874a58b26c248408a589230c4db4be3e0461c76f32ef30436"
+  },
+  "frozen_references_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-helper1/ordinary-target-result1.json": "22fd92d1c6b132a9ca5d7f082bd26d33789baf0c6ca431e7927124913ce0494e",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-helper1/audit_productive1.py": "e26ff4cdbfd795e3690aca2a5db212a9e8db08084604410d174b93059e7f965c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-value-native1/c4-ordinary-result1.json": "36acce11f555054c39d1fbaa011cb9dd9f8240e4d883a0dda67cfb878aee8b46"
+  }
+}

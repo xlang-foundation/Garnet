@@ -47,8 +47,8 @@ namespace Garnet
         std::unordered_map<std::string, SafeTensorMetadata> m_tensors;
 
     public:
-        // Accepts a single .safetensors file, a Hugging Face
-        // model.safetensors.index.json, or a directory containing either.
+        // Accepts a single .safetensors file, a Hugging Face shard index, or a
+        // directory using either Transformers model.* or Diffusers names.
         bool Open(const std::filesystem::path& filePath, std::string& errorMessage);
 
         const std::filesystem::path& FilePath() const { return m_filePath; }

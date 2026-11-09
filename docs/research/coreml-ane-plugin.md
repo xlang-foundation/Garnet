@@ -175,7 +175,8 @@ case: Metal output RMS was4.44e-7 and Core ML relative RMS errors were25.9–33.
 Its absolute errors were small, which is why relative error and input scale are
 reported together. No tested Core ML path has established useful Mistral speed
 or numerical quality. Anticipated device plans do not prove hardware execution;
-an observed ANE trace remains pending. A system ANE compiler service was active
+that collection did not include an execution trace. The subsequent trace study
+below addresses model-labelled ANE activity. A system ANE compiler service was active
 during this work, so these descriptive operator timings do not establish fully
 isolated hardware performance. No frozen vLLM-Metal or SGLang result was rerun.
 
@@ -198,3 +199,108 @@ and changed artifacts. `--comparison-export` compares two representations with
 one shared native Metal control per cohort. Runtime reports retain per-operation
 preferred/supported devices and use a contiguous memcpy fast path for matching
 MLMultiArray layouts, with a stride-aware fallback.
+
+## Observed ANE activity and a channel/range profile
+
+The next study uses Xcode Instruments27.1's `Core AI` template and exports its
+`ane-hw-intervals` table. Two serial collections, each launching dense CPU+ANE,
+dense CPU-only and LUT CPU+ANE controls, reproduce the same output bytes as the
+earlier uninstrumented collection. The dense graph has12 model-labelled ANE
+prediction intervals, matching three warmups plus nine native predictions;
+the CPU-only control has zero. The LUT graph also has12 intervals, despite zero
+convolutions preferring ANE in its plan. Its SiLU and multiplication prefer ANE;
+its three convolutions prefer CPU.
+
+In the collector-qualified second trace collection, the dense ANE interval
+median is15.793ms, while the LUT interval median is0.218ms. Instrumented host
+medians are17.896 /24.428ms; CPU-only is24.604ms. These measurements include
+instrumentation effects and do not replace the uninstrumented latency tables.
+They support observed model-labelled ANE activity and distinguish limited LUT
+offload from the larger dense graph. The table does not expose a per-row PID
+or hardware-cycle utilization. Attribution uses the model labels, launched
+target arguments, exact prediction counts and CPU-only negative control;
+per-operation residency and pure ANE compute time are not established.
+
+An additional offline profile splits the14336 intermediate channels into seven
+2048-channel branches. Each branch computes gate/up, SiLU/product and its down
+projection contribution; a balanced sum combines the contributions. This
+produces21 convolutions and covers every original weight once. An explicit
+power-of-two range adjustment multiplies the up-projection weights by64 and
+applies the reciprocal scale to the final output. Every one of58,720,256 up
+weight values roundtrips bitwise through the scale/inverse scale. Together
+with the176,160,768 original native-dequantizer weight checks, this establishes
+the base values and reversibility. Exported scaled up-weight bits differ from
+the base bits; the transformation preserves the real-valued MLP algebra while
+changing FP16 intermediate range and rounding. It is not an exact FP32
+execution replacement, and safe ranges for arbitrary activations are unproven.
+
+The final direct collection holds input, original model/weight identity,
+native probe and engine policy fixed and compares the original dense export
+with the combined2048-channel/64x profile. Ten fresh native processes run
+serially in two reversed cohorts, each with three warmups and nine samples.
+The input remains128 normalized embedding proxy rows, not actual
+post-attention activations or a complete model request.
+
+| Final direct operator comparison | Cohort0 /1 host medians (ms) | Relative RMS error vs Metal |
+|---|---:|---:|
+| Metal control |10.358 /10.364 |Reference |
+| Original dense Core ML CPU |20.938 /20.998 |2.097% |
+| Original dense Core ML CPU+ANE |17.587 /17.353 |7.236% |
+| Channel/range Core ML CPU |20.351 /20.299 |1.972% |
+| Channel/range Core ML CPU+ANE |14.310 /14.121 |1.104% |
+
+The candidate is1.2291x /1.2289x the original ANE operator speed, or about18.6%
+lower latency. Metal remains faster. Complete outputs repeat bitwise between
+cohorts within each profile. This is a two-cohort operator result, not a
+statistical serving qualification, full-model ANE gain, coding-quality
+admission or achievement of the2x target.
+
+The staged studies are also retained. Channel tiling alone improves ANE
+latency but leaves error near7.236%; adding64x range scaling reduces it to
+1.104% with negligible timing change. Increasing to256x only reduces error to
+1.090%, with no demonstrated speed advantage, so64x remains the research
+candidate. The range-scaling evidence supports a range-loss explanation; it
+does not identify a specific internal accumulator or prove the precise
+location of underflow. A separate trace of the selected-source64x candidate
+records12 model-labelled ANE prediction intervals with a12.262ms interval
+median. All21 convolutions prefer ANE; its instrumented output matches the
+uninstrumented candidate bitwise. Per-operation residency remains unproven.
+
+The optional exporter flags are `--intermediate-tile 2048 --activation-scale
+64`. Existing defaults remain unchanged. The selected exporter reproduces
+the original default and measured candidate protobuf semantics, raw weight
+files and input exactly. Protobuf map serialization is not byte-deterministic;
+the proof compares complete parsed protobufs and deterministic serialization,
+plus raw weights/input. Four additional serial native smoke probes reproduce
+the original CPU/CPU+ANE and candidate CPU/CPU+ANE outputs bitwise. No C++
+runtime API, xModel operator, default inference route or serving library is
+changed by these offline flags. Core ML model-level scheduling, KV/prefix
+ownership, full-model quality/memory and xMind integration remain open.
+
+Reproduction tools are `run_mistral_ane_trace.py`,
+`audit_mistral_ane_trace.py`, `test_mistral_ane_trace.py`, the extended
+`export_mistral_mlp.py` / `audit_mistral_mlp_probe.py`, and
+`test_mistral_channel_profile.py`. The trace collector accepts `--probe`,
+`--checkpoint`, `--dense-export`, `--lut-export` and a new `--output` directory.
+Audit it with `audit_mistral_ane_trace.py CAMPAIGN --output NEW_JSON`; its
+reference outputs are the retained normalized campaign beside that directory.
+The trace negative controls reject21 corruptions, including unresolved XML
+references, missing predictions, CPU-only ANE events and changed outputs.
+Fourteen profile controls reject inconsistent tile/scale/coverage claims;
+the eight existing collection controls pass for both legacy and new data.
+
+Evidence roots are `mistral-coreml-observed-trace1` (initial manual capture),
+`mistral-coreml-observed-trace3` (collector reproduction) and
+`mistral-coreml-channel-tiles1` (four serial paired campaigns, exports,
+selected-source proof/smokes and candidate trace). The failed trace2 collector
+preflight is retained: an older export omitted the explicit arithmetic field;
+the collector now accepts its established FP16 default. No inference ran in
+that failed attempt. Frozen vLLM-Metal/SGLang results are not rerun or replaced.
+
+The aggregate post-run `mistral-coreml-channel-tiles1/provenance1.json` SHA256
+is `0566e22a4a00cee0af990a910c3126a4e2e52d13a327ec0fc89f37ee3f9fcec1`.
+It binds final/staged reports, retained source copies, selected-source checks,
+trace-bundle file manifests and protected-source/baseline hash checks. Two
+invalid exporter flag combinations are rejected before output creation.
+The protected serving DLL, target checkpoint and frozen comparator summary
+remain unchanged. Pre-existing dirty work is preserved separately.

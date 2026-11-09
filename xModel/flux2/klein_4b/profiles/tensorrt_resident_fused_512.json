@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "tensorrt-bf16-resident-fused-512",
+  "backend": "tensorrt",
+  "device": "CUDA",
+  "precision": "bf16",
+  "entrypoint": "denoiser_fused_attention",
+  "runtime_options": {
+    "GARNET_TRT_WEIGHT_STREAMING_BUDGET_MIB": "256",
+    "GARNET_TRT_FULL_RESIDENT_WEIGHT_LIMIT_MIB": "0",
+    "GARNET_TRT_ZERO_AUX_STREAMS": "1",
+    "GARNET_TRT_RUNTIME_WEIGHT_STREAMING_BUDGET_MIB": "4096",
+    "GARNET_TRT_RUNTIME_FULL_RESIDENT_MIN_WEIGHT_MIB": "1"
+  },
+  "session_options": {
+    "maximum_models": 4,
+    "keep_execution_contexts": true
+  },
+  "gpu_admission": {"minimum_free_mib": 14500},
+  "pipeline_options": {
+    "width": 512,
+    "height": 512,
+    "steps": 4,
+    "attention": "fused_fp16"
+  },
+  "capabilities": {
+    "single_request_generation": true,
+    "image_editing": false
+  }
+}

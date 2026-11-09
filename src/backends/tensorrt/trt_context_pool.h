@@ -222,6 +222,19 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
         return slots_.size();
     }
+    size_t RetireIdle() {
+        std::vector<std::unique_ptr<Slot>> retired;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            for(auto slot=slots_.begin();slot!=slots_.end();){
+                if((*slot)->busy){++slot;continue;}
+                retired.push_back(std::move(*slot));slot=slots_.erase(slot);
+            }
+        }
+        // Slot destruction fences outstanding work before freeing graph pointers
+        // and context scratch. Reserved/busy contexts remain owned by the pool.
+        return retired.size();
+    }
     std::array<uint64_t,6> GraphCounts() {
         std::lock_guard<std::mutex> lock(mutex_);std::array<uint64_t,6> counts{};
         for(auto& slot:slots_){counts[0]+=slot->graphCaptures.load();counts[1]+=slot->graphReplays.load();counts[2]+=slot->graphCaptureFailures.load();

@@ -25,6 +25,27 @@ def sha(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
+def validate_channel_profile(model):
+    intermediate_tile = model.get('intermediate_tile', 0)
+    require(type(intermediate_tile) is int and intermediate_tile in (0, 1024, 2048),
+            'unknown intermediate-channel tile')
+    if intermediate_tile:
+        require(model['representation'] == 'fp16' and not model.get('inner_tile', 0)
+                and model['arithmetic'] == 'fp16'
+                and model['projection_convolutions'] == 3*(14336//intermediate_tile)
+                and model['reduction'] == 'balanced_intermediate_channel_branches',
+                'invalid intermediate-channel representation')
+    scale = model.get('activation_scale', 1)
+    require(type(scale) is int and scale in (1, 16, 64, 256), 'unknown activation scale')
+    if scale != 1:
+        require(intermediate_tile and model.get('scaled_up_roundtrip_words_matched') == 58720256
+                and model.get('scale_cancellation') ==
+                'up weights multiplied by exact power of two; reciprocal final output scale',
+                'missing reversible up-weight scale proof')
+    if model.get('inner_tile', 0) or intermediate_tile:
+        require(model['remapped_tile_weight_words_matched'] == 176160768, 'missing remapped tile weight parity')
+
+
 def audit(root):
     root = root.resolve()
     status = json.loads((root/'status.json').read_text())
@@ -53,8 +74,7 @@ def audit(root):
         require(model['input_sha256'] == base['input_sha256'] and model['rows'] == base['rows']
                 and [w['native_rounded_sha256'] for w in model['weights']] == [w['native_rounded_sha256'] for w in base['weights']], 'different input/weights between representations')
         require(sum(w['native_fp16_words_matched'] for w in model['weights']) == 176160768, 'missing native weight parity')
-        if model.get('inner_tile', 0):
-            require(model['remapped_tile_weight_words_matched'] == 176160768, 'missing remapped tile weight parity')
+        validate_channel_profile(model)
         for rel, digest in model['files'].items():
             require(sha(path/rel) == digest, 'changed model/input/profile asset: '+rel)
         files[str(path/'manifest.json')] = sha(path/'manifest.json')
@@ -124,6 +144,8 @@ def audit(root):
         require(rms > 0, 'zero reference signal')
         comparisons.append(dict(cohort=cohort, engine=engine, representation=models[model]['representation'],
             export_root=str(model), inner_tile=models[model].get('inner_tile', 0),
+            intermediate_tile=models[model].get('intermediate_tile', 0),
+            activation_scale=models[model].get('activation_scale', 1),
             palette_row_group=models[model].get('palette_row_group', 1),
             arithmetic=models[model].get('arithmetic', 'fp16'),
             input_mode=models[model].get('input_mode', 'embedding'),

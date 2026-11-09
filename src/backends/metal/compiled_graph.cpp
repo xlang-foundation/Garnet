@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "compiled_graph.h"
+#if defined(GARNET_METAL_FUSED_MISTRAL_MLP)||defined(GARNET_METAL_FUSED_Q4_DECODE)
+#include "fused_mlp_use_proof.h"
+#endif
 #include "float16_codec.h"
+#include "half_attention_profile.h"
 #ifdef GARNET_METAL_PREFILL_ALIAS_GROUPS
 #include "../../runtime/memory/scratch_alias_group_plan.h"
 #include <type_traits>
@@ -17,6 +21,7 @@
 #include <algorithm>
 #include <cmath>
 #include <unordered_set>
+#include <set>
 #include <map>
 #include <cstdlib>
 #include <cstdio>
@@ -277,6 +282,9 @@ size_t MetalCompiledGraph::LowerVision(size_t input,const X::Value& attrs) {
     return output;
 }
 void MetalCompiledGraph::Clear() {
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+    fusedMlpSites_.clear();
+#endif
     mtpProgram_=mtpPrefill_=false;
 #ifdef GARNET_METAL_RETIRE_NONRESIDENT_PACKS
     nonresidentPackSlots_=0;
@@ -296,7 +304,22 @@ void MetalCompiledGraph::Clear() {
     visionParallelDispatches_=0;
     visionPrefetchDispatches_=0;visionVectorDispatches_=0;mlpGraphDispatches_=0;
     resetKVPrefix_[0]=resetKVPrefix_[1]=false;
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+    fusedDecodeSites_.clear();
+#endif
     verificationTokens_=0;
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+    diagnosticAliases_.clear();
+#endif
+#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+    kvHoistPlan_={};
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+    halfOnlyPrepared_=false;
+#endif
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+    lookaheadAliases_.clear();
+#endif
     visionGlobalAlphaDispatches_=0;++generation_;ready_=false;bf16Projections_=false;outputParts_.clear();outputStorageGroups_.clear();residentOps_.clear();controlSources_.clear();ops_.clear();inputs_.clear();inputShapes_.clear();tensors_.clear();weights_.clear();sharedWeights_.clear();weightRecords_.clear();bindings_.clear();slots_.clear();gpu_.reset();
 #ifdef GARNET_METAL_MTP_DEFER_PACKS
     mtpDeferredPackSlots_=0;
@@ -474,7 +497,13 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         if(verification) {
             if(symbols.Size()!=6)throw std::invalid_argument("Verification requires six symbolic inputs");
             X::Tensor hidden(symbols.Get(uint64_t(0)));auto info=hidden.Info();
-            if(info.rank!=3||info.shape[0]<1||info.shape[0]>4||info.shape[1]<1||info.shape[1]>4/info.shape[0])
+            if(info.rank!=3||info.shape[0]<1||info.shape[0]>4||info.shape[1]<1||
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+               (info.shape[1]>4/info.shape[0]&&!(info.shape[0]==4&&info.shape[1]==4&&info.shape[2]==4096))
+#else
+               info.shape[1]>4/info.shape[0]
+#endif
+               )
                 throw std::invalid_argument("Verification supports at most four physical token rows");
             verificationTokens_=size_t(info.shape[1]);
         }
@@ -727,7 +756,13 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 if(isChunk&&(batch>4||width>4096||rows>GARNET_METAL_DENSE_PREFILL_MAX_TOKENS))
                     throw std::invalid_argument("Dense prefill exceeds the compiled physical token-row profile");
 #endif
-                if(verificationTokens_&&(chunk!=verificationTokens_||rows>4||capacity>4096))
+                if(verificationTokens_&&(chunk!=verificationTokens_||capacity>4096||
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+                   (rows>4&&!(batch==4&&chunk==4&&width==4096&&heads==32&&kv==8&&dim==128&&capacity==4096))
+#else
+                   rows>4
+#endif
+                   ))
                     throw std::invalid_argument("Verification attention exceeds prepared bounds");
                 auto flatten=[&](size_t input,size_t columns){auto output=Allocate(rows,columns);Op op{Kind::Layout,input,input,output};op.dimensions={0};ops_.push_back(std::move(op));return output;};
                 if(isChunk)a=flatten(a,width);
@@ -1082,6 +1117,12 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
         }
         // All operations write fresh slots. Trace only matrices needed by the
         // returned value, resolving storage aliases before removing unused packs.
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+        diagnosticAliases_.clear();diagnosticAliases_.insert(aliases.begin(),aliases.end());
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+        lookaheadAliases_.clear();lookaheadAliases_.insert(aliases.begin(),aliases.end());
+#endif
         auto canonical=[&](size_t id){while(aliases.count(id))id=aliases.at(id);return id;};
 #ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
         // Propagate request-row identity from a 2D decoder/head hidden input.
@@ -1093,7 +1134,11 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
             if(inputs_.size()==4&&inputShapes_[3]==std::vector<int64_t>{int64_t(rows)})activeId=canonical(inputs_[3]);
             if(inputs_.size()==6&&inputShapes_[3]==std::vector<int64_t>{int64_t(rows),3}&&
                inputShapes_[4]==std::vector<int64_t>{int64_t(rows)}&&inputShapes_[5]==inputShapes_[4])activeId=canonical(inputs_[5]);
-            if(rows&&rows<=4&&(head||activeId!=SIZE_MAX)) {
+            if(rows&&(rows<=4
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+               ||(head&&rows==16&&inputShapes_[0][1]==4096)
+#endif
+               )&&(head||activeId!=SIZE_MAX)) {
                 std::vector<bool> layout(slots_.size(),false);layout[canonical(inputs_[0])]=true;
                 auto rowwise=[&](size_t id){return id<slots_.size()&&layout[canonical(id)]&&slots_[id].rows==rows;};
                 auto active=[&](size_t id){return activeId!=SIZE_MAX&&canonical(id)==activeId;};
@@ -1308,11 +1353,74 @@ bool MetalCompiledGraph::BuildInternal(X::Value graph,X::Value symbols,const std
                 (std::find(group.begin(),group.end(),ops_[i].out)!=group.end()||std::find(group.begin(),group.end(),ops_[i].auxiliaryOutput)!=group.end()))writer=true;
             if(eligible&&writer)outputStorageGroups_[part]=std::move(group);
         }
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+        fusedMlpSites_.assign(ops_.size(),0);
+        if(!mtpProgram_&&!verificationTokens_&&inputs_.size()==6&&inputShapes_[0].size()==3&&
+           inputShapes_[0][2]==4096&&outputParts_.size()==3&&residentOps_.size()==ops_.size()) {
+            std::vector<FusedMlpUseNode> uses;uses.reserve(ops_.size());
+            for(const auto& op:ops_){FusedMlpUseNode n;n.reads={canonical(op.a),canonical(op.b)};for(auto id:op.arguments)n.reads.push_back(canonical(id));n.writes={canonical(op.out)};if(op.auxiliaryOutput!=SIZE_MAX)n.writes.push_back(canonical(op.auxiliaryOutput));uses.push_back(std::move(n));}
+            std::vector<size_t> observable{canonical(output_)};for(auto id:inputs_)observable.push_back(canonical(id));for(auto id:outputParts_)observable.push_back(canonical(id));
+            auto projection=[&](const Op& op,size_t inner,size_t columns){return op.kind==Kind::MatMul&&op.transpose&&slots_[op.b].affineInt4.Valid()&&slots_[op.a].columns==inner&&slots_[op.out].columns==columns&&slots_[op.a].rows>=128&&slots_[op.a].rows<=512&&op.indexedTokenProjection&&!op.indexedDecodeProjection;};
+            for(size_t i=0;i+3<ops_.size();++i){const auto& gate=ops_[i];const auto& up=ops_[i+1];const auto& silu=ops_[i+2];const auto& down=ops_[i+3];
+                if(!projection(gate,4096,14336)||!projection(up,4096,14336)||!projection(down,14336,4096)||gate.a!=up.a||silu.kind!=Kind::Silu||silu.a!=gate.out||silu.b!=up.out||down.a!=silu.out||!residentOps_[i]||!residentOps_[i+1]||!residentOps_[i+2]||!residentOps_[i+3])continue;
+                auto protectedIds=observable;protectedIds.push_back(canonical(gate.a));protectedIds.push_back(canonical(down.out));
+                if(ProveFusedMlpUses(uses,i,{canonical(gate.out),canonical(up.out),canonical(silu.out)},protectedIds))fusedMlpSites_[i]=1;
+            }
+        }
+#endif
+
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+        // Preserve immutable logical aliases before any physical arena reuse.
+        // Four rows can be B4 decode or a B1/T4 FP32 verification profile.
+        fusedDecodeSites_.assign(ops_.size(),0);
+        if(!mtpProgram_&&inputs_.size()==6&&!inputShapes_[0].empty()&&inputShapes_[0].back()==4096&&
+           outputParts_.size()==3&&residentOps_.size()==ops_.size()) {
+            std::vector<FusedMlpUseNode> uses;uses.reserve(ops_.size());
+            for(const auto& op:ops_){FusedMlpUseNode n;n.reads={canonical(op.a),canonical(op.b)};for(auto id:op.arguments)n.reads.push_back(canonical(id));n.writes={canonical(op.out)};if(op.auxiliaryOutput!=SIZE_MAX)n.writes.push_back(canonical(op.auxiliaryOutput));uses.push_back(std::move(n));}
+            std::vector<size_t> observable{canonical(output_)};for(auto id:inputs_)observable.push_back(canonical(id));for(auto id:outputParts_)observable.push_back(canonical(id));
+            auto projection=[&](const Op& op,size_t inner,size_t columns){return op.kind==Kind::MatMul&&op.transpose&&slots_[op.b].affineInt4.Valid()&&slots_[op.a].columns==inner&&slots_[op.out].columns==columns&&(slots_[op.a].rows==4
+#ifdef GARNET_METAL_FUSED_Q4_WIDE_SELECTION
+                    ||(slots_[op.a].rows==16&&verificationTokens_==4&&inputShapes_[0].size()==3&&inputShapes_[0][0]==4&&inputShapes_[0][1]==4)
+#endif
+                )&&op.indexedDecodeProjection&&!op.indexedTokenProjection;};
+            for(size_t i=0;i+3<ops_.size();++i){const auto& gate=ops_[i];const auto& up=ops_[i+1];const auto& silu=ops_[i+2];const auto& down=ops_[i+3];
+                if(!projection(gate,4096,14336)||!projection(up,4096,14336)||!projection(down,14336,4096)||gate.a!=up.a||silu.kind!=Kind::Silu||silu.a!=gate.out||silu.b!=up.out||down.a!=silu.out||!residentOps_[i]||!residentOps_[i+1]||!residentOps_[i+2]||!residentOps_[i+3])continue;
+                auto protectedIds=observable;protectedIds.push_back(canonical(gate.a));protectedIds.push_back(canonical(down.out));
+                if(ProveFusedMlpUses(uses,i,{canonical(gate.out),canonical(up.out),canonical(silu.out)},protectedIds))fusedDecodeSites_[i]=1;
+            }
+        }
+#endif
+
         resetKVPrefix_[0]=ComputeResetKVPrefix(1);resetKVPrefix_[1]=ComputeResetKVPrefix(2);
+#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+        // Build from immutable logical aliases before any shared scratch rebinding.
+        if(!mtpProgram_&&!verificationTokens_&&inputs_.size()==6&&inputShapes_[0].size()==3&&
+           inputShapes_[0][2]==4096&&outputStorageGroups_.size()==3&&residentOps_.size()==ops_.size()) {
+            std::vector<KVHoistNode> nodes;nodes.reserve(ops_.size());
+            for(size_t i=0;i<ops_.size();++i){const auto& op=ops_[i];KVHoistNode n;n.resident=residentOps_[i];
+                n.kind=op.kind==Kind::AttentionChunk?KVHoistNode::Attention:op.kind==Kind::KVChunk?KVHoistNode::Commit:KVHoistNode::Other;
+                n.reads={canonical(op.a),canonical(op.b)};for(auto id:op.arguments){n.reads.push_back(canonical(id));n.args.push_back(canonical(id));}
+                n.writes={canonical(op.out)};if(op.auxiliaryOutput!=SIZE_MAX)n.writes.push_back(canonical(op.auxiliaryOutput));n.dims=op.dimensions;nodes.push_back(std::move(n));}
+            std::array<size_t,6> ids;for(size_t i=0;i<6;++i)ids[i]=canonical(inputs_[i]);
+            std::array<std::vector<size_t>,2> groups;for(size_t i=0;i<2;++i)for(auto id:outputStorageGroups_[i+1])groups[i].push_back(canonical(id));
+            for(auto& group:groups){std::sort(group.begin(),group.end());group.erase(std::unique(group.begin(),group.end()),group.end());}
+            kvHoistPlan_=ProveKVCommitHoist(nodes,ids,groups,size_t(inputShapes_[0][0]),size_t(inputShapes_[0][1]),kMetalHalfAttentionMaximumChunk);
+        }
+#endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
-        for(const auto& op:ops_)if(op.kind==Kind::AttentionChunk) {
+        for(size_t index=0;index<ops_.size();++index)if(ops_[index].kind==Kind::AttentionChunk) {
+            const auto& op=ops_[index];
             std::vector<MetalMatrix> args;for(auto id:op.arguments)args.push_back(slots_[id].matrix);
-            gpu_->PrepareAttentionChunk(args,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4]);
+            bool halfOnly=false;
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+            // The same immutable use proof selects half math at execution.
+            // Generic graphs and FP32 verification still prepare their MPS plans.
+            halfOnly=kvHoistPlan_.Valid()&&index==kvHoistPlan_.attention;
+#endif
+            gpu_->PrepareAttentionChunk(args,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],halfOnly);
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+            halfOnlyPrepared_=halfOnlyPrepared_||halfOnly;
+#endif
         }
 #endif
 #ifdef GARNET_METAL_AFFINE_PROFILE
@@ -1596,10 +1704,48 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
     // They identify expensive kernels; their latency is not a serving metric.
     const char* profile=std::getenv("GARNET_METAL_PROFILE_OPS");
     const bool profileOps=profile&&std::strcmp(profile,"1")==0;
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+    // This compiled engine omits a fallback only for the proved resident path.
+    // Fail before encoding any operator if a caller asks for a different mode.
+    if(halfOnlyPrepared_&&(packedOutput||verification||profileOps||!kvHoistPlan_.Valid()||
+       !residentOps_[kvHoistPlan_.commits[0]]||!residentOps_[kvHoistPlan_.commits[1]]))
+        throw std::invalid_argument("Half-only prepared graphs require the resident non-diagnostic inference path");
+#endif
     static const char* names[]={"MatMul","BF16MatVec","Norm","Silu","Add","Bias","Mask","Conv","Delta","Slice","Prepare","GateNorm","Concat","NormRope","KVUpdate","KVChunk","AttentionChunk","Scores","AttentionContext","Vision","Layout","DeltaSplit","ConvChunk","DeltaChunk","VerificationAttention"};
+#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+    bool hoisted=false;
+#endif
     for(size_t i=0;i<ops_.size();++i) {
         if(!packedOutput&&!residentOps_[i])continue;
+#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+        if(hoisted&&(i==kvHoistPlan_.commits[0]||i==kvHoistPlan_.commits[1]))continue;
+        if(!packedOutput&&!verification&&!profileOps&&kvHoistPlan_.Valid()&&i==kvHoistPlan_.attention&&
+           residentOps_[kvHoistPlan_.commits[0]]&&residentOps_[kvHoistPlan_.commits[1]]) {
+            const auto& attention=ops_[i];const auto& args=attention.arguments;
+            bool safe=true;
+            for(size_t part=0;part<2;++part){const auto& commit=ops_[kvHoistPlan_.commits[part]];
+                const auto& old=slots_[args[part+3]].matrix;
+                safe=safe&&old.SameView(slots_[commit.out].matrix)&&old.SameView(slots_[commit.arguments[1]].matrix);
+                for(size_t n:{size_t(0),size_t(1),size_t(2),size_t(5),size_t(6),size_t(7)})safe=safe&&!old.SharesStorage(slots_[args[n]].matrix);
+                safe=safe&&!old.SharesStorage(slots_[attention.out].matrix);
+            }
+            safe=safe&&!slots_[args[3]].matrix.SharesStorage(slots_[args[4]].matrix)&&
+                gpu.CanHoistKVControls(slots_[args[5]].matrix,slots_[args[6]].matrix,size_t(inputShapes_[0][0]),attention.dimensions[4],attention.dimensions[3]);
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+            if(halfOnlyPrepared_&&!safe)
+                throw std::invalid_argument("Half-only prepared graph requires proved in-place KV aliases and completed contiguous controls");
+#endif
+            if(safe){
+                for(auto at:kvHoistPlan_.commits){const auto& commit=ops_[at];const auto& a=commit.arguments;
+                    gpu.EncodeKVChunk(slots_[a[0]].matrix,slots_[a[1]].matrix,slots_[a[2]].matrix,slots_[a[3]].matrix,slots_[commit.out].matrix,
+                        commit.dimensions[0],commit.dimensions[1],commit.dimensions[2],commit.dimensions[3],commit.contiguousSlots);}
+                gpu.NoteChunkKVCommitHoist();hoisted=true;
+            }
+        }
+#endif
         const auto& op=ops_[i];
+        gpu.SetGpuCounterRegion(names[size_t(op.kind)],i,slots_[op.a].rows,slots_[op.a].columns);
+        struct CounterRegionScope {MetalContext& gpu;~CounterRegionScope(){gpu.ClearGpuCounterRegion();}} counterScope{gpu};
         auto a=slots_[op.a].matrix,b=slots_[op.b].matrix,out=slots_[op.out].matrix;
 #ifdef GARNET_METAL_SCREENED_HEAD
         if(greedyOutput&&!profileOps&&i+1==ops_.size()&&op.out==output_&&op.kind==Kind::BF16MatVec&&
@@ -1620,7 +1766,7 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
             const auto& layout=ops_[i+1];const auto& norm=ops_[i+2];
             const auto& packed=slots_[op.out];const auto& reshaped=slots_[layout.out];
             if(layout.kind==Kind::Layout&&layout.a==op.out&&layout.dimensions.size()==1&&!layout.dimensions[0]&&
-                norm.kind==Kind::Norm&&norm.a==layout.out&&packed.rows<=2&&reshaped.rows>packed.rows&&
+                norm.kind==Kind::Norm&&norm.a==layout.out&&packed.rows<=4&&reshaped.rows>packed.rows&&
                 reshaped.columns&&packed.columns%reshaped.columns==0&&
                 packed.columns/reshaped.columns<=kMetalPrefillChunkLimit&&a.CompatibleLayout(b)&&a.CompatibleLayout(out)&&
                 reshaped.matrix.CompatibleLayout(slots_[norm.out].matrix)) {
@@ -1636,6 +1782,33 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
                 a.CompatibleLayout(slots_[next.out].matrix)) {
                 gpu.EncodeResidualRMSNorm(a,b,slots_[next.b].matrix,out,slots_[next.out].matrix,next.epsilon,next.offset);
                 ++i;continue;
+            }
+        }
+#endif
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+        if(!profileOps&&i<fusedDecodeSites_.size()&&fusedDecodeSites_[i]) {
+            const auto& up=ops_[i+1];const auto& silu=ops_[i+2];
+            const auto* selected=(selectedTokenRows&&op.indexedDecodeProjection&&selectedTokenRows->size()<slots_[op.a].rows)?selectedTokenRows:nullptr;
+            if(gpu.TryEncodeFusedMistralDecode(a,slots_[op.b].affineInt4,slots_[up.b].affineInt4,slots_[silu.out].matrix,selected)){i+=2;continue;}
+        }
+#endif
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+        if(!profileOps&&i<fusedMlpSites_.size()&&fusedMlpSites_[i]) {
+            const auto& up=ops_[i+1];const auto& silu=ops_[i+2];const auto& down=ops_[i+3];
+            const auto* selected=(selectedTokenRows&&op.indexedTokenProjection&&selectedTokenRows->size()<slots_[op.a].rows)?selectedTokenRows:nullptr;
+            if(gpu.TryEncodeFusedMistralMlp(a,slots_[op.b].affineInt4,slots_[up.b].affineInt4,
+                slots_[down.b].affineInt4,out,slots_[up.out].matrix,slots_[silu.out].matrix,slots_[down.out].matrix,selected)){i+=3;continue;}
+        }
+#endif
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+        if(!profileOps&&slots_[op.a].rows>=128&&i+1<ops_.size()&&(packedOutput||residentOps_[i+1])) {
+            const auto& next=ops_[i+1];
+            auto affine=[&](const Op& v){return v.kind==Kind::MatMul&&v.transpose&&slots_[v.b].affineInt4.Valid();};
+            if(affine(op)&&affine(next)&&op.a==next.a&&op.out!=next.out&&
+               op.indexedTokenProjection==next.indexedTokenProjection&&op.indexedDecodeProjection==next.indexedDecodeProjection) {
+                const auto* selected=(selectedTokenRows&&op.indexedTokenProjection&&selectedTokenRows->size()<slots_[op.a].rows)?selectedTokenRows:nullptr;
+                if(gpu.TryEncodePairedPackedPrefill(a,slots_[op.b].affineInt4,slots_[next.b].affineInt4,
+                    out,slots_[next.out].matrix,selected)) {++i;continue;}
             }
         }
 #endif
@@ -1683,7 +1856,11 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
             if(slots_[op.b].affineInt4.Valid()){
                 if(!op.transpose)throw std::logic_error("Affine INT4 projection must transpose checkpoint rows");
 #ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
-                if(selectedTokenRows&&op.indexedDecodeProjection&&selectedTokenRows->size()<slots_[op.a].rows)
+                if(selectedTokenRows&&op.indexedDecodeProjection&&(selectedTokenRows->size()<slots_[op.a].rows
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+                   ||slots_[op.a].rows>4
+#endif
+                   ))
                     gpu.EncodeAffineInt4IndexedDecode(a,slots_[op.b].affineInt4,out,*selectedTokenRows);
                 else
 #endif
@@ -1757,6 +1934,14 @@ void MetalCompiledGraph::Encode(MetalContext& gpu,bool packedOutput,const MetalM
                 slots_[args[3]].matrix,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.contiguousSlots);
         }else if(op.kind==Kind::AttentionChunk) {
             std::vector<MetalMatrix> args;for(auto id:op.arguments)args.push_back(slots_[id].matrix);
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+            if(hoisted&&i==kvHoistPlan_.attention)gpu.EncodeHalfAttentionChunk(args,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],op.dimensions[5]!=0);
+            else
+#endif
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+            if(hoisted&&i==kvHoistPlan_.attention)gpu.EncodeCommittedAttentionChunk(args,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],op.dimensions[5]!=0);
+            else
+#endif
             gpu.EncodeAttentionChunk(args,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],op.dimensions[5]!=0);
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         }else if(op.kind==Kind::VerificationAttention) {
@@ -2187,3 +2372,87 @@ size_t MetalCompiledGraph::LazyPlannedSlots() const {
 #endif
 }
 }
+
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+namespace Garnet {
+MetalCompiledGraph::DiagnosticFfn MetalCompiledGraph::DescribeDiagnosticFfn() const {
+    using K=Kind;size_t found=0;DiagnosticFfn result;
+    for(size_t i=0;i+5<ops_.size();++i) {
+        const auto& norm=ops_[i];const auto& gate=ops_[i+1];const auto& up=ops_[i+2];const auto& silu=ops_[i+3];const auto& down=ops_[i+4];const auto& add=ops_[i+5];
+        auto projection=[&](const Op& op,size_t n,size_t k){return op.kind==K::MatMul&&op.transpose&&slots_[op.b].affineInt4.Valid()&&slots_[op.a].columns==k&&slots_[op.out].columns==n;};
+        if(norm.kind!=K::Norm||slots_[norm.a].columns!=4096||!projection(gate,14336,4096)||!projection(up,14336,4096)||!projection(down,4096,14336)||gate.a!=norm.out||up.a!=norm.out||silu.kind!=K::Silu||silu.a!=gate.out||silu.b!=up.out||down.a!=silu.out||add.kind!=K::Add||add.a!=norm.a||add.b!=down.out)continue;
+        for(size_t j=i;j<=i+5;++j)if(!residentOps_[j])throw std::logic_error("Bulk FFN includes nonresident operation");
+        for(size_t j=i+6;j<ops_.size();++j)if(residentOps_[j]&&ops_[j].kind!=K::Layout)throw std::logic_error("Unexpected resident FFN suffix");
+        result={i,norm.a,norm.b,gate.b,up.b,down.b,norm.epsilon,norm.offset};++found;
+    }
+    if(found!=1) {std::string trace;for(const auto& op:ops_)trace+=std::to_string(int(op.kind))+":"+std::to_string(op.a)+","+std::to_string(op.b)+","+std::to_string(op.out)+" ";throw std::invalid_argument("Expected one exact Mistral FFN, found "+std::to_string(found)+" ops="+trace);}
+    return result;
+}
+MetalCompiledGraph::DiagnosticKV MetalCompiledGraph::DescribeDiagnosticKV() const {
+    // Match immutable named Mistral weights and their exact resident producers.
+    // Rebinding is limited to fresh MatMul outputs, never physical scratch aliases.
+    auto suffix=[](const std::string& s,const std::string& tail){return s.size()>=tail.size()&&s.compare(s.size()-tail.size(),tail.size(),tail)==0;};
+    size_t key=SIZE_MAX,value=SIZE_MAX;std::string prefix;
+    for(const auto& pair:weights_)if(suffix(pair.first,".self_attn.k_proj.weight")){if(key!=SIZE_MAX)throw std::invalid_argument("Multiple diagnostic K weights");key=pair.second;prefix=pair.first.substr(0,pair.first.size()-std::string("k_proj.weight").size());}
+    auto v=weights_.find(prefix+"v_proj.weight");if(key==SIZE_MAX||v==weights_.end())throw std::invalid_argument("Missing diagnostic K/V weights");value=v->second;
+    auto producer=[&](size_t id){size_t found=SIZE_MAX;for(size_t i=0;i<ops_.size();++i)if(ops_[i].out==id){if(found!=SIZE_MAX)throw std::invalid_argument("Multiple diagnostic slot producers");found=i;}return found;};
+    auto projection=[&](size_t weight){size_t found=SIZE_MAX;for(size_t i=0;i<ops_.size();++i){const auto& op=ops_[i];if(op.kind==Kind::MatMul&&op.b==weight){if(found!=SIZE_MAX||!residentOps_[i]||!op.transpose||!slots_[weight].affineInt4.Valid()||slots_[op.a].rows!=512||slots_[op.a].columns!=4096||slots_[op.out].rows!=512||slots_[op.out].columns!=1024)throw std::invalid_argument("Diagnostic K/V projection profile differs");found=i;}}if(found==SIZE_MAX)throw std::invalid_argument("Missing diagnostic K/V projection");return found;};
+    DiagnosticKV result;result.keyOp=projection(key);result.valueOp=projection(value);const auto& k=ops_[result.keyOp];const auto& val=ops_[result.valueOp];
+    if(k.a!=val.a||result.valueOp!=result.keyOp+1)throw std::invalid_argument("Diagnostic K/V do not share adjacent normalized input");
+    size_t input=k.a,at=producer(input);while(at!=SIZE_MAX&&ops_[at].kind==Kind::Layout&&ops_[at].dimensions==std::vector<size_t>{0}){input=ops_[at].a;at=producer(input);}
+    if(at==SIZE_MAX||ops_[at].kind!=Kind::Norm||!residentOps_[at])throw std::invalid_argument("Diagnostic K/V lacks plain input RMS norm");const auto& norm=ops_[at];
+    if(slots_[norm.a].rows!=512||slots_[norm.a].columns!=4096||slots_[norm.b].rows!=1||slots_[norm.b].columns!=4096)throw std::invalid_argument("Diagnostic K/V RMS profile differs");
+    input=norm.a;at=producer(input);while(at!=SIZE_MAX&&ops_[at].kind==Kind::Layout&&ops_[at].dimensions==std::vector<size_t>{0}){input=ops_[at].a;at=producer(input);}
+    if(at==SIZE_MAX||ops_[at].kind!=Kind::Layout||ops_[at].dimensions!=std::vector<size_t>{4096}||ops_[at].a!=inputs_.at(0)||ops_[at].b!=inputs_.at(5))throw std::invalid_argument("Diagnostic K/V input is not the exact chunk mask");
+    size_t ropes=0,attention=0,commits=0;
+    for(const auto& op:ops_){if(op.kind==Kind::NormRope&&op.a==k.out){if(op.dimensions!=std::vector<size_t>{8,128,128,0})throw std::invalid_argument("Diagnostic K rope differs");++ropes;}if(op.kind==Kind::AttentionChunk&&op.arguments.size()==8&&op.arguments[2]==val.out){if(op.dimensions!=std::vector<size_t>{32,8,128,4096,128,0})throw std::invalid_argument("Diagnostic attention profile differs");++attention;}if(op.kind==Kind::KVChunk&&op.a==val.out)++commits;}
+    if(ropes!=1||attention!=1||commits!=1)throw std::invalid_argument("Diagnostic K/V consumers differ");
+    result.keyOut=k.out;result.valueOut=val.out;result.keyWeight=key;result.valueWeight=value;result.normWeight=norm.b;result.epsilon=norm.epsilon;result.offset=norm.offset;return result;
+}
+MetalCompiledGraph::DiagnosticQO MetalCompiledGraph::DescribeDiagnosticQO(const DiagnosticKV& kv,const DiagnosticFfn& ffn) const {
+    auto canonical=[&](size_t id){size_t steps=0;while(diagnosticAliases_.count(id)){if(++steps>slots_.size())throw std::logic_error("Cyclic diagnostic aliases");id=diagnosticAliases_.at(id);}return id;};
+    auto producer=[&](size_t id){id=canonical(id);size_t found=SIZE_MAX;for(size_t i=0;i<ops_.size();++i)if(ops_[i].out==id){if(found!=SIZE_MAX)throw std::invalid_argument("Multiple Q/O slot producers");found=i;}return found;};
+    auto flatRoot=[&](size_t id){id=canonical(id);size_t at=producer(id),steps=0;while(at!=SIZE_MAX&&ops_[at].kind==Kind::Layout&&ops_[at].dimensions==std::vector<size_t>{0}){if(++steps>ops_.size()||slots_[id].rows*slots_[id].columns!=512*4096)throw std::invalid_argument("Q/O reshape profile differs");id=canonical(ops_[at].a);at=producer(id);}return id;};
+    std::string prefix;for(const auto& item:weights_)if(item.second==kv.keyWeight&&item.first.size()>=13&&item.first.compare(item.first.size()-13,13,"k_proj.weight")==0){if(!prefix.empty())throw std::invalid_argument("Ambiguous Q/O layer prefix");prefix=item.first.substr(0,item.first.size()-13);}
+    auto q=weights_.find(prefix+"q_proj.weight"),o=weights_.find(prefix+"o_proj.weight");if(prefix.empty()||q==weights_.end()||o==weights_.end())throw std::invalid_argument("Missing immutable Q/O weights");
+    auto projection=[&](size_t weight){size_t found=SIZE_MAX;for(size_t i=0;i<ops_.size();++i){const auto& op=ops_[i];if(op.kind==Kind::MatMul&&op.b==weight){if(found!=SIZE_MAX||!residentOps_[i]||!op.transpose||!slots_[weight].affineInt4.Valid()||slots_[op.a].rows!=512||slots_[op.a].columns!=4096||slots_[op.out].rows!=512||slots_[op.out].columns!=4096)throw std::invalid_argument("Q/O projection profile differs");found=i;}}if(found==SIZE_MAX)throw std::invalid_argument("Missing Q/O product");return found;};
+    DiagnosticQO result;result.queryOp=projection(q->second);result.outputOp=projection(o->second);const auto& query=ops_[result.queryOp];const auto& output=ops_[result.outputOp];
+    if(result.queryOp+1!=kv.keyOp||query.a!=ops_[kv.keyOp].a||result.outputOp>=ffn.begin)throw std::invalid_argument("Q/O projection order/input differs");
+    size_t qr=SIZE_MAX,kr=SIZE_MAX,attend=SIZE_MAX;for(size_t i=0;i<result.outputOp;++i){const auto& op=ops_[i];if(op.kind==Kind::NormRope&&op.a==query.out){if(qr!=SIZE_MAX||op.dimensions!=std::vector<size_t>{32,128,128,0})throw std::invalid_argument("Q rope differs");qr=op.out;}if(op.kind==Kind::NormRope&&op.a==kv.keyOut)kr=op.out;if(op.kind==Kind::AttentionChunk){if(attend!=SIZE_MAX)throw std::invalid_argument("Multiple Q/O attention operations");attend=i;}}
+    if(attend==SIZE_MAX||qr==SIZE_MAX||kr==SIZE_MAX)throw std::invalid_argument("Missing Q/O attention producers");const auto& attention=ops_[attend];
+    if(!residentOps_[attend]||attention.dimensions!=std::vector<size_t>{32,8,128,4096,128,0}||attention.arguments.size()!=8||attention.arguments[0]!=qr||attention.arguments[1]!=kr||attention.arguments[2]!=kv.valueOut||attention.arguments[3]!=inputs_.at(1)||attention.arguments[4]!=inputs_.at(2)||attention.arguments[5]!=inputs_.at(4)||attention.arguments[6]!=inputs_.at(5)||attention.arguments[7]!=query.out||output.a!=attention.out)throw std::invalid_argument("Q/O attention dataflow differs");
+    std::array<size_t,2> commits{0,0};for(size_t i=0;i<result.outputOp;++i){const auto& op=ops_[i];if(op.kind!=Kind::KVChunk)continue;const size_t part=op.a==kr?1:(op.a==kv.valueOut?2:0);if(!part||i<=attend||!residentOps_[i]||op.dimensions!=std::vector<size_t>{8,128,4096,128}||op.arguments!=std::vector<size_t>{op.a,inputs_.at(part),inputs_.at(4),inputs_.at(5),inputs_.at(3)}||op.b!=inputs_.at(part)||std::find(outputStorageGroups_.at(part).begin(),outputStorageGroups_.at(part).end(),op.out)==outputStorageGroups_.at(part).end())throw std::invalid_argument("Q/O causal in-place cache commit differs");++commits[part-1];}
+    if(commits!=std::array<size_t,2>{1,1})throw std::invalid_argument("Q/O cache commits incomplete");
+    size_t mask=SIZE_MAX;for(const auto& op:ops_)if(op.kind==Kind::Layout&&op.dimensions==std::vector<size_t>{4096}&&op.a==inputs_.at(0)&&op.b==inputs_.at(5)){if(mask!=SIZE_MAX)throw std::invalid_argument("Multiple Q/O chunk masks");mask=op.out;}
+    auto residual=flatRoot(ffn.residual);size_t add=producer(residual);if(mask==SIZE_MAX||add==SIZE_MAX||ops_[add].kind!=Kind::Add||flatRoot(ops_[add].a)!=canonical(mask)||flatRoot(ops_[add].b)!=output.out||add<=result.outputOp||add>=ffn.begin)throw std::invalid_argument("Q/O residual does not match masked input plus O");
+    for(size_t i=result.outputOp+1;i<ffn.begin;++i)if(residentOps_[i]&&i!=add&&(ops_[i].kind!=Kind::Layout||ops_[i].dimensions!=std::vector<size_t>{0}))throw std::invalid_argument("Unexpected resident Q/O suffix");
+    // Only the norm/identity-layout/mask chain feeding the skipped Q/K/V
+    // projections becomes dead. Retain independent position/control producers.
+    size_t id=canonical(query.a),steps=0;std::set<size_t> dead,deadOutputs;size_t norms=0,masks=0;
+    while(id!=inputs_.at(0)){
+        if(++steps>ops_.size())throw std::logic_error("Cyclic Q/O input preparation");size_t at=producer(id);if(at==SIZE_MAX||!residentOps_[at])throw std::invalid_argument("Unknown Q/O input producer");const auto& op=ops_[at];
+        if(op.kind==Kind::Norm){if(op.b!=kv.normWeight||op.epsilon!=kv.epsilon||op.offset!=kv.offset)throw std::invalid_argument("Q/O input norm changed");++norms;}
+        else if(op.kind==Kind::Layout&&op.dimensions==std::vector<size_t>{4096}){if(op.a!=inputs_.at(0)||op.b!=inputs_.at(5))throw std::invalid_argument("Q/O input mask changed");++masks;}
+        else if(op.kind!=Kind::Layout||op.dimensions!=std::vector<size_t>{0})throw std::invalid_argument("Unexpected Q/O input preparation operation");
+        dead.insert(at);deadOutputs.insert(canonical(op.out));id=canonical(op.a);
+    }
+    if(norms!=1||masks!=1)throw std::invalid_argument("Incomplete Q/O input preparation chain");
+    for(size_t i=0;i<result.outputOp;++i)if(residentOps_[i]&&!dead.count(i)&&i!=result.queryOp&&i!=kv.keyOp&&i!=kv.valueOp){const auto& op=ops_[i];auto readsDead=[&](size_t at){return deadOutputs.count(canonical(at))!=0;};if(readsDead(op.a)||readsDead(op.b)||std::any_of(op.arguments.begin(),op.arguments.end(),readsDead))throw std::invalid_argument("Q/O input preparation has another live consumer");}
+    result.inputOps.assign(dead.begin(),dead.end());
+    result.queryOut=query.out;result.queryWeight=q->second;result.outputWeight=o->second;result.context=attention.out;return result;
+}
+void MetalCompiledGraph::EncodeDiagnosticAttentionPrefix(MetalContext& gpu,const DiagnosticKV& kv,const DiagnosticQO& qo) {
+    if(qo.queryOp>=qo.outputOp||kv.keyOp>=qo.outputOp||kv.valueOp>=qo.outputOp||qo.outputOp>=ops_.size())throw std::invalid_argument("Invalid Q/O prefix boundaries");
+    for(auto i:qo.inputOps)if(i>=qo.queryOp)throw std::invalid_argument("Q/O input producer outside preprojection region");
+    const auto original=residentOps_;for(size_t i=qo.outputOp;i<residentOps_.size();++i)residentOps_[i]=0;residentOps_[qo.queryOp]=residentOps_[kv.keyOp]=residentOps_[kv.valueOp]=0;for(auto i:qo.inputOps)residentOps_[i]=0;
+    try{Encode(gpu,false);}catch(...){residentOps_=original;throw;}residentOps_=original;
+}
+void MetalCompiledGraph::EncodeDiagnosticPrefix(MetalContext& gpu,size_t end,const DiagnosticKV* suppliedKV) {
+    if(!end||end>ops_.size())throw std::invalid_argument("Invalid diagnostic prefix boundary");
+    if(suppliedKV&&(suppliedKV->keyOp>=end||suppliedKV->valueOp>=end))throw std::invalid_argument("Supplied diagnostic K/V outside prefix");
+    const auto original=residentOps_;for(size_t i=end;i<residentOps_.size();++i)residentOps_[i]=0;
+    if(suppliedKV){residentOps_[suppliedKV->keyOp]=0;residentOps_[suppliedKV->valueOp]=0;}
+    try {Encode(gpu,false);}catch(...){residentOps_=original;throw;}residentOps_=original;
+}
+}
+#endif

@@ -1,0 +1,333 @@
+{
+  "passed": true,
+  "scope": "Exact native retained-prefix lineage, head-only admission and survivor audit.",
+  "small_profile": {
+    "host_bytes": 2147483648,
+    "all_states_outputs_exact": true,
+    "full_A_return_qualified": false,
+    "reason": "Host budget eviction, not a matching/state error",
+    "arms": [
+      {
+        "mode": "ordinary-cache",
+        "host_bytes": 2147483648,
+        "output_ids": 224,
+        "state_digest_pairs_vs_fresh": 1430,
+        "survivor_unchanged_digest_pairs": 975,
+        "admitted_cached_tokens": {
+          "A_exact": 0,
+          "B_exact": 2051,
+          "A_append": 2048,
+          "A_suffix": 1792,
+          "A_early": 256
+        },
+        "twin_cached_tokens": {
+          "twin_0": 2052,
+          "twin_1": 2052
+        },
+        "head_only_requests": [
+          "B_exact",
+          "twin_0",
+          "twin_1"
+        ],
+        "actual_prefill_tokens": 12296,
+        "native_verification_calls": 0,
+        "final_cache": {
+          "retention_enabled": true,
+          "entries": 20,
+          "accounted_host_bytes": 2101388304,
+          "hits": 6,
+          "misses": 5,
+          "evictions": 63,
+          "replacements": 0,
+          "dense_capture_compared_bytes": 21994930176,
+          "dense_capture_copied_bytes": 3172990976,
+          "dense_capture_reused_blocks": 83904,
+          "dense_capture_new_blocks": 12288,
+          "private_host_bytes": 1549328,
+          "shared_resource_bytes": 2099838976,
+          "shared_resource_count": 8192,
+          "capture_policy": "prefill_only_v1",
+          "prefill_capture_skipped_mixed": 11
+        },
+        "maximum_sampled_cache_bytes": 2101388304
+      },
+      {
+        "mode": "verify-cache",
+        "host_bytes": 2147483648,
+        "output_ids": 224,
+        "state_digest_pairs_vs_fresh": 1430,
+        "survivor_unchanged_digest_pairs": 975,
+        "admitted_cached_tokens": {
+          "A_exact": 0,
+          "B_exact": 2051,
+          "A_append": 2048,
+          "A_suffix": 1792,
+          "A_early": 256
+        },
+        "twin_cached_tokens": {
+          "twin_0": 2052,
+          "twin_1": 2052
+        },
+        "head_only_requests": [
+          "B_exact",
+          "twin_0",
+          "twin_1"
+        ],
+        "actual_prefill_tokens": 12296,
+        "native_verification_calls": 67,
+        "final_cache": {
+          "retention_enabled": true,
+          "entries": 20,
+          "accounted_host_bytes": 2101388304,
+          "hits": 6,
+          "misses": 5,
+          "evictions": 63,
+          "replacements": 0,
+          "dense_capture_compared_bytes": 21994930176,
+          "dense_capture_copied_bytes": 3172990976,
+          "dense_capture_reused_blocks": 83904,
+          "dense_capture_new_blocks": 12288,
+          "private_host_bytes": 1549328,
+          "shared_resource_bytes": 2099838976,
+          "shared_resource_count": 8192,
+          "capture_policy": "prefill_only_v1",
+          "prefill_capture_skipped_mixed": 11
+        },
+        "maximum_sampled_cache_bytes": 2101388304
+      },
+      {
+        "mode": "reverse-cache",
+        "host_bytes": 2147483648,
+        "output_ids": 224,
+        "state_digest_pairs_vs_fresh": 1430,
+        "survivor_unchanged_digest_pairs": 975,
+        "admitted_cached_tokens": {
+          "A_exact": 0,
+          "B_exact": 2051,
+          "A_append": 2048,
+          "A_suffix": 1792,
+          "A_early": 256
+        },
+        "twin_cached_tokens": {
+          "twin_0": 2052,
+          "twin_1": 2052
+        },
+        "head_only_requests": [
+          "B_exact",
+          "twin_0",
+          "twin_1"
+        ],
+        "actual_prefill_tokens": 12296,
+        "native_verification_calls": 67,
+        "final_cache": {
+          "retention_enabled": true,
+          "entries": 20,
+          "accounted_host_bytes": 2101388304,
+          "hits": 6,
+          "misses": 5,
+          "evictions": 63,
+          "replacements": 0,
+          "dense_capture_compared_bytes": 21994930176,
+          "dense_capture_copied_bytes": 3172990976,
+          "dense_capture_reused_blocks": 83904,
+          "dense_capture_new_blocks": 12288,
+          "private_host_bytes": 1549328,
+          "shared_resource_bytes": 2099838976,
+          "shared_resource_count": 8192,
+          "capture_policy": "prefill_only_v1",
+          "prefill_capture_skipped_mixed": 11
+        },
+        "maximum_sampled_cache_bytes": 2101388304
+      }
+    ]
+  },
+  "qualified_profile": {
+    "host_bytes": 3221225472,
+    "arms": [
+      {
+        "mode": "ordinary-cache",
+        "host_bytes": 3221225472,
+        "output_ids": 224,
+        "state_digest_pairs_vs_fresh": 1430,
+        "survivor_unchanged_digest_pairs": 975,
+        "admitted_cached_tokens": {
+          "A_exact": 2048,
+          "B_exact": 2051,
+          "A_append": 2048,
+          "A_suffix": 1792,
+          "A_early": 384
+        },
+        "twin_cached_tokens": {
+          "twin_0": 2052,
+          "twin_1": 2052
+        },
+        "head_only_requests": [
+          "A_exact",
+          "B_exact",
+          "twin_0",
+          "twin_1"
+        ],
+        "actual_prefill_tokens": 10120,
+        "native_verification_calls": 0,
+        "final_cache": {
+          "retention_enabled": true,
+          "entries": 64,
+          "accounted_host_bytes": 2641558848,
+          "hits": 7,
+          "misses": 4,
+          "evictions": 11,
+          "replacements": 0,
+          "dense_capture_compared_bytes": 20317208576,
+          "dense_capture_copied_bytes": 2636120064,
+          "dense_capture_reused_blocks": 77504,
+          "dense_capture_new_blocks": 10240,
+          "private_host_bytes": 4701504,
+          "shared_resource_bytes": 2636857344,
+          "shared_resource_count": 10240,
+          "capture_policy": "prefill_only_v1",
+          "prefill_capture_skipped_mixed": 11
+        },
+        "maximum_sampled_cache_bytes": 2641558848
+      },
+      {
+        "mode": "verify-cache",
+        "host_bytes": 3221225472,
+        "output_ids": 224,
+        "state_digest_pairs_vs_fresh": 1430,
+        "survivor_unchanged_digest_pairs": 975,
+        "admitted_cached_tokens": {
+          "A_exact": 2048,
+          "B_exact": 2051,
+          "A_append": 2048,
+          "A_suffix": 1792,
+          "A_early": 384
+        },
+        "twin_cached_tokens": {
+          "twin_0": 2052,
+          "twin_1": 2052
+        },
+        "head_only_requests": [
+          "A_exact",
+          "B_exact",
+          "twin_0",
+          "twin_1"
+        ],
+        "actual_prefill_tokens": 10120,
+        "native_verification_calls": 67,
+        "final_cache": {
+          "retention_enabled": true,
+          "entries": 64,
+          "accounted_host_bytes": 2641558848,
+          "hits": 7,
+          "misses": 4,
+          "evictions": 11,
+          "replacements": 0,
+          "dense_capture_compared_bytes": 20317208576,
+          "dense_capture_copied_bytes": 2636120064,
+          "dense_capture_reused_blocks": 77504,
+          "dense_capture_new_blocks": 10240,
+          "private_host_bytes": 4701504,
+          "shared_resource_bytes": 2636857344,
+          "shared_resource_count": 10240,
+          "capture_policy": "prefill_only_v1",
+          "prefill_capture_skipped_mixed": 11
+        },
+        "maximum_sampled_cache_bytes": 2641558848
+      },
+      {
+        "mode": "reverse-cache",
+        "host_bytes": 3221225472,
+        "output_ids": 224,
+        "state_digest_pairs_vs_fresh": 1430,
+        "survivor_unchanged_digest_pairs": 975,
+        "admitted_cached_tokens": {
+          "A_exact": 2048,
+          "B_exact": 2051,
+          "A_append": 2048,
+          "A_suffix": 1792,
+          "A_early": 384
+        },
+        "twin_cached_tokens": {
+          "twin_0": 2052,
+          "twin_1": 2052
+        },
+        "head_only_requests": [
+          "A_exact",
+          "B_exact",
+          "twin_0",
+          "twin_1"
+        ],
+        "actual_prefill_tokens": 10120,
+        "native_verification_calls": 67,
+        "final_cache": {
+          "retention_enabled": true,
+          "entries": 64,
+          "accounted_host_bytes": 2641558848,
+          "hits": 7,
+          "misses": 4,
+          "evictions": 11,
+          "replacements": 0,
+          "dense_capture_compared_bytes": 20317208576,
+          "dense_capture_copied_bytes": 2636120064,
+          "dense_capture_reused_blocks": 77504,
+          "dense_capture_new_blocks": 10240,
+          "private_host_bytes": 4701504,
+          "shared_resource_bytes": 2636857344,
+          "shared_resource_count": 10240,
+          "capture_policy": "prefill_only_v1",
+          "prefill_capture_skipped_mixed": 11
+        },
+        "maximum_sampled_cache_bytes": 2641558848
+      }
+    ],
+    "state_digest_pairs_vs_fresh": 4290,
+    "survivor_unchanged_digest_pairs": 2925,
+    "full_exact_append_suffix_early_and_twin_reuse": true
+  },
+  "fresh_control_reused_without_inference_rerun": true,
+  "fresh_control_retention_disabled": true,
+  "source_changed": false,
+  "serial_fresh_engines": 7,
+  "negative_controls_rejected": [
+    "wrong_cache_hit",
+    "wrong_restored_hidden",
+    "wrong_restored_kv",
+    "wrong_survivor_cache",
+    "dummy_prefill_on_full_hit",
+    "fake_host_budget",
+    "missing_shared_blocks",
+    "decoded_snapshot_domain",
+    "fake_native_remaining",
+    "missing_rollback",
+    "wrong_target_id",
+    "candidate_skipped_verifier",
+    "fake_memory_envelope",
+    "fake_cache_hit_counter"
+  ],
+  "prefix_retention_qualified": true,
+  "wide_cancel_refill_qualification_unchanged": true,
+  "learned_helper_batching_qualified": false,
+  "new_serving_speed_metrics": false,
+  "selected_full_serving_comparison_promoted": false,
+  "no_comparator_execution": true,
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/audit2.py": "aba371583ca360b4f57e1cc10578b4d74bfd7386daa62078082192f44ee0f5e0",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/worker1.py": "5b8f3872f3f06fde692986079ddcf5bf08f24af05c65f869a726438acf3965f7",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/input1.json": "95638ea93cd84742f7855b4cdfed9e4431ceea06a1bc7201953f9eef1d5a9cd7",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/input2.json": "550f411e8fe60994f7d4db822051846882824ddfd198cf9abfe60d1705dd5b85",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/plan1.json": "3443c1f93726b50994487a11304a9204212d42cb7372e0d1d4b3f759b12d68ca",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/plan2.json": "d6924a8a6e4c7fd9f2222912e49bf5440c0be7c577c9a1de0fda453c2634f804",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/preflight1.json": "06f9f698c7e9b77bd3715443ce378e8733feb30fad49415f9a5a219c4d3d72b8",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/preflight2.json": "2bebdf5378dd34fff5fde6bf80e46207b58cecdc1b0caa60936cbc36b48ac0f3",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/postflight1.json": "e91c95490c16ebb8f053b6e7719dc4c1ded27daca97c391c8f06147614abbb45",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/postflight2.json": "621b181815bbf9ca6069466f6247635634ebeabd596899e1077cab7e5eccb37d",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/ordinary-off-result1.json": "f292b9f8155d36bd1bd774d47393faed3f2ac49050b81fa1f6e136a88f2d142c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/ordinary-cache-result1.json": "dcd12a51f8fe51e10e17df85f03462a2f645ea0f0401b52d12d3fd79f998dec1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/verify-cache-result1.json": "23b8e1c1a8b53927149040a76db21b34780c59a75dfffd920ab9911bca49775d",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/reverse-cache-result1.json": "5ec79819032428c6548a5e9bcad67c6d31ccd7c0e3159dcc251bd85d6fef86ea",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/ordinary-cache-result2.json": "0be6351a1acf80cf51d6e0e6474d2e4b4bb708746caac924cf7d487c19b31933",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/verify-cache-result2.json": "cca44493fd4f92d225b68099d15cb58ca0e59986da4d29476c0beb50037812cb",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/reverse-cache-result2.json": "94a69655dd9accda3a3e2aeb7d09442c1e34a136d16bad38d59a8e0219312bf3"
+  }
+}

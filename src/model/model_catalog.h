@@ -16,4 +16,16 @@ namespace Garnet
 
     std::string EnumerateAvailableModelsJson(
         const std::filesystem::path& catalogRoot);
+
+    struct GenerationRoute {
+        std::filesystem::path file;
+        std::string module;
+        std::string function;
+        bool allowEnginePool = true;
+    };
+
+    GenerationRoute ResolveGenerationRoute(
+        const std::filesystem::path& packageRoot,
+        const std::string& model,
+        const std::string& mode);
 }

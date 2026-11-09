@@ -1,0 +1,30 @@
+{
+  "scope": "Optional model-free native prefix/local lookahead attention only; defaultOFF. Not fullmodel lookahead, codingquality, throughput or TTFT qualification.",
+  "actual_native_attention_summary": "lookahead attention reference PASS cases=82 active_queries=1034 fp32_words=325685248 fp64_components=9306 rejections=262 native_decode_bitwise=true readonly_all_operands=true poison_inactive_prefix_tail=true abort_pending_flush_foreign=true owners=0",
+  "all_five_native_correctness_tests_passed": true,
+  "actual_outer_execution": {
+    "session": 48481,
+    "terminal_exit": 0,
+    "terminal_chunk": "03d690"
+  },
+  "raw_evidence_directory": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-native-lookahead-window1",
+  "evidence_sha256": {
+    "attention-build2-audit1.json": "d4f474e852f92f7a5fb1996937cb737027bfcea19005fc9da3c0d423ecb07d11",
+    "attention-native2-status1.json": "44ffe639b5f9c5aee53f73fffbe1f1504dd1fee0dc2ed9fc649b48ca081d6af7",
+    "attention-native2-audit1.json": "8816a5d0454ce672fdea86c7ba750567a0366bff6170c059cabbc1274adc1d78",
+    "attention-native2-release1.json": "b5a62faf5da13a963e32a1e857a6bfc6b49c69ef4274b1eb2c40c1865a3afe5e",
+    "attention-native-failure1-preservation.json": "c00cb00d5164fb5dd154cc68c5ee7ebf64088824723a83ee9f6ec33558b2a93e",
+    "attention-native-release1.json": "389db8f6d6e91bf59038639673ea026bc3839cce71378860469a6737a70ccf0f"
+  },
+  "preserved_first_failure": "Probabilityword74 mismatch in originalnewlibrary. Newlibrary forcedfastMathNO whileexistingstate library useddefaultmathoptions; constantvsruntime rsqrtboundaryalso differed. Both corrected toreferencecontract; no isolatedcausalclaim. Strictmemcmp/FP64/rejectiongates unchanged. OriginalON/OFFbuild1 and exactfailedsource retained.",
+  "production_flags": {
+    "GARNET_METAL_LOOKAHEAD_ATTENTION": "OFF bydefault",
+    "requires": "GARNET_METAL_VERIFY_ATTENTION"
+  },
+  "limitations": [
+    "Immutableviewdescriptor is not a live row-epoch lease authority; Session must validate live ownership",
+    "FullGraph/Sessionintegration and64-row indexedprojectionprofile not implemented",
+    "No newmodel/serving/performance result; frozenvLLM/SGLang unchanged",
+    "Fullgoal and2xspeed/aggregate/halfTTFT/codingquality gates remain incomplete"
+  ]
+}

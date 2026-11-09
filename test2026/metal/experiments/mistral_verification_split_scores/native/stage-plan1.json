@@ -1,0 +1,43 @@
+{
+  "scope": "Current native split score ON/OFF in unchanged full2K target and fixed bounded helper; no HTTP/comparator admission",
+  "source": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-native1/source2",
+  "libraries": {
+    "on": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-native1/build-on1",
+    "off": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-native1/build-default-off1"
+  },
+  "input": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/input1.json",
+  "worker_sha256": "591004531c86e9780b8e9769b41906ba103634fe6daf07bd6e7d1df7268b3a27",
+  "qualification_modes": [
+    "on",
+    "off"
+  ],
+  "qualification_experiment": "qualify",
+  "sequence": [
+    [
+      1,
+      "off"
+    ],
+    [
+      1,
+      "on"
+    ],
+    [
+      2,
+      "on"
+    ],
+    [
+      2,
+      "off"
+    ]
+  ],
+  "experiment": "bounded",
+  "minimum_native_decode_ratio": 1.05,
+  "proposals_and_full_final_state_must_repeat": true,
+  "all_current_ordinary_state_pairs_must_match": true,
+  "requires_native_on_off_suites": true,
+  "requires_independent_qualification_audit_before_measurement": true,
+  "no_hash_build_during_collection": true,
+  "no_comparator_execution": true,
+  "serving_ttft_measured": false,
+  "goal_complete": false
+}

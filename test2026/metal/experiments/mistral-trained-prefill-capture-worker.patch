@@ -1,0 +1,40 @@
+--- base/local_coder_batch_worker.py
++++ capture/local_coder_batch_worker.py
+@@ -24,6 +24,13 @@
+     folder=sys.argv[3]
+     with open(sys.argv[4]) as stream:profile=json.load(stream)
+     with open(folder+'/config.json') as stream:config=json.load(stream)
++    # Research capture only: real native prefill call, selected invocation16.
++    import ctypes
++    capture_bridge=ctypes.CDLL(profile['diagnostic_capture_library'])
++    capture_bridge.garnet_diagnostic_capture_start.argtypes=[ctypes.c_char_p]
++    capture_bridge.garnet_diagnostic_capture_start.restype=ctypes.c_int
++    capture_bridge.garnet_diagnostic_capture_stop.restype=ctypes.c_int
++    capture_prefill_count=[0]
+     family=profile.get('model_family','qwen38_27b')
+     if family not in ('qwen38_27b','mistral_7b'):raise ValueError('Unsupported native batch model family')
+     text_config=config if family=='mistral_7b' else config['text_config']
+@@ -431,8 +438,21 @@
+             return result
+         def execute(graphs,hidden,positions,slots,active,prediction,epochs,ids):
+             started=time.monotonic() if trace_stages else 0
+-            if tracked_rows:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
+-            else:result=decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
++            capture_this=False
++            if len(ids)>batch:
++                capture_prefill_count[0]+=1
++                if capture_prefill_count[0]==16:
++                    if len(ids)!=512 or sum(active.tolist())!=512:raise ValueError('Diagnostic capture requires four complete T128 rows')
++                    emit(dict(event='diagnostic_prefill_capture_boundary',enabled=profile['diagnostic_capture_enabled'],invocation=16,ids=ids,slots=slots.tolist(),active=active.tolist(),epochs=epochs))
++                    capture_this=profile['diagnostic_capture_enabled']
++                    if capture_this and capture_bridge.garnet_diagnostic_capture_start(profile['diagnostic_capture_path'].encode('utf8'))!=0:raise ValueError('Native diagnostic capture start failed; see stderr')
++            try:
++                if tracked_rows:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
++                else:result=decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
++            finally:
++                if capture_this:
++                    if capture_bridge.garnet_diagnostic_capture_stop()!=0:raise ValueError('Native diagnostic capture stop failed; see stderr')
++                    emit(dict(event='diagnostic_prefill_capture_stopped',invocation=16,path=profile['diagnostic_capture_path']))
+             ended=time.monotonic() if trace_stages else 0
+             elapsed=(ended-started)*1000 if trace_stages else 0
+             attention_valid=sum(1 for flag in active.tolist() if flag!=0) if attention_buckets else None

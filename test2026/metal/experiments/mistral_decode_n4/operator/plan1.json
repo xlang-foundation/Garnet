@@ -1,0 +1,26 @@
+{
+  "status": "prepared_not_built_or_measured",
+  "scope": "Screen lossless N4 interleaving of packed Q4 words and FP16 group coefficients for vectorized FP32 decode.",
+  "base_engine_provenance_sha256": "3dd125f8f9ed9bef0a944cdb14eca7ff0f7af3b0bc19f818fc884763d99a9411",
+  "previous_geometry_provenance_sha256": "999a6bcba1d642682e5c5cde6e28ad475d77b6892c53ef7275b8a4ae6802789c",
+  "native_source_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_blocked_decode_shader.h": "be2541686a691294107d8db11ae2f1a9b58f627649ce38bed08c6d5ef3882521",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_profile_shader.h": "dbaf2b94613564d2ac44f708307f7783970fd10652fbd5631321f154e8c9ffde"
+  },
+  "distinct_change": "Keep four SIMD groups and four columns per SIMD. Interleave four adjacent N channels at each packed K word/coefficient; use uint4/ushort4 loads and componentwise FP32 fused dequant/accumulation. Keep every output lane word order and scalar SIMD reduction.",
+  "layout": "packed[(n//4)*(K//8)*4+word*4+n%4]; coefficients[(n//4)*(K//64)*4+group*4+n%4]. Pad final N4 block only; real Mistral full dimensions need no padding.",
+  "memory": "Compact Q4 payload size unchanged for N divisible4. Any runtime integration must explicitly budget or retire the original row-major copy, preserve prefill consumer compatibility, and give the layout a distinct immutable profile/cache identity.",
+  "gates": [
+    "Round-trip every packed/scale/bias word exactly, including odd output-column tails.",
+    "Complete output parents, inactive rows, input/weight bytes and all guards exact to unmodified native blocked4 and legacy scalar controls.",
+    "Independent FP64 checks on frozen trained operands.",
+    "All active-row masks, serving contiguous strides and padded views.",
+    "Compile entire fixed profile family before any timing; no post-barrier pipeline creation.",
+    "Paired fresh serial warm/pressure timing; retain all samples and no whole-model inference until reproducible operator benefit."
+  ],
+  "no_new_quantization": true,
+  "no_xmodel_operator_changes": true,
+  "no_runtime_integration": true,
+  "serving_speed_claim": false,
+  "goal_complete": false
+}

@@ -1,0 +1,1976 @@
+diff --git a/cmake/GarnetMetal.cmake b/cmake/GarnetMetal.cmake
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -1153,3 +1153,63 @@
+     target_link_libraries(garnet_value_profile_test PRIVATE garnet_metal)
+     add_test(NAME metal_value_profile_reference COMMAND garnet_value_profile_test)
+ endif()
++
++# Research only: bulk projection amortization, no serving interface.
++add_executable(garnet_bulk_projection_native_benchmark test2026/metal/bulk_projection_native_benchmark.cpp)
++target_include_directories(garnet_bulk_projection_native_benchmark PRIVATE third_party)
++target_link_libraries(garnet_bulk_projection_native_benchmark PRIVATE garnet_metal)
++
++option(GARNET_METAL_DIAGNOSTIC_LAYER_BULK "Research unmanaged layer-major bulk FFN prefill" OFF)
++if(GARNET_METAL_DIAGNOSTIC_LAYER_BULK)
++    if(NOT GARNET_METAL_MISTRAL_PACKED_PREFILL OR NOT GARNET_METAL_PREPARED_KV_ROW_SPANS OR NOT GARNET_METAL_ROW_FINAL_HIDDEN OR NOT GARNET_METAL_VERIFY_ATTENTION)
++        message(FATAL_ERROR "Diagnostic layer bulk requires packed affine, prepared spans, final hidden and owner verification")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_DIAGNOSTIC_LAYER_BULK=1)
++    target_sources(garnet PRIVATE src/backends/metal/diagnostic_layer_bulk.cpp)
++endif()
++
++if(GARNET_METAL_DIAGNOSTIC_LAYER_BULK)
++    add_executable(garnet_diagnostic_bulk_view_test test2026/metal/diagnostic_bulk_view_test.cpp)
++    target_link_libraries(garnet_diagnostic_bulk_view_test PRIVATE garnet_metal)
++    add_test(NAME metal_diagnostic_bulk_views COMMAND garnet_diagnostic_bulk_view_test)
++endif()
++
++if(GARNET_METAL_DIAGNOSTIC_LAYER_BULK)
++    add_executable(garnet_bulk_silu_half_test test2026/metal/bulk_silu_half_test.cpp)
++    target_include_directories(garnet_bulk_silu_half_test PRIVATE third_party)
++    target_link_libraries(garnet_bulk_silu_half_test PRIVATE garnet_metal)
++    add_test(NAME metal_bulk_silu_half_reference COMMAND garnet_bulk_silu_half_test)
++endif()
++
++if(GARNET_METAL_DIAGNOSTIC_LAYER_BULK AND GARNET_METAL_TOKEN_PREFIX_CACHE AND GARNET_METAL_CONTINUOUS_ROWS)
++ target_sources(garnet PRIVATE src/backends/metal/diagnostic_leased_bulk.cpp)
++ add_executable(garnet_bulk_append_policy_test test2026/metal/bulk_append_policy_test.cpp)
++ add_test(NAME metal_bulk_append_policy COMMAND garnet_bulk_append_policy_test)
++endif()
++
++if(GARNET_METAL_DIAGNOSTIC_LAYER_BULK AND GARNET_METAL_TOKEN_PREFIX_CACHE AND GARNET_METAL_CONTINUOUS_ROWS)
++ add_executable(garnet_scheduler_bulk_group_test test2026/native/scheduler_bulk_group_test.cpp src/runtime/scheduler/continuous_batch_scheduler.cpp)
++ add_test(NAME native_scheduler_bulk_groups COMMAND garnet_scheduler_bulk_group_test)
++endif()
++
++if(GARNET_METAL_DIAGNOSTIC_LAYER_BULK)
++ add_executable(garnet_bulk_kv_projection_test test2026/metal/bulk_kv_projection_test.cpp)
++ target_include_directories(garnet_bulk_kv_projection_test PRIVATE third_party)
++ target_link_libraries(garnet_bulk_kv_projection_test PRIVATE garnet_metal)
++ add_test(NAME metal_bulk_kv_projection_gate COMMAND garnet_bulk_kv_projection_test)
++endif()
++
++if(GARNET_METAL_DIAGNOSTIC_LAYER_BULK)
++ add_executable(garnet_bulk_qo_alias_test test2026/metal/bulk_qo_alias_test.cpp)
++ target_include_directories(garnet_bulk_qo_alias_test PRIVATE third_party)
++ target_link_libraries(garnet_bulk_qo_alias_test PRIVATE garnet_metal)
++ add_test(NAME metal_bulk_qo_alias_gate COMMAND garnet_bulk_qo_alias_test)
++endif()
++
++
++if(GARNET_METAL_DIAGNOSTIC_LAYER_BULK)
++    add_executable(garnet_packed_fulltile_test test2026/metal/packed_fulltile_test.cpp)
++    target_include_directories(garnet_packed_fulltile_test PRIVATE third_party)
++    target_link_libraries(garnet_packed_fulltile_test PRIVATE garnet_metal)
++    add_test(NAME metal_packed_fulltile_diagnostic_contract COMMAND garnet_packed_fulltile_test)
++endif()
+diff --git a/src/backends/metal/compiled_graph.cpp b/src/backends/metal/compiled_graph.cpp
+--- a/src/backends/metal/compiled_graph.cpp
++++ b/src/backends/metal/compiled_graph.cpp
+@@ -17,6 +17,7 @@
+ #include <algorithm>
+ #include <cmath>
+ #include <unordered_set>
++#include <set>
+ #include <map>
+ #include <cstdlib>
+ #include <cstdio>
+@@ -297,6 +298,9 @@
+     visionPrefetchDispatches_=0;visionVectorDispatches_=0;mlpGraphDispatches_=0;
+     resetKVPrefix_[0]=resetKVPrefix_[1]=false;
+     verificationTokens_=0;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    diagnosticAliases_.clear();
++#endif
+     visionGlobalAlphaDispatches_=0;++generation_;ready_=false;bf16Projections_=false;outputParts_.clear();outputStorageGroups_.clear();residentOps_.clear();controlSources_.clear();ops_.clear();inputs_.clear();inputShapes_.clear();tensors_.clear();weights_.clear();sharedWeights_.clear();weightRecords_.clear();bindings_.clear();slots_.clear();gpu_.reset();
+ #ifdef GARNET_METAL_MTP_DEFER_PACKS
+     mtpDeferredPackSlots_=0;
+@@ -1082,6 +1086,9 @@
+         }
+         // All operations write fresh slots. Trace only matrices needed by the
+         // returned value, resolving storage aliases before removing unused packs.
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++        diagnosticAliases_.clear();diagnosticAliases_.insert(aliases.begin(),aliases.end());
++#endif
+         auto canonical=[&](size_t id){while(aliases.count(id))id=aliases.at(id);return id;};
+ #ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
+         // Propagate request-row identity from a 2D decoder/head hidden input.
+@@ -2201,3 +2208,87 @@
+ #endif
+ }
+ }
++
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++namespace Garnet {
++MetalCompiledGraph::DiagnosticFfn MetalCompiledGraph::DescribeDiagnosticFfn() const {
++    using K=Kind;size_t found=0;DiagnosticFfn result;
++    for(size_t i=0;i+5<ops_.size();++i) {
++        const auto& norm=ops_[i];const auto& gate=ops_[i+1];const auto& up=ops_[i+2];const auto& silu=ops_[i+3];const auto& down=ops_[i+4];const auto& add=ops_[i+5];
++        auto projection=[&](const Op& op,size_t n,size_t k){return op.kind==K::MatMul&&op.transpose&&slots_[op.b].affineInt4.Valid()&&slots_[op.a].columns==k&&slots_[op.out].columns==n;};
++        if(norm.kind!=K::Norm||slots_[norm.a].columns!=4096||!projection(gate,14336,4096)||!projection(up,14336,4096)||!projection(down,4096,14336)||gate.a!=norm.out||up.a!=norm.out||silu.kind!=K::Silu||silu.a!=gate.out||silu.b!=up.out||down.a!=silu.out||add.kind!=K::Add||add.a!=norm.a||add.b!=down.out)continue;
++        for(size_t j=i;j<=i+5;++j)if(!residentOps_[j])throw std::logic_error("Bulk FFN includes nonresident operation");
++        for(size_t j=i+6;j<ops_.size();++j)if(residentOps_[j]&&ops_[j].kind!=K::Layout)throw std::logic_error("Unexpected resident FFN suffix");
++        result={i,norm.a,norm.b,gate.b,up.b,down.b,norm.epsilon,norm.offset};++found;
++    }
++    if(found!=1) {std::string trace;for(const auto& op:ops_)trace+=std::to_string(int(op.kind))+":"+std::to_string(op.a)+","+std::to_string(op.b)+","+std::to_string(op.out)+" ";throw std::invalid_argument("Expected one exact Mistral FFN, found "+std::to_string(found)+" ops="+trace);}
++    return result;
++}
++MetalCompiledGraph::DiagnosticKV MetalCompiledGraph::DescribeDiagnosticKV() const {
++    // Match immutable named Mistral weights and their exact resident producers.
++    // Rebinding is limited to fresh MatMul outputs, never physical scratch aliases.
++    auto suffix=[](const std::string& s,const std::string& tail){return s.size()>=tail.size()&&s.compare(s.size()-tail.size(),tail.size(),tail)==0;};
++    size_t key=SIZE_MAX,value=SIZE_MAX;std::string prefix;
++    for(const auto& pair:weights_)if(suffix(pair.first,".self_attn.k_proj.weight")){if(key!=SIZE_MAX)throw std::invalid_argument("Multiple diagnostic K weights");key=pair.second;prefix=pair.first.substr(0,pair.first.size()-std::string("k_proj.weight").size());}
++    auto v=weights_.find(prefix+"v_proj.weight");if(key==SIZE_MAX||v==weights_.end())throw std::invalid_argument("Missing diagnostic K/V weights");value=v->second;
++    auto producer=[&](size_t id){size_t found=SIZE_MAX;for(size_t i=0;i<ops_.size();++i)if(ops_[i].out==id){if(found!=SIZE_MAX)throw std::invalid_argument("Multiple diagnostic slot producers");found=i;}return found;};
++    auto projection=[&](size_t weight){size_t found=SIZE_MAX;for(size_t i=0;i<ops_.size();++i){const auto& op=ops_[i];if(op.kind==Kind::MatMul&&op.b==weight){if(found!=SIZE_MAX||!residentOps_[i]||!op.transpose||!slots_[weight].affineInt4.Valid()||slots_[op.a].rows!=512||slots_[op.a].columns!=4096||slots_[op.out].rows!=512||slots_[op.out].columns!=1024)throw std::invalid_argument("Diagnostic K/V projection profile differs");found=i;}}if(found==SIZE_MAX)throw std::invalid_argument("Missing diagnostic K/V projection");return found;};
++    DiagnosticKV result;result.keyOp=projection(key);result.valueOp=projection(value);const auto& k=ops_[result.keyOp];const auto& val=ops_[result.valueOp];
++    if(k.a!=val.a||result.valueOp!=result.keyOp+1)throw std::invalid_argument("Diagnostic K/V do not share adjacent normalized input");
++    size_t input=k.a,at=producer(input);while(at!=SIZE_MAX&&ops_[at].kind==Kind::Layout&&ops_[at].dimensions==std::vector<size_t>{0}){input=ops_[at].a;at=producer(input);}
++    if(at==SIZE_MAX||ops_[at].kind!=Kind::Norm||!residentOps_[at])throw std::invalid_argument("Diagnostic K/V lacks plain input RMS norm");const auto& norm=ops_[at];
++    if(slots_[norm.a].rows!=512||slots_[norm.a].columns!=4096||slots_[norm.b].rows!=1||slots_[norm.b].columns!=4096)throw std::invalid_argument("Diagnostic K/V RMS profile differs");
++    input=norm.a;at=producer(input);while(at!=SIZE_MAX&&ops_[at].kind==Kind::Layout&&ops_[at].dimensions==std::vector<size_t>{0}){input=ops_[at].a;at=producer(input);}
++    if(at==SIZE_MAX||ops_[at].kind!=Kind::Layout||ops_[at].dimensions!=std::vector<size_t>{4096}||ops_[at].a!=inputs_.at(0)||ops_[at].b!=inputs_.at(5))throw std::invalid_argument("Diagnostic K/V input is not the exact chunk mask");
++    size_t ropes=0,attention=0,commits=0;
++    for(const auto& op:ops_){if(op.kind==Kind::NormRope&&op.a==k.out){if(op.dimensions!=std::vector<size_t>{8,128,128,0})throw std::invalid_argument("Diagnostic K rope differs");++ropes;}if(op.kind==Kind::AttentionChunk&&op.arguments.size()==8&&op.arguments[2]==val.out){if(op.dimensions!=std::vector<size_t>{32,8,128,4096,128,0})throw std::invalid_argument("Diagnostic attention profile differs");++attention;}if(op.kind==Kind::KVChunk&&op.a==val.out)++commits;}
++    if(ropes!=1||attention!=1||commits!=1)throw std::invalid_argument("Diagnostic K/V consumers differ");
++    result.keyOut=k.out;result.valueOut=val.out;result.keyWeight=key;result.valueWeight=value;result.normWeight=norm.b;result.epsilon=norm.epsilon;result.offset=norm.offset;return result;
++}
++MetalCompiledGraph::DiagnosticQO MetalCompiledGraph::DescribeDiagnosticQO(const DiagnosticKV& kv,const DiagnosticFfn& ffn) const {
++    auto canonical=[&](size_t id){size_t steps=0;while(diagnosticAliases_.count(id)){if(++steps>slots_.size())throw std::logic_error("Cyclic diagnostic aliases");id=diagnosticAliases_.at(id);}return id;};
++    auto producer=[&](size_t id){id=canonical(id);size_t found=SIZE_MAX;for(size_t i=0;i<ops_.size();++i)if(ops_[i].out==id){if(found!=SIZE_MAX)throw std::invalid_argument("Multiple Q/O slot producers");found=i;}return found;};
++    auto flatRoot=[&](size_t id){id=canonical(id);size_t at=producer(id),steps=0;while(at!=SIZE_MAX&&ops_[at].kind==Kind::Layout&&ops_[at].dimensions==std::vector<size_t>{0}){if(++steps>ops_.size()||slots_[id].rows*slots_[id].columns!=512*4096)throw std::invalid_argument("Q/O reshape profile differs");id=canonical(ops_[at].a);at=producer(id);}return id;};
++    std::string prefix;for(const auto& item:weights_)if(item.second==kv.keyWeight&&item.first.size()>=13&&item.first.compare(item.first.size()-13,13,"k_proj.weight")==0){if(!prefix.empty())throw std::invalid_argument("Ambiguous Q/O layer prefix");prefix=item.first.substr(0,item.first.size()-13);}
++    auto q=weights_.find(prefix+"q_proj.weight"),o=weights_.find(prefix+"o_proj.weight");if(prefix.empty()||q==weights_.end()||o==weights_.end())throw std::invalid_argument("Missing immutable Q/O weights");
++    auto projection=[&](size_t weight){size_t found=SIZE_MAX;for(size_t i=0;i<ops_.size();++i){const auto& op=ops_[i];if(op.kind==Kind::MatMul&&op.b==weight){if(found!=SIZE_MAX||!residentOps_[i]||!op.transpose||!slots_[weight].affineInt4.Valid()||slots_[op.a].rows!=512||slots_[op.a].columns!=4096||slots_[op.out].rows!=512||slots_[op.out].columns!=4096)throw std::invalid_argument("Q/O projection profile differs");found=i;}}if(found==SIZE_MAX)throw std::invalid_argument("Missing Q/O product");return found;};
++    DiagnosticQO result;result.queryOp=projection(q->second);result.outputOp=projection(o->second);const auto& query=ops_[result.queryOp];const auto& output=ops_[result.outputOp];
++    if(result.queryOp+1!=kv.keyOp||query.a!=ops_[kv.keyOp].a||result.outputOp>=ffn.begin)throw std::invalid_argument("Q/O projection order/input differs");
++    size_t qr=SIZE_MAX,kr=SIZE_MAX,attend=SIZE_MAX;for(size_t i=0;i<result.outputOp;++i){const auto& op=ops_[i];if(op.kind==Kind::NormRope&&op.a==query.out){if(qr!=SIZE_MAX||op.dimensions!=std::vector<size_t>{32,128,128,0})throw std::invalid_argument("Q rope differs");qr=op.out;}if(op.kind==Kind::NormRope&&op.a==kv.keyOut)kr=op.out;if(op.kind==Kind::AttentionChunk){if(attend!=SIZE_MAX)throw std::invalid_argument("Multiple Q/O attention operations");attend=i;}}
++    if(attend==SIZE_MAX||qr==SIZE_MAX||kr==SIZE_MAX)throw std::invalid_argument("Missing Q/O attention producers");const auto& attention=ops_[attend];
++    if(!residentOps_[attend]||attention.dimensions!=std::vector<size_t>{32,8,128,4096,128,0}||attention.arguments.size()!=8||attention.arguments[0]!=qr||attention.arguments[1]!=kr||attention.arguments[2]!=kv.valueOut||attention.arguments[3]!=inputs_.at(1)||attention.arguments[4]!=inputs_.at(2)||attention.arguments[5]!=inputs_.at(4)||attention.arguments[6]!=inputs_.at(5)||attention.arguments[7]!=query.out||output.a!=attention.out)throw std::invalid_argument("Q/O attention dataflow differs");
++    std::array<size_t,2> commits{0,0};for(size_t i=0;i<result.outputOp;++i){const auto& op=ops_[i];if(op.kind!=Kind::KVChunk)continue;const size_t part=op.a==kr?1:(op.a==kv.valueOut?2:0);if(!part||i<=attend||!residentOps_[i]||op.dimensions!=std::vector<size_t>{8,128,4096,128}||op.arguments!=std::vector<size_t>{op.a,inputs_.at(part),inputs_.at(4),inputs_.at(5),inputs_.at(3)}||op.b!=inputs_.at(part)||std::find(outputStorageGroups_.at(part).begin(),outputStorageGroups_.at(part).end(),op.out)==outputStorageGroups_.at(part).end())throw std::invalid_argument("Q/O causal in-place cache commit differs");++commits[part-1];}
++    if(commits!=std::array<size_t,2>{1,1})throw std::invalid_argument("Q/O cache commits incomplete");
++    size_t mask=SIZE_MAX;for(const auto& op:ops_)if(op.kind==Kind::Layout&&op.dimensions==std::vector<size_t>{4096}&&op.a==inputs_.at(0)&&op.b==inputs_.at(5)){if(mask!=SIZE_MAX)throw std::invalid_argument("Multiple Q/O chunk masks");mask=op.out;}
++    auto residual=flatRoot(ffn.residual);size_t add=producer(residual);if(mask==SIZE_MAX||add==SIZE_MAX||ops_[add].kind!=Kind::Add||flatRoot(ops_[add].a)!=canonical(mask)||flatRoot(ops_[add].b)!=output.out||add<=result.outputOp||add>=ffn.begin)throw std::invalid_argument("Q/O residual does not match masked input plus O");
++    for(size_t i=result.outputOp+1;i<ffn.begin;++i)if(residentOps_[i]&&i!=add&&(ops_[i].kind!=Kind::Layout||ops_[i].dimensions!=std::vector<size_t>{0}))throw std::invalid_argument("Unexpected resident Q/O suffix");
++    // Only the norm/identity-layout/mask chain feeding the skipped Q/K/V
++    // projections becomes dead. Retain independent position/control producers.
++    size_t id=canonical(query.a),steps=0;std::set<size_t> dead,deadOutputs;size_t norms=0,masks=0;
++    while(id!=inputs_.at(0)){
++        if(++steps>ops_.size())throw std::logic_error("Cyclic Q/O input preparation");size_t at=producer(id);if(at==SIZE_MAX||!residentOps_[at])throw std::invalid_argument("Unknown Q/O input producer");const auto& op=ops_[at];
++        if(op.kind==Kind::Norm){if(op.b!=kv.normWeight||op.epsilon!=kv.epsilon||op.offset!=kv.offset)throw std::invalid_argument("Q/O input norm changed");++norms;}
++        else if(op.kind==Kind::Layout&&op.dimensions==std::vector<size_t>{4096}){if(op.a!=inputs_.at(0)||op.b!=inputs_.at(5))throw std::invalid_argument("Q/O input mask changed");++masks;}
++        else if(op.kind!=Kind::Layout||op.dimensions!=std::vector<size_t>{0})throw std::invalid_argument("Unexpected Q/O input preparation operation");
++        dead.insert(at);deadOutputs.insert(canonical(op.out));id=canonical(op.a);
++    }
++    if(norms!=1||masks!=1)throw std::invalid_argument("Incomplete Q/O input preparation chain");
++    for(size_t i=0;i<result.outputOp;++i)if(residentOps_[i]&&!dead.count(i)&&i!=result.queryOp&&i!=kv.keyOp&&i!=kv.valueOp){const auto& op=ops_[i];auto readsDead=[&](size_t at){return deadOutputs.count(canonical(at))!=0;};if(readsDead(op.a)||readsDead(op.b)||std::any_of(op.arguments.begin(),op.arguments.end(),readsDead))throw std::invalid_argument("Q/O input preparation has another live consumer");}
++    result.inputOps.assign(dead.begin(),dead.end());
++    result.queryOut=query.out;result.queryWeight=q->second;result.outputWeight=o->second;result.context=attention.out;return result;
++}
++void MetalCompiledGraph::EncodeDiagnosticAttentionPrefix(MetalContext& gpu,const DiagnosticKV& kv,const DiagnosticQO& qo) {
++    if(qo.queryOp>=qo.outputOp||kv.keyOp>=qo.outputOp||kv.valueOp>=qo.outputOp||qo.outputOp>=ops_.size())throw std::invalid_argument("Invalid Q/O prefix boundaries");
++    for(auto i:qo.inputOps)if(i>=qo.queryOp)throw std::invalid_argument("Q/O input producer outside preprojection region");
++    const auto original=residentOps_;for(size_t i=qo.outputOp;i<residentOps_.size();++i)residentOps_[i]=0;residentOps_[qo.queryOp]=residentOps_[kv.keyOp]=residentOps_[kv.valueOp]=0;for(auto i:qo.inputOps)residentOps_[i]=0;
++    try{Encode(gpu,false);}catch(...){residentOps_=original;throw;}residentOps_=original;
++}
++void MetalCompiledGraph::EncodeDiagnosticPrefix(MetalContext& gpu,size_t end,const DiagnosticKV* suppliedKV) {
++    if(!end||end>ops_.size())throw std::invalid_argument("Invalid diagnostic prefix boundary");
++    if(suppliedKV&&(suppliedKV->keyOp>=end||suppliedKV->valueOp>=end))throw std::invalid_argument("Supplied diagnostic K/V outside prefix");
++    const auto original=residentOps_;for(size_t i=end;i<residentOps_.size();++i)residentOps_[i]=0;
++    if(suppliedKV){residentOps_[suppliedKV->keyOp]=0;residentOps_[suppliedKV->valueOp]=0;}
++    try {Encode(gpu,false);}catch(...){residentOps_=original;throw;}residentOps_=original;
++}
++}
++#endif
+diff --git a/src/backends/metal/compiled_graph.h b/src/backends/metal/compiled_graph.h
+--- a/src/backends/metal/compiled_graph.h
++++ b/src/backends/metal/compiled_graph.h
+@@ -35,6 +35,9 @@
+     std::unique_ptr<MetalContext> gpu_;
+     std::vector<Slot> slots_;
+     std::vector<Op> ops_;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    std::unordered_map<size_t,size_t> diagnosticAliases_;
++#endif
+     std::vector<size_t> inputs_;
+     std::vector<std::vector<int64_t>> inputShapes_;
+     std::unordered_map<uint64_t,size_t> tensors_;
+@@ -109,6 +112,16 @@
+     void Encode(MetalContext&,bool packedOutput=true,const MetalMatrix* greedyOutput=nullptr,
+         const std::vector<size_t>* selectedTokenRows=nullptr,VerificationBindings* verification=nullptr);
+     void EncodeGreedy(MetalContext&,const MetalMatrix& prediction,const std::vector<size_t>* selectedRows=nullptr);
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    struct DiagnosticFfn {size_t begin=0,residual=0,normWeight=0,gateWeight=0,upWeight=0,downWeight=0;float epsilon=0,offset=0;};
++    DiagnosticFfn DescribeDiagnosticFfn() const;
++    struct DiagnosticKV {size_t keyOp=0,valueOp=0,keyOut=0,valueOut=0,keyWeight=0,valueWeight=0,normWeight=0;float epsilon=0,offset=0;};
++    DiagnosticKV DescribeDiagnosticKV() const;
++    struct DiagnosticQO {size_t queryOp=0,queryOut=0,queryWeight=0,outputOp=0,outputWeight=0,context=0;std::vector<size_t> inputOps;};
++    DiagnosticQO DescribeDiagnosticQO(const DiagnosticKV&,const DiagnosticFfn&) const;
++    void EncodeDiagnosticAttentionPrefix(MetalContext&,const DiagnosticKV&,const DiagnosticQO&);
++    void EncodeDiagnosticPrefix(MetalContext&,size_t end,const DiagnosticKV* suppliedKV=nullptr);
++#endif
+     bool CanUpdateKVInPlace(size_t part) const;
+ #ifdef GARNET_METAL_LINEAR_CHUNK_STATE_INPLACE
+     bool CanUpdateLinearStateInPlace(size_t part) const;
+diff --git a/src/backends/metal/continuous_scheduler.cpp b/src/backends/metal/continuous_scheduler.cpp
+--- a/src/backends/metal/continuous_scheduler.cpp
++++ b/src/backends/metal/continuous_scheduler.cpp
+@@ -1,5 +1,7 @@
+ // SPDX-License-Identifier: Apache-2.0
+ #include "continuous_scheduler.h"
++#include "lowering_context.h"
++#include <atomic>
+ #include "token_prefix_profile.h"
+ #include "../../runtime/scheduler/packed_token_plan.h"
+ #include "nlohmann/json.hpp"
+@@ -90,6 +92,10 @@
+     void Track(uint64_t id,X::Value tokens) {
+         if(!pendingTokens_.emplace(id,std::move(tokens)).second)throw std::logic_error("Duplicate tracked request identity");
+     }
++    int64_t PromptToken(uint64_t id,int position) const {
++        auto found=sequences_.find(id);if(found==sequences_.end()||!found->second.prompt.IsList()||position<0||uint64_t(position)>=found->second.prompt.Size())throw std::invalid_argument("Grouped prefill token is outside its immutable native request");
++        return found->second.prompt.Get(uint64_t(position)).ToInt64();
++    }
+     bool Tracked(uint64_t id) const {
+         auto found=sequences_.find(id);return found!=sequences_.end()&&found->second.prompt.IsList();
+     }
+@@ -181,6 +187,39 @@
+ #endif
+     scheduler_=std::move(policy);allocator_=std::move(allocator);failed_=false;return true;
+ }
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++namespace {
++std::atomic<uint64_t> nextBulkTicket{1};
++uint64_t BulkTicket(){auto n=nextBulkTicket.load();for(;;){if(n>=uint64_t(INT64_MAX))throw std::overflow_error("Native grouped plan tickets exhausted");if(nextBulkTicket.compare_exchange_weak(n,n+1))return n;}}
++}
++bool MetalContinuousScheduler::GroupedRequest(uint64_t id) const {return std::any_of(groupedRequests_.begin(),groupedRequests_.end(),[&](const auto& r){return r.id==id;});}
++void MetalContinuousScheduler::EraseGroupedRequest(uint64_t id) {groupedRequests_.erase(std::remove_if(groupedRequests_.begin(),groupedRequests_.end(),[&](const auto& r){return r.id==id;}),groupedRequests_.end());if(groupedRequests_.empty()){groupedChunks_=0;groupedTicket_=0;groupedExecuted_=false;}}
++bool MetalContinuousScheduler::SetBulkPrefill(int64_t chunks) {
++    std::lock_guard<std::mutex> lock(mutex_);Ready();
++    auto session=sessionOwner_.NativeData<MetalDecoderSession>();
++    if(rows_!=4||chunks<2||chunks>16||chunks>session->DiagnosticBulkChunkBound()||!inflight_.empty()||scheduler_->TrackedRequestCount())return false;
++    if(!scheduler_->SetPrefillGrouping(128,int(chunks),int(rows_*128*size_t(chunks))))return false;
++    maximumGroupedChunks_=int(chunks);return true;
++}
++X::Value MetalContinuousScheduler::RunBulkPrefill(X::Value hiddenChunks,int64_t ticket) {
++    std::lock_guard<std::mutex> lock(mutex_);Ready();
++    if(ticket<=0||uint64_t(ticket)!=groupedTicket_||groupedExecuted_||groupedChunks_<2||groupedRequests_.size()!=rows_||
++       hiddenChunks.runtime()!=Host()->runtime||!hiddenChunks.IsList()||hiddenChunks.Size()!=uint64_t(groupedChunks_))throw std::invalid_argument("Run only the current native grouped prefill ticket once");
++    for(uint64_t c=0;c<hiddenChunks.Size();++c){auto value=hiddenChunks.Get(c);if(value.runtime()!=Host()->runtime)throw std::invalid_argument("Grouped hidden runtime differs");X::Tensor t(value);auto lease=t.Acquire();auto info=t.Info();std::vector<int64_t> shape{4,128,4096};if(info.dtype!=X3_TENSOR_FLOAT32||info.symbolic||info.device_type||!info.data||info.rank!=3||!std::equal(shape.begin(),shape.end(),info.shape)||info.byte_size!=4*128*4096*4||!IsContiguousTensor(t))throw std::invalid_argument("Grouped prefill hidden profile differs");}
++    std::vector<const ScheduledRequest*> byRow(rows_,nullptr);auto epochs=X::Value::List(Host());
++    for(const auto& request:groupedRequests_){auto found=inflight_.find(request.id);auto placement=allocator_->Placement(request.id);
++        if(request.requestRow<0||size_t(request.requestRow)>=rows_||byRow[size_t(request.requestRow)]||found==inflight_.end()||found->second!=RequestStage::Prefill||!allocator_->Tracked(request.id)||placement.requestRow!=request.requestRow||placement.rowEpoch!=request.rowEpoch||allocator_->LogicalLength(request.id)!=request.prefillOffset||request.prefillTokens!=groupedChunks_*128||trackedExpected_.at(request.id)!=request.contextLength)throw std::logic_error("Current grouped native request/lease/progress differs");byRow[size_t(request.requestRow)]=&request;
++    }
++    for(size_t row=0;row<rows_;++row){if(!byRow[row])throw std::logic_error("Grouped native physical row missing");epochs.Append(X::Value(int64_t(byRow[row]->rowEpoch)));}
++    auto controls=X::Value::List(Host()),tokens=X::Value::List(Host());
++    for(int c=0;c<groupedChunks_;++c){std::vector<float> positions,slots,active(512,1.f);positions.reserve(1536);slots.reserve(512);auto ids=X::Value::List(Host());
++        for(size_t row=0;row<rows_;++row)for(int t=0;t<128;++t){int position=byRow[row]->prefillOffset+c*128+t;slots.push_back(float(position));for(int axis=0;axis<3;++axis)positions.push_back(float(position));ids.Append(X::Value(allocator_->PromptToken(byRow[row]->id,position)));}
++        auto bank=X::Value::List(Host());bank.Append(X::Tensor::Create(Host(),X3_TENSOR_FLOAT32,{4,128,3},positions.data(),positions.size()*4));bank.Append(X::Tensor::Create(Host(),X3_TENSOR_FLOAT32,{4,128},slots.data(),slots.size()*4));bank.Append(X::Tensor::Create(Host(),X3_TENSOR_FLOAT32,{4,128},active.data(),active.size()*4));controls.Append(bank);tokens.Append(ids);
++    }
++    try {auto result=sessionOwner_.NativeData<MetalDecoderSession>()->RunDiagnosticLeasedBulk(hiddenChunks,controls,epochs,tokens,true);groupedExecuted_=true;return result;}
++    catch(...){failed_=true;throw;}
++}
++#endif
+ bool MetalContinuousScheduler::SetPrefillChunk(int64_t tokens) {
+     std::lock_guard<std::mutex> lock(mutex_);Ready();
+     if(tokens<0||uint64_t(tokens)>kSchedulerPrefillChunkLimit||uint64_t(tokens)>capacity_||!inflight_.empty())return false;
+@@ -203,7 +242,11 @@
+ bool MetalContinuousScheduler::CompletePrefillChunk(int64_t id,int64_t tokens) {
+     std::lock_guard<std::mutex> lock(mutex_);Ready();
+     auto found=inflight_.find(uint64_t(id));
+-    if(id<=0||tokens<1||uint64_t(tokens)>kSchedulerPrefillChunkLimit||found==inflight_.end()||found->second!=RequestStage::Prefill)return false;
++    bool tokenBound=tokens>0&&uint64_t(tokens)<=kSchedulerPrefillChunkLimit;
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++    if(GroupedRequest(uint64_t(id)))tokenBound=groupedExecuted_&&tokens==groupedChunks_*128;
++#endif
++    if(id<=0||!tokenBound||found==inflight_.end()||found->second!=RequestStage::Prefill)return false;
+     try {
+ #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+         const auto expected=trackedExpected_.find(uint64_t(id));
+@@ -213,7 +256,11 @@
+ #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+         if(expected!=trackedExpected_.end()){allocator_->Capture(uint64_t(id),expected->second,true);trackedExpected_.erase(expected);}
+ #endif
+-        inflight_.erase(found);return true;
++        inflight_.erase(found);
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++        EraseGroupedRequest(uint64_t(id));
++#endif
++        return true;
+     }catch(...){failed_=true;throw;}
+ }
+ int64_t MetalContinuousScheduler::Submit(int64_t prompt,int64_t output,int64_t priority) {
+@@ -282,6 +329,14 @@
+             nlohmann::json body={{"stage",batch.stage==RequestStage::Prefill?"prefill":"decode"},
+                 {"bucket_size",rows_},{"active_rows",mask},{"epochs",epochs},{"requests",requests}};
+             if(batch.prefillChunkTokens)body["prefill_chunk"]=batch.prefillChunkTokens;
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++            if(batch.prefillGroupChunks>1){
++                if(batch.stage!=RequestStage::Prefill||maximumGroupedChunks_<batch.prefillGroupChunks||batch.requests.size()!=rows_||!groupedRequests_.empty())throw std::logic_error("Invalid native grouped scheduler plan");
++                for(const auto& r:batch.requests)if(!allocator_->Tracked(r.id))throw std::logic_error("Grouped scheduler requests must use native tracked token admission");
++                groupedRequests_=batch.requests;groupedChunks_=batch.prefillGroupChunks;groupedExecuted_=false;groupedTicket_=BulkTicket();
++                body["prefill_group_chunks"]=groupedChunks_;body["bulk_ticket"]=groupedTicket_;body["execution"]="native_leased_bulk";
++            }
++#endif
+             batches.push_back(std::move(body));
+         }
+         return nlohmann::json{{"batches",batches},
+@@ -293,6 +348,9 @@
+     std::lock_guard<std::mutex> lock(mutex_);Ready();
+     auto found=inflight_.find(uint64_t(id));
+     if(id<=0||token<0||token>INT_MAX||found==inflight_.end()||found->second!=RequestStage::Prefill)return -1;
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++    if(GroupedRequest(uint64_t(id))&&!groupedExecuted_)return -1;
++#endif
+     try {
+ #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+         const auto expected=trackedExpected_.find(uint64_t(id));
+@@ -306,6 +364,9 @@
+         trackedExpected_.erase(uint64_t(id));
+ #endif
+         const auto stage=scheduler_->Stage(uint64_t(id));inflight_.erase(found);
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++        EraseGroupedRequest(uint64_t(id));
++#endif
+         if(stage==RequestStage::Finished)scheduler_->ForgetFinished(uint64_t(id));
+         return int64_t(stage);
+     }catch(...){failed_=true;throw;}
+@@ -329,6 +390,9 @@
+         trackedExpected_.erase(uint64_t(id));
+ #endif
+         const auto stage=scheduler_->Stage(uint64_t(id));inflight_.erase(found);
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++        EraseGroupedRequest(uint64_t(id));
++#endif
+         if(stage==RequestStage::Finished)scheduler_->ForgetFinished(uint64_t(id));
+         return int64_t(stage);
+     }catch(...){failed_=true;throw;}
+@@ -379,11 +443,19 @@
+ bool MetalContinuousScheduler::Cancel(int64_t id) {
+     std::lock_guard<std::mutex> lock(mutex_);Ready();if(id<=0)return false;
+     try {
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++        const bool abandon=GroupedRequest(uint64_t(id))&&!groupedExecuted_;
++#endif
+         if(!scheduler_->Cancel(uint64_t(id),*allocator_))return false;
+ #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+         trackedExpected_.erase(uint64_t(id));
+ #endif
+-        inflight_.erase(uint64_t(id));scheduler_->ForgetFinished(uint64_t(id));return true;
++        inflight_.erase(uint64_t(id));scheduler_->ForgetFinished(uint64_t(id));
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++        if(abandon){for(const auto& r:groupedRequests_)if(r.id!=uint64_t(id)){if(!scheduler_->AbandonPrefillChunk(r.id))throw std::logic_error("Cannot abandon an unexecuted grouped survivor");inflight_.erase(r.id);trackedExpected_.erase(r.id);}groupedRequests_.clear();groupedChunks_=0;groupedTicket_=0;groupedExecuted_=false;}
++        else EraseGroupedRequest(uint64_t(id));
++#endif
++        return true;
+     }catch(...){failed_=true;throw;}
+ }
+ std::string MetalContinuousScheduler::StatusJson() {
+@@ -394,6 +466,9 @@
+ bool MetalContinuousScheduler::CloseUnlocked() {
+     bool result=!allocator_||allocator_->Clear();
+     inflight_.clear();scheduler_.reset();allocator_.reset();sessionOwner_=X::Value();
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++    groupedRequests_.clear();groupedChunks_=maximumGroupedChunks_=0;groupedTicket_=0;groupedExecuted_=false;
++#endif
+ #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+     trackedExpected_.clear();
+ #endif
+diff --git a/src/backends/metal/continuous_scheduler.h b/src/backends/metal/continuous_scheduler.h
+--- a/src/backends/metal/continuous_scheduler.h
++++ b/src/backends/metal/continuous_scheduler.h
+@@ -22,6 +22,14 @@
+     bool adaptiveProfiles_=false;
+     size_t maximumPrefillChunk_=128;
+ #endif
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++    std::vector<ScheduledRequest> groupedRequests_;
++    int groupedChunks_=0,maximumGroupedChunks_=0;
++    uint64_t groupedTicket_=0;
++    bool groupedExecuted_=false;
++    bool GroupedRequest(uint64_t id) const;
++    void EraseGroupedRequest(uint64_t id);
++#endif
+     bool failed_=false;
+     std::mutex mutex_;
+     void Ready() const;
+@@ -31,6 +39,10 @@
+     ~MetalContinuousScheduler();
+     bool Initialize(X::Value session,int64_t maxPending);
+     bool SetPrefillChunk(int64_t tokens);
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++    bool SetBulkPrefill(int64_t chunks);
++    X::Value RunBulkPrefill(X::Value hiddenChunks,int64_t ticket);
++#endif
+     bool CompletePrefillChunk(int64_t request,int64_t tokens);
+     int64_t Submit(int64_t prompt,int64_t output,int64_t priority);
+ #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+@@ -47,6 +59,10 @@
+     bool Close();
+     BEGIN_PACKAGE(MetalContinuousScheduler)
+         APISET().AddFunc<2>("initialize",&MetalContinuousScheduler::Initialize);
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
++        APISET().AddFunc<1>("set_bulk_prefill",&MetalContinuousScheduler::SetBulkPrefill);
++        APISET().AddFunc<2>("run_bulk_prefill",&MetalContinuousScheduler::RunBulkPrefill);
++#endif
+         APISET().AddFunc<1>("set_prefill_chunk",&MetalContinuousScheduler::SetPrefillChunk);
+         APISET().AddFunc<2>("complete_prefill_chunk",&MetalContinuousScheduler::CompletePrefillChunk);
+         APISET().AddFunc<3>("submit",&MetalContinuousScheduler::Submit);
+diff --git a/src/backends/metal/decoder_session.cpp b/src/backends/metal/decoder_session.cpp
+--- a/src/backends/metal/decoder_session.cpp
++++ b/src/backends/metal/decoder_session.cpp
+@@ -7,6 +7,7 @@
+ #include <stdexcept>
+ #include <atomic>
+ #include <limits>
++#include <set>
+ namespace Garnet {
+ bool MetalDecoderSession::PrepareGpuCounters() {
+     std::lock_guard<std::mutex> lock(mutex_);
+@@ -100,6 +101,9 @@
+ }
+ #endif
+ void MetalDecoderSession::Clear() {
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    diagnosticLayerBulk_.reset();diagnosticLayerBulkStats_="{}";
++#endif
+ #ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+     compactFamilies_.clear();compactDecodeHidden_=MetalMatrix();compactRunning_=nullptr;compactFirst_=compactLastRows_=0;compactLastFirst_=4;compactSealed_=false;
+ #endif
+@@ -225,6 +229,15 @@
+     }
+ #ifdef GARNET_METAL_MTP_BRIDGE
+     ResetMTP();
++#endif
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    if(diagnosticLayerBulk_) {
++        std::set<uintptr_t> restored;
++        auto zero=[&](const MetalMatrix& m){auto b=MetalContext::MatrixBufferInfo(m);if(b.identity&&restored.insert(b.identity).second)gpu_->Zero(m);};
++        auto& p=*diagnosticLayerBulk_;for(const auto& m:p.tape)zero(m);
++        for(const auto& m:{p.residual,p.norm,p.gate,p.up,p.down,p.hidden,p.lastHidden,p.key,p.value})zero(m);
++        for(const auto& m:gpu_->DiagnosticBulkScratch())zero(m);
++    }
+ #endif
+     hidden_=MetalMatrix();hiddenShape_.clear();kvInplaceUpdates_=0;poisoned_=false;inferenceMs_=0;prepareMs_=encodeMs_=gpuMs_=waitMs_=0;
+ #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
+@@ -1100,6 +1113,13 @@
+     for(size_t k=0;k<2;++k)result.Append(TensorValue(Host(),*gpu_,state.matrix[k],state.shape[k]));
+     return result;
+ }
++#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE) && defined(GARNET_METAL_CONTINUOUS_ROWS)
++X::Value MetalDecoderSession::DiagnosticFinalHidden() {
++ std::lock_guard<std::mutex> lock(mutex_);
++ if(!gpu_||poisoned_||!rowFinalHidden_.Valid()||rowFinalWidth_!=4096)throw std::logic_error("No completed diagnostic row-hidden bank");
++ return TensorValue(Host(),*gpu_,rowFinalHidden_,{4,4096});
++}
++#endif
+ X::Value MetalDecoderSession::Hidden() {
+     std::lock_guard<std::mutex> lock(mutex_);
+ #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+diff --git a/src/backends/metal/decoder_session.h b/src/backends/metal/decoder_session.h
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -32,6 +32,16 @@
+ #endif
+     };
+     std::unique_ptr<MetalContext> gpu_;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    struct DiagnosticBulkLayer {MetalCompiledGraph* graph=nullptr;uint64_t generation=0;MetalCompiledGraph::DiagnosticFfn ffn;MetalCompiledGraph::DiagnosticKV kv;MetalCompiledGraph::DiagnosticQO qo;std::vector<size_t> controlIds;std::vector<std::vector<MetalMatrix>> controls;};
++    struct DiagnosticBulkGroup {MetalMatrix residual,norm,gate,up,down,key,value;std::array<MetalMatrix,2> tape;};
++    struct DiagnosticLayerBulk {X::Value graphs;size_t chunks=0;std::vector<DiagnosticBulkGroup> groups;std::vector<DiagnosticBulkLayer> layers;std::array<MetalMatrix,2> tape;std::array<std::vector<MetalMatrix>,2> tapeViews;MetalMatrix residual,norm,gate,up,silu,down,hidden,lastHidden,key,value;std::vector<MetalMatrix> residualViews,keyViews,valueViews,normViews;uint64_t workspaceBytes=0;};
++    std::unique_ptr<DiagnosticLayerBulk> diagnosticLayerBulk_;
++    std::string diagnosticLayerBulkStats_="{}";
++    bool diagnosticBulkKVEnabled_=false;
++    bool diagnosticBulkQOEnabled_=false;
++#endif
++
+ #ifdef GARNET_METAL_SHARED_PREFILL_SCRATCH
+     std::shared_ptr<MetalPrefillScratch> prefillScratch_;
+ #endif
+@@ -301,6 +311,20 @@
+     X::Value Run(X::Value graphs,X::Value hidden,X::Value positions,
+         X::Value slots,X::Value active,int64_t predictionToken);
+     void Reset();
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    bool PrepareDiagnosticLayerBulk(X::Value graphs,int64_t chunks);
++    bool SetDiagnosticBulkKV(bool enabled);
++    bool SetDiagnosticBulkQO(bool enabled);
++    X::Value RunDiagnosticLayerBulk(X::Value hiddenChunks,X::Value controls,bool enabled);
++#if defined(GARNET_METAL_TOKEN_PREFIX_CACHE) && defined(GARNET_METAL_CONTINUOUS_ROWS)
++    bool ConfigureTokenTracking(X::Value identity){return ConfigureTokenPrefix(identity,0,0);}
++    int64_t DiagnosticBulkChunkBound(){std::lock_guard<std::mutex> lock(mutex_);return gpu_&&!poisoned_&&tokenCache_&&diagnosticLayerBulk_?int64_t(diagnosticLayerBulk_->chunks):0;}
++    X::Value RunDiagnosticLeasedBulk(X::Value hiddenChunks,X::Value controls,X::Value epochs,X::Value tokenChunks,bool enabled);
++    X::Value DiagnosticFinalHidden();
++#endif
++    std::string DiagnosticLayerBulkStatsJson(){std::lock_guard<std::mutex> lock(mutex_);return diagnosticLayerBulkStats_;}
++#endif
++
+ #ifdef GARNET_METAL_VERIFY_ATTENTION
+     bool PrepareVerification(X::Value graphs,X::Value head);
+     X::Value VerifyGreedy(X::Value hidden,X::Value positions,X::Value slots,X::Value active,
+@@ -528,6 +552,19 @@
+         APISET().AddFunc<0>("reset",&MetalDecoderSession::Reset);
+ #if defined(GARNET_METAL_QWEN38_WIDE_PREFILL)||defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
+         APISET().AddFunc<2>("prepare_prefill",&MetalDecoderSession::PreparePrefill);
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++        APISET().AddFunc<2>("diagnostic_layer_bulk_prepare",&MetalDecoderSession::PrepareDiagnosticLayerBulk);
++        APISET().AddFunc<1>("diagnostic_bulk_kv_set_enabled",&MetalDecoderSession::SetDiagnosticBulkKV);
++        APISET().AddFunc<1>("diagnostic_bulk_qo_set_enabled",&MetalDecoderSession::SetDiagnosticBulkQO);
++        APISET().AddFunc<3>("diagnostic_layer_bulk_run",&MetalDecoderSession::RunDiagnosticLayerBulk);
++#if defined(GARNET_METAL_TOKEN_PREFIX_CACHE) && defined(GARNET_METAL_CONTINUOUS_ROWS)
++        APISET().AddFunc<1>("configure_token_tracking",&MetalDecoderSession::ConfigureTokenTracking);
++        APISET().AddFunc<5>("diagnostic_leased_bulk_run",&MetalDecoderSession::RunDiagnosticLeasedBulk);
++        APISET().AddFunc<0>("diagnostic_final_hidden",&MetalDecoderSession::DiagnosticFinalHidden);
++        APISET().AddFunc<2>("diagnostic_tracked_token_count",&MetalDecoderSession::TrackedTokenCount);
++#endif
++        APISET().AddFunc<0>("diagnostic_layer_bulk_stats_json",&MetalDecoderSession::DiagnosticLayerBulkStatsJson);
++#endif
+ #endif
+ #ifdef GARNET_METAL_REQUEST_ROWS
+         APISET().AddFunc<1>("reset_row",&MetalDecoderSession::ResetRow);
+diff --git a/src/backends/metal/metal_context.h b/src/backends/metal/metal_context.h
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -199,6 +199,23 @@
+ #ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+     bool PreparePackedAffineProfile(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&,size_t maximumRows);
+     void SetPackedAffineEnabled(bool enabled);
++    // Research-only projection amortization. Prepared dense up-to8192 rows;
++    // not an inference/session/serving interface.
++    bool PrepareDiagnosticBulkAffine(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&);
++    void EncodeDiagnosticBulkAffine(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&);
++    size_t LastDiagnosticBulkDispatches() const;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    void EncodeDiagnosticSiluHalf(const MetalMatrix&,const MetalMatrix&,const MetalMatrix& halfCarrier);
++    void EncodeDiagnosticHalfCastReference(const MetalMatrix&,const MetalMatrix& halfCarrier);
++    void EncodeDiagnosticBulkGatedDown(const MetalMatrix& gate,const MetalMatrix& up,const MetalAffineInt4Weight&,const MetalMatrix&);
++    size_t LastDiagnosticSiluHalfDispatches() const;
++    MetalMatrix PrepareDiagnosticDenseView(const MetalMatrix&,size_t firstElement,size_t rows,size_t columns) const;
++    void SetDiagnosticPackedFullTileEnabled(bool enabled);
++    bool DiagnosticPackedFullTileEnabled() const;
++    size_t LastDiagnosticPackedFullTileDispatches() const;
++#endif
++    std::array<MetalMatrix,2> DiagnosticBulkScratch() const;
++
+     size_t LastPackedAffineDispatches() const;
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+     void SetPairedPackedPrefillEnabled(bool enabled);
+diff --git a/src/backends/metal/metal_context.mm b/src/backends/metal/metal_context.mm
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -3,6 +3,10 @@
+ #endif
+ // SPDX-License-Identifier: Apache-2.0
+ #include "metal_context.h"
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++#include "bulk_silu_half_policy.h"
++#include "bulk_silu_half_shader.h"
++#endif
+ #ifdef GARNET_METAL_VALUE_PROFILE32
+ #include "value_profile_shader.h"
+ #include "value_profile_policy.h"
+@@ -22,6 +26,10 @@
+ #endif
+ #ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+ #include "packed_affine_shader.h"
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++#include "packed_fulltile_diagnostic_shader.h"
++#endif
++#include "streamed_affine_shader.h"
+ #endif
+ #ifdef GARNET_METAL_SILU_PROFILE32
+ #include "silu_profile_shader.h"
+@@ -451,6 +459,9 @@
+     id<MTLComputePipelineState> residualNorm;
+     id<MTLComputePipelineState> packedPrefillNorm;
+     id<MTLComputePipelineState> silu;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    id<MTLComputePipelineState> bulkSiluHalf=nil;
++#endif
+ #ifdef GARNET_METAL_SILU_PROFILE32
+     id<MTLComputePipelineState> siluProfile32=nil;
+ #endif
+@@ -579,6 +590,9 @@
+ #endif
+ #ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+     struct PackedPlan {std::array<id<MTLComputePipelineState>,2> pipelines{};
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++        std::array<id<MTLComputePipelineState>,2> diagnosticFullTile{};
++#endif
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+         std::array<id<MTLComputePipelineState>,2> paired{};
+ #endif
+@@ -588,6 +602,23 @@
+     id<MTLLibrary> packedLibrary=nil;
+     id<MTLComputePipelineState> packedGather=nil;
+     bool packedEnabled=true;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    bool diagnosticPackedFullTileEnabled=false;
++    size_t diagnosticPackedFullTileDispatches=0;
++#endif
++    struct DiagnosticBulkPlan {MPSMatrix* a=nil;MPSMatrix* w=nil;MPSMatrixMultiplication* product=nil;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++        MetalMatrix halfCarrier;
++#endif
++    };
++    std::map<std::array<size_t,3>,DiagnosticBulkPlan> diagnosticBulkPlans;
++    std::array<MetalMatrix,2> diagnosticBulkScratch;
++    id<MTLComputePipelineState> diagnosticBulkUnpack=nil,diagnosticBulkCast=nil;
++    size_t diagnosticBulkDispatches=0;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    size_t diagnosticSiluHalfDispatches=0;
++#endif
++
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+     bool pairedPackedEnabled=false;
+     size_t pairedPackedDispatches=0;
+@@ -1765,6 +1796,9 @@
+ #ifdef GARNET_METAL_SILU_PROFILE32
+         source=[source stringByAppendingString:[NSString stringWithUTF8String:kSiluProfile32Shader]];
+ #endif
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++        source=[source stringByAppendingString:[NSString stringWithUTF8String:kBulkSiluHalfShader]];
++#endif
+         MTLCompileOptions* compileOptions=nil;
+ #ifdef GARNET_METAL_NATIVE_BFLOAT_BODY
+         source=[source stringByAppendingString:[NSString stringWithUTF8String:R"METAL(
+@@ -2188,6 +2222,10 @@
+         if(!impl_->kernels->residualNorm)throw std::runtime_error("Cannot create residual normalization pipeline");
+ #endif
+         impl_->kernels->silu=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"silu_mul"] error:&error];
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++        impl_->kernels->bulkSiluHalf=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"bulk_silu_half"] error:&error];
++        if(!impl_->kernels->bulkSiluHalf||impl_->kernels->bulkSiluHalf.threadExecutionWidth!=32||impl_->kernels->bulkSiluHalf.maxTotalThreadsPerThreadgroup<128)throw std::runtime_error("Cannot prepare bounded fused SiLU-half pipeline");
++#endif
+ #ifdef GARNET_METAL_SILU_PROFILE32
+         auto siluProfile=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"silu_profile32"] error:&error];
+         if(!siluProfile||siluProfile.threadExecutionWidth!=32||siluProfile.maxTotalThreadsPerThreadgroup<128)
+@@ -2668,6 +2706,97 @@
+ }
+ }
+ size_t MetalContext::LastPackedAffineDispatches() const {return impl_->packedDispatches;}
++size_t MetalContext::LastDiagnosticBulkDispatches() const {return impl_->diagnosticBulkDispatches;}
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++MetalMatrix MetalContext::PrepareDiagnosticDenseView(const MetalMatrix& owner,size_t first,size_t rows,size_t columns) const {
++ @autoreleasepool {
++ if(impl_->command||impl_->submitted.count)throw std::logic_error("Prepare dense spans before inference");
++ if(!owner.impl_||!owner.impl_->ready||owner.impl_->pending||owner.impl_->matrix.device!=impl_->device)throw std::invalid_argument("Dense span needs an initialized owner");
++ auto a=owner.impl_->matrix;
++ if(a.dataType!=MPSDataTypeFloat32||a.rowBytes!=a.columns*4||!rows||!columns||rows>8192||columns>524288||first%4||columns%4||first>a.rows*a.columns||rows>(a.rows*a.columns-first)/columns)throw std::invalid_argument("Dense span exceeds initialized backing storage");
++ auto storage=std::make_shared<MetalMatrix::Impl>(owner.impl_);auto desc=[MPSMatrixDescriptor matrixDescriptorWithRows:rows columns:columns rowBytes:columns*4 dataType:MPSDataTypeFloat32];
++ storage->matrix=[[MPSMatrix alloc] initWithBuffer:a.data offset:a.offset+first*4 descriptor:desc];if(!storage->matrix)throw std::runtime_error("Cannot prepare dense span");
++#ifdef GARNET_METAL_CACHED_MATRIX_METADATA
++ auto v=storage->matrix;storage->bufferIdentity=reinterpret_cast<uintptr_t>((__bridge void*)v.data);storage->deviceIdentity=reinterpret_cast<uintptr_t>((__bridge void*)v.device);storage->rows=v.rows;storage->columns=v.columns;storage->rowBytes=v.rowBytes;storage->offset=v.offset;storage->allocatedBytes=v.data.allocatedSize;storage->lengthBytes=v.data.length;
++#endif
++ return MetalMatrix(storage);
++ }
++}
++#endif
++
++std::array<MetalMatrix,2> MetalContext::DiagnosticBulkScratch() const {return impl_->diagnosticBulkScratch;}
++bool MetalContext::PrepareDiagnosticBulkAffine(const MetalMatrix& input,const MetalAffineInt4Weight& weight,const MetalMatrix& output) {
++    @autoreleasepool {
++    if(impl_->command||impl_->submitted.count)throw std::logic_error("Prepare bulk projection before inference");
++    if(!input.impl_||!weight.impl_||!output.impl_)throw std::invalid_argument("Missing bulk operands");
++    auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
++    if(a.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||a.data==o.data||
++       !a.rows||a.rows>8192||a.rows!=o.rows||a.columns!=w->columns||o.columns!=w->rows||
++       a.dataType!=MPSDataTypeFloat32||o.dataType!=MPSDataTypeFloat32||a.rowBytes!=a.columns*4||o.rowBytes!=o.columns*4)
++        throw std::invalid_argument("Invalid dense bulk projection profile");
++    // Diagnostic-only K/V product. Original packed selection and its kernels
++    // remain unchanged, so the control still uses the existing indexed path.
++    const bool kvShape=o.columns==1024&&a.columns==4096;
++    if(!PackedAffineShape(o.columns,a.columns)&&!kvShape)return false;
++    const std::array<size_t,3> key{a.rows,a.columns,o.columns};if(impl_->diagnosticBulkPlans.count(key))return true;
++    if(impl_->diagnosticBulkPlans.size()>=64)throw std::logic_error("Bulk preparation profile bound");
++    if(!impl_->diagnosticBulkUnpack) {
++        NSError* error=nil;auto opts=[MTLCompileOptions new];opts.fastMathEnabled=NO;
++        NSString* source=[NSString stringWithUTF8String:kStreamedAffineShader];
++        source=[source stringByAppendingString:@"\nkernel void diagnostic_bulk_cast(device const float* a [[buffer(0)]],device half* h [[buffer(1)]],constant uint& count [[buffer(2)]],uint i [[thread_position_in_grid]]){if(i<count)h[i]=half(a[i]);}\n"];
++        auto library=[impl_->device newLibraryWithSource:source options:opts error:&error];
++        if(!library)throw std::runtime_error("Cannot compile bulk projection helpers");
++        auto make=[&](NSString* name){auto p=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:name] error:&error];if(!p||p.maxTotalThreadsPerThreadgroup<256)throw std::runtime_error("Cannot create bulk helper");return p;};
++        auto unpack=make(@"streamed_affine_unpack"),cast=make(@"diagnostic_bulk_cast");
++        // Existing owned float buffers hold bounded half weight/input storage.
++        std::array<MetalMatrix,2> scratch{Allocate(14336,2048),Allocate(8192,7168)};
++        impl_->diagnosticBulkScratch=std::move(scratch);impl_->diagnosticBulkUnpack=unpack;impl_->diagnosticBulkCast=cast;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++        // Partial half-carrier views inherit initialized parent readiness.
++        for(const auto& owner:impl_->diagnosticBulkScratch)Zero(owner);
++#endif
++    }
++    auto halfW=impl_->diagnosticBulkScratch[0].impl_->matrix,halfA=impl_->diagnosticBulkScratch[1].impl_->matrix;
++    Impl::DiagnosticBulkPlan plan;
++    plan.a=[[MPSMatrix alloc] initWithBuffer:halfA.data descriptor:[MPSMatrixDescriptor matrixDescriptorWithRows:a.rows columns:a.columns rowBytes:a.columns*2 dataType:MPSDataTypeFloat16]];
++    plan.w=[[MPSMatrix alloc] initWithBuffer:halfW.data descriptor:[MPSMatrixDescriptor matrixDescriptorWithRows:o.columns columns:a.columns rowBytes:a.columns*2 dataType:MPSDataTypeFloat16]];
++    plan.product=[[MPSMatrixMultiplication alloc] initWithDevice:impl_->device transposeLeft:NO transposeRight:YES resultRows:a.rows resultColumns:o.columns interiorColumns:a.columns alpha:1 beta:0];
++    if(!plan.a||!plan.w||!plan.product)throw std::runtime_error("Cannot prepare bulk MPS plan");
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    plan.halfCarrier=PrepareDiagnosticDenseView(impl_->diagnosticBulkScratch[1],0,a.rows,a.columns/2);
++#endif
++    impl_->diagnosticBulkPlans.emplace(key,std::move(plan));return true;
++    }
++}
++void MetalContext::EncodeDiagnosticBulkAffine(const MetalMatrix& input,const MetalAffineInt4Weight& weight,const MetalMatrix& output) {
++    @autoreleasepool {
++    if(!impl_->command||!input.impl_||!weight.impl_||!output.impl_)throw std::logic_error("Bulk projection needs an open batch and operands");
++    auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
++    if(a.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||a.data==o.data||(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))||
++       !a.rows||a.rows>8192||a.rows!=o.rows||a.columns!=w->columns||o.columns!=w->rows||a.rowBytes!=a.columns*4||o.rowBytes!=o.columns*4||
++       a.dataType!=MPSDataTypeFloat32||o.dataType!=MPSDataTypeFloat32)
++        throw std::invalid_argument("Bulk projection operand layout/readiness mismatch");
++    auto found=impl_->diagnosticBulkPlans.find({a.rows,a.columns,o.columns});if(found==impl_->diagnosticBulkPlans.end())throw std::logic_error("Bulk profile not prepared");
++    for(const auto& scratch:impl_->diagnosticBulkScratch)if(a.data==scratch.impl_->matrix.data||o.data==scratch.impl_->matrix.data)throw std::invalid_argument("Bulk private workspace alias");
++    output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
++    const auto& plan=found->second;auto e=impl_->ComputeEncoder(__func__);if(!e)throw std::runtime_error("Cannot encode bulk unpack/cast");
++    [e setComputePipelineState:impl_->diagnosticBulkUnpack];[e setBuffer:w->packed offset:0 atIndex:0];[e setBuffer:w->scales offset:0 atIndex:1];[e setBuffer:w->biases offset:0 atIndex:2];[e setBuffer:plan.w.data offset:0 atIndex:3];
++    uint32_t dims[]{uint32_t(o.columns),uint32_t(a.columns)};[e setBytes:dims length:sizeof(dims) atIndex:4];[e dispatchThreads:MTLSizeMake(o.columns*a.columns,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];
++    [e setComputePipelineState:impl_->diagnosticBulkCast];[e setBuffer:a.data offset:a.offset atIndex:0];[e setBuffer:plan.a.data offset:0 atIndex:1];uint32_t count=uint32_t(a.rows*a.columns);[e setBytes:&count length:sizeof(count) atIndex:2];[e dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[e endEncoding];
++    [plan.product encodeToCommandBuffer:impl_->command leftMatrix:plan.a rightMatrix:plan.w resultMatrix:o];
++    ++impl_->diagnosticBulkDispatches;output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
++    }
++}
++
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++void MetalContext::SetDiagnosticPackedFullTileEnabled(bool enabled) {
++ if(impl_->command||impl_->submitted.count)throw std::logic_error("Select diagnostic full tiles between drained batches");
++ impl_->diagnosticPackedFullTileEnabled=enabled;
++}
++bool MetalContext::DiagnosticPackedFullTileEnabled() const {return impl_->diagnosticPackedFullTileEnabled;}
++size_t MetalContext::LastDiagnosticPackedFullTileDispatches() const {return impl_->diagnosticPackedFullTileDispatches;}
++#endif
++
+ size_t MetalContext::PackedAffinePlanCount() const {return impl_->packedPlans.size();}
+ MetalMatrix MetalContext::PackedAffineScratch() const {return impl_->packedInput;}
+ void MetalContext::SetPackedAffineEnabled(bool enabled) {
+@@ -2697,6 +2826,9 @@
+             auto opts=[MTLCompileOptions new];opts.languageVersion=MTLLanguageVersion4_0;opts.mathMode=MTLMathModeSafe;
+             NSString* source=[@"#define GARNET_AFFINE_PROFILE 1\n#define GARNET_AFFINE_INDEX32 1\n#define GARNET_AFFINE_FP16_COEFFICIENTS 1\n" stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4ProfilePrelude]];
+             source=[source stringByAppendingString:[NSString stringWithUTF8String:kPackedAffineShader]];
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++            source=[source stringByAppendingString:[NSString stringWithUTF8String:kPackedFullTileDiagnosticShader]];
++#endif
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+             source=[source stringByAppendingString:[NSString stringWithUTF8String:kPairedPrefillShader]];
+ #endif
+@@ -2755,6 +2887,17 @@
+             }
+         }
+ #endif
++
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++        const std::array<NSString*,2> fullTileNames{@"fulltile_m128k128",@"fulltile_m256k128"};
++        for(size_t i=0;i<2;++i){auto function=[impl_->packedLibrary newFunctionWithName:fullTileNames[i] constantValues:constants error:&error];
++            if(!function)throw std::runtime_error("Cannot specialize fulltile diagnostic: "+std::string(error.localizedDescription.UTF8String));
++            auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
++            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<256||pipeline.staticThreadgroupMemoryLength!=17408||pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
++                throw std::runtime_error("Fulltile diagnostic exceeds device/declared scratch bounds");
++            plan.diagnosticFullTile[i]=pipeline;
++        }
++#endif
+         impl_->packedPlans.emplace(key,std::move(plan));return true;
+     }
+ }
+@@ -2791,6 +2934,12 @@
+     // shorter/narrow projections keep the128-row tile. No input padding.
+     const size_t tile=(indices.size()>=256&&(o.columns==14336||(a.columns==14336&&indices.size()>=384)))?256:128;
+     auto pipeline=found->second.pipelines[tile==256?1:0];
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    // Native dispatch proof: every cooperative row lies in the actual compact
++    // token array. A profile ceiling is never substituted for indices.size().
++    const bool fullTile=impl_->diagnosticPackedFullTileEnabled&&indices.size()%tile==0;
++    if(fullTile){if(!found->second.diagnosticFullTile[tile==256?1:0])throw std::logic_error("Fulltile diagnostic not prepared");pipeline=found->second.diagnosticFullTile[tile==256?1:0];}
++#endif
+     struct Params {uint64_t rows,inner,columns,aStride,oStride;};
+     const Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+     encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode packed prefill projection");
+@@ -2798,6 +2947,9 @@
+     [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];[encoder setBuffer:o.data offset:o.offset atIndex:4];
+     [encoder setBytes:&params length:sizeof(params) atIndex:5];[encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:6];
+     [encoder dispatchThreadgroups:MTLSizeMake(o.columns/64,(indices.size()+tile-1)/tile,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    impl_->diagnosticPackedFullTileDispatches+=fullTile;
++#endif
+     ++impl_->packedDispatches;++impl_->affineProfileDispatches;if(reportIndexed)++impl_->indexedAffineDispatches;
+     impl_->affineProfileMaxThreads=pipeline.maxTotalThreadsPerThreadgroup;
+     output.impl_->ready=false;output.impl_->pending=true;
+@@ -4272,7 +4424,13 @@
+     impl_->streamedDispatches=0;
+ #endif
+ #ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+-    impl_->packedDispatches=0;
++    impl_->packedDispatches=0;impl_->diagnosticBulkDispatches=0;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    impl_->diagnosticPackedFullTileDispatches=0;
++#endif
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    impl_->diagnosticSiluHalfDispatches=0;
++#endif
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+     impl_->pairedPackedDispatches=0;
+ #endif
+@@ -5890,7 +6048,13 @@
+     impl_->streamedDispatches=0;
+ #endif
+ #ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+-    impl_->packedDispatches=0;
++    impl_->packedDispatches=0;impl_->diagnosticBulkDispatches=0;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    impl_->diagnosticPackedFullTileDispatches=0;
++#endif
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    impl_->diagnosticSiluHalfDispatches=0;
++#endif
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+     impl_->pairedPackedDispatches=0;
+ #endif
+@@ -5997,3 +6161,39 @@
+ #endif
+ }
+ }
++
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++namespace Garnet {
++size_t MetalContext::LastDiagnosticSiluHalfDispatches() const {return impl_->diagnosticSiluHalfDispatches;}
++void MetalContext::EncodeDiagnosticSiluHalf(const MetalMatrix& gate,const MetalMatrix& up,const MetalMatrix& carrier) {
++ @autoreleasepool {
++ if(!impl_->command||!gate.impl_||!up.impl_||!carrier.impl_)throw std::logic_error("SiLU-half needs an open batch and operands");
++ auto a=gate.impl_->matrix,b=up.impl_->matrix,h=carrier.impl_->matrix;
++ auto readable=[&](const MetalMatrix& m){return m.impl_->ready||(m.impl_->pending&&impl_->pendingOutputs.count(m.impl_->PendingKey()));};
++ if(a.device!=impl_->device||b.device!=impl_->device||h.device!=impl_->device||!readable(gate)||!readable(up)||a.rows!=b.rows||a.columns!=b.columns||h.rows!=a.rows||h.columns*2!=a.columns||a.dataType!=MPSDataTypeFloat32||b.dataType!=MPSDataTypeFloat32||h.dataType!=MPSDataTypeFloat32||a.data==h.data||b.data==h.data||a.rowBytes%4||b.rowBytes%4||h.rowBytes%2||!BulkSiluHalfSupported(a.rows,a.columns,a.rowBytes/4,b.rowBytes/4,h.rowBytes/2))throw std::invalid_argument("SiLU-half profile/readiness/alias mismatch");
++ carrier.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(carrier.impl_->PendingKey()));
++ struct Params {uint32_t rows,columns,aStride,bStride,hStride;};Params q{uint32_t(a.rows),uint32_t(a.columns),uint32_t(a.rowBytes/4),uint32_t(b.rowBytes/4),uint32_t(h.rowBytes/2)};
++ auto e=impl_->ComputeEncoder(__func__);if(!e)throw std::runtime_error("Cannot encode fused SiLU-half");[e setComputePipelineState:impl_->kernels->bulkSiluHalf];[e setBuffer:a.data offset:a.offset atIndex:0];[e setBuffer:b.data offset:b.offset atIndex:1];[e setBuffer:h.data offset:h.offset atIndex:2];[e setBytes:&q length:sizeof(q) atIndex:3];[e dispatchThreads:MTLSizeMake(a.rows*a.columns,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[e endEncoding];
++ ++impl_->diagnosticSiluHalfDispatches;carrier.impl_->ready=false;carrier.impl_->pending=true;if(impl_->pendingOutputs.insert(carrier.impl_->PendingKey()).second)impl_->outputs.push_back(carrier.impl_);
++ }
++}
++void MetalContext::EncodeDiagnosticHalfCastReference(const MetalMatrix& input,const MetalMatrix& carrier) {
++ @autoreleasepool {
++ if(!impl_->command||!impl_->diagnosticBulkCast||!input.impl_||!carrier.impl_)throw std::logic_error("Prepare native bulk cast before its reference call");auto a=input.impl_->matrix,h=carrier.impl_->matrix;
++ if(a.device!=impl_->device||h.device!=impl_->device||a.dataType!=MPSDataTypeFloat32||h.dataType!=MPSDataTypeFloat32||a.rows!=h.rows||a.columns!=h.columns*2||a.rowBytes!=a.columns*4||h.rowBytes!=a.columns*2||a.data==h.data||(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))||!BulkSiluHalfSupported(a.rows,a.columns,a.columns,a.columns,a.columns))throw std::invalid_argument("Native half reference shape/readiness/alias mismatch");
++ carrier.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(carrier.impl_->PendingKey()));auto e=impl_->ComputeEncoder(__func__);if(!e)throw std::runtime_error("Cannot encode native half reference");[e setComputePipelineState:impl_->diagnosticBulkCast];[e setBuffer:a.data offset:a.offset atIndex:0];[e setBuffer:h.data offset:h.offset atIndex:1];uint32_t count=uint32_t(a.rows*a.columns);[e setBytes:&count length:sizeof(count) atIndex:2];[e dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[e endEncoding];carrier.impl_->ready=false;carrier.impl_->pending=true;if(impl_->pendingOutputs.insert(carrier.impl_->PendingKey()).second)impl_->outputs.push_back(carrier.impl_);
++ }
++}
++void MetalContext::EncodeDiagnosticBulkGatedDown(const MetalMatrix& gate,const MetalMatrix& up,const MetalAffineInt4Weight& weight,const MetalMatrix& output) {
++ @autoreleasepool {
++ if(!impl_->command||!gate.impl_||!up.impl_||!weight.impl_||!output.impl_)throw std::logic_error("Fused gated down needs an open batch and operands");auto a=gate.impl_->matrix,b=up.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
++ if(a.device!=impl_->device||b.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||a.rows!=b.rows||a.columns!=b.columns||a.rows!=o.rows||a.columns!=w->columns||o.columns!=w->rows||a.columns!=14336||o.columns!=4096||a.dataType!=MPSDataTypeFloat32||b.dataType!=MPSDataTypeFloat32||o.dataType!=MPSDataTypeFloat32||a.rowBytes!=a.columns*4||b.rowBytes!=b.columns*4||o.rowBytes!=o.columns*4||a.data==o.data||b.data==o.data)throw std::invalid_argument("Fused gated down profile/device mismatch");
++ auto found=impl_->diagnosticBulkPlans.find({a.rows,a.columns,o.columns});if(found==impl_->diagnosticBulkPlans.end())throw std::logic_error("Fused gated down profile was not prepared");for(const auto& scratch:impl_->diagnosticBulkScratch)if(a.data==scratch.impl_->matrix.data||b.data==scratch.impl_->matrix.data||o.data==scratch.impl_->matrix.data)throw std::invalid_argument("Fused down operands alias private workspace");
++ output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));const auto& plan=found->second;
++ EncodeDiagnosticSiluHalf(gate,up,plan.halfCarrier);
++ auto e=impl_->ComputeEncoder(__func__);if(!e)throw std::runtime_error("Cannot encode fused down weight unpack");[e setComputePipelineState:impl_->diagnosticBulkUnpack];[e setBuffer:w->packed offset:0 atIndex:0];[e setBuffer:w->scales offset:0 atIndex:1];[e setBuffer:w->biases offset:0 atIndex:2];[e setBuffer:plan.w.data offset:0 atIndex:3];uint32_t dims[]{uint32_t(o.columns),uint32_t(a.columns)};[e setBytes:dims length:sizeof(dims) atIndex:4];[e dispatchThreads:MTLSizeMake(o.columns*a.columns,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[e endEncoding];
++ [plan.product encodeToCommandBuffer:impl_->command leftMatrix:plan.a rightMatrix:plan.w resultMatrix:o];++impl_->diagnosticBulkDispatches;output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
++ }
++}
++}
++#endif
+diff --git a/src/backends/metal/token_prefix_session.cpp b/src/backends/metal/token_prefix_session.cpp
+--- a/src/backends/metal/token_prefix_session.cpp
++++ b/src/backends/metal/token_prefix_session.cpp
+@@ -63,12 +63,16 @@
+ #ifdef GARNET_METAL_MTP_BRIDGE
+     if(mtp_)throw std::invalid_argument("MTP auxiliary prefix snapshots are not prepared");
+ #endif
+-    if(!gpu_||poisoned_||!head_||!requestRows_||tokenCache_||maxEntries<1||maxEntries>256||maxBytes<1024||uint64_t(maxBytes)>kTokenPrefixHostLimitBytes||
++    bool trackingOnly=false;
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++    trackingOnly=maxEntries==0&&maxBytes==0;
++#endif
++    if(!gpu_||poisoned_||!head_||!requestRows_||tokenCache_||(!trackingOnly&&(maxEntries<1||maxEntries>256||maxBytes<1024||uint64_t(maxBytes)>kTokenPrefixHostLimitBytes))||
+        identity.runtime()!=Host()->runtime||!identity.IsList()||identity.Size()!=6)
+         throw std::invalid_argument("Token-prefix configuration requires a ready session, six identity strings and bounded host budget");
+ #if GARNET_METAL_TOKEN_PREFIX_HOST_MIB > 512
+     const auto memory=MetalContext::MemoryStats();
+-    if(memory.taskStatus!=0||!TokenPrefixHostMemoryFits(memory.allocated,memory.physical,memory.recommended,uint64_t(maxBytes),2))
++    if(!trackingOnly&&(memory.taskStatus!=0||!TokenPrefixHostMemoryFits(memory.allocated,memory.physical,memory.recommended,uint64_t(maxBytes),2)))
+         throw std::runtime_error("Prefix host budget and replacement reserve exceed the task memory envelope");
+ #endif
+     for(size_t row=0;row<states_[0].rows;++row)if(requestRows_->Owned(row)||(finalHiddenReady_.size()>row&&finalHiddenReady_[row]))
+@@ -416,7 +420,7 @@
+     std::lock_guard<std::mutex> lock(mutex_);
+     if(!tokenCache_)throw std::logic_error("Token prefix cache is not configured");
+     const auto stats=tokenCache_->Stats();std::ostringstream out;
+-    out<<"{\"entries\":"<<stats.entries<<",\"accounted_host_bytes\":"<<stats.accountedBytes
++    out<<"{\"retention_enabled\":"<<(tokenCacheBudget_?"true":"false")<<",\"entries\":"<<stats.entries<<",\"accounted_host_bytes\":"<<stats.accountedBytes
+        <<",\"hits\":"<<stats.hits<<",\"misses\":"<<stats.misses<<",\"evictions\":"<<stats.evictions
+        <<",\"replacements\":"<<stats.replacements;
+ #ifdef GARNET_METAL_PREFIX_DIRECT_CAPTURE
+diff --git a/src/entry/metal_main.cpp b/src/entry/metal_main.cpp
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -328,6 +328,9 @@
+         info+="; row_final_hidden";
+ #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+         info+="; native_hybrid_token_prefix; native_cached_prefill_scheduler";
++#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
++        info+="; native_leased_bulk_prefill_scheduler; native_tracking_only_rows";
++#endif
+         info+="; native_prefix_host_limit_bytes="+std::to_string(kTokenPrefixHostLimitBytes);
+ #if GARNET_METAL_TOKEN_PREFIX_HOST_MIB > 512
+         info+="; native_prefix_completion_recency";
+diff --git a/src/runtime/scheduler/continuous_batch_scheduler.cpp b/src/runtime/scheduler/continuous_batch_scheduler.cpp
+--- a/src/runtime/scheduler/continuous_batch_scheduler.cpp
++++ b/src/runtime/scheduler/continuous_batch_scheduler.cpp
+@@ -226,8 +226,38 @@
+                 }
+             }
+         }
++        // Coalescing is separate from a single chunk's tensor workspace. Never
++        // place it ahead of a ready decoder or hide an early row's prompt end.
++        if(m_groupChunks>1&&decodeCandidates.empty()&&int(prefill.requests.size())==m_config.maxPrefillBatch&&
++           m_config.prefillChunkTokens==m_groupChunkTokens&&
++           (!prefill.prefillChunkTokens||prefill.prefillChunkTokens==m_groupChunkTokens)) {
++            const int64_t perRow=int64_t(m_groupChunkTokens)*m_groupChunks;
++            bool eligible=perRow*int64_t(prefill.requests.size())<=m_groupBudget;
++            for(const auto& request:prefill.requests) {
++                const auto& state=m_requests.at(request.id);
++                if(state.request.hasVision||state.request.positionDelta||state.request.promptTokens-state.prefillProcessed<perRow)eligible=false;
++            }
++            if(eligible) {
++                for(const auto& request:prefill.requests)if(!kvPool.EnsureCapacity(request.id,request.prefillOffset+int(perRow)))
++                    throw std::logic_error("Grouped prefill cannot retain its reserved context");
++                prefill.scheduledTokens=int(perRow*int64_t(prefill.requests.size()));
++                prefill.prefillChunkTokens=m_groupChunkTokens;prefill.prefillGroupChunks=m_groupChunks;
++                for(auto& request:prefill.requests){auto& state=m_requests.at(request.id);state.prefillScheduled=int(perRow);state.cachedHeadScheduled=false;request.prefillTokens=int(perRow);request.contextLength=request.prefillOffset+int(perRow);}
++            }
++        }
+         if (!prefill.requests.empty()) tick.batches.push_back(std::move(prefill));
+         return tick;
++    }
++
++    bool ContinuousBatchScheduler::SetPrefillGrouping(int chunkTokens,int chunks,int tokenBudget) {
++        if(!m_requests.empty()||chunkTokens<1||chunks<2||chunks>16||tokenBudget<1||
++           chunkTokens!=m_config.prefillChunkTokens||int64_t(chunkTokens)*chunks*m_config.maxPrefillBatch>tokenBudget)return false;
++        m_groupChunkTokens=chunkTokens;m_groupChunks=chunks;m_groupBudget=tokenBudget;return true;
++    }
++    bool ContinuousBatchScheduler::AbandonPrefillChunk(std::uint64_t id) {
++        auto found=m_requests.find(id);if(found==m_requests.end())return false;auto& state=found->second;
++        if(state.stage!=RequestStage::Prefill||state.prefillScheduled<=0)return false;
++        state.prefillScheduled=0;state.cachedHeadScheduled=false;m_prefillQueue.push_back(id);return true;
+     }
+
+     bool ContinuousBatchScheduler::SetPrefillChunkTokens(int tokens)
+diff --git a/src/runtime/scheduler/continuous_batch_scheduler.h b/src/runtime/scheduler/continuous_batch_scheduler.h
+--- a/src/runtime/scheduler/continuous_batch_scheduler.h
++++ b/src/runtime/scheduler/continuous_batch_scheduler.h
+@@ -57,6 +57,7 @@
+         std::vector<ScheduledRequest> requests;
+         std::vector<int> activeMask;
+         int prefillChunkTokens = 0; // Optional prepared input shape; zero is legacy.
++        int prefillGroupChunks = 0; // More than one uses a separately bounded executor.
+     };
+
+     struct SchedulerTick
+@@ -94,6 +95,7 @@
+         };
+
+         ContinuousBatchSchedulerConfig m_config;
++        int m_groupChunkTokens=0,m_groupChunks=0,m_groupBudget=0;
+         std::unordered_map<std::uint64_t, State> m_requests;
+         std::deque<std::uint64_t> m_prefillQueue;
+         std::vector<std::uint64_t> m_decode;
+@@ -111,6 +113,8 @@
+         bool Cancel(std::uint64_t requestId, KVSequenceAllocator& kvPool);
+         SchedulerTick Schedule(KVSequenceAllocator& kvPool);
+         bool SetPrefillChunkTokens(int tokens);
++        bool SetPrefillGrouping(int chunkTokens,int chunks,int tokenBudget);
++        bool AbandonPrefillChunk(std::uint64_t requestId);
+         bool CompletePrefillChunk(std::uint64_t requestId, int tokens, KVSequenceAllocator& kvPool);
+         bool CompletePrefill(
+             std::uint64_t requestId,
+diff --git a/test2026/metal/local_coder_batch_worker.py b/test2026/metal/local_coder_batch_worker.py
+--- a/test2026/metal/local_coder_batch_worker.py
++++ b/test2026/metal/local_coder_batch_worker.py
+@@ -29,12 +29,17 @@
+     text_config=config if family=='mistral_7b' else config['text_config']
+     batch=profile['batch'];capacity=profile['capacity'];chunk=profile['prefill_chunk'];prefix=profile.get('prefix_cache',False)
+     if type(prefix) is not bool:raise ValueError('Explicit boolean prefix policy required')
++    bulk_chunks=profile.get('native_leased_bulk_chunks',0)
++    if type(bulk_chunks) is not int or bulk_chunks not in (0,16):raise ValueError('Bulk study requires explicit zero or16 prepared chunks')
++    if bulk_chunks and (family!='mistral_7b' or batch!=4 or chunk!=128 or 'native_leased_bulk_prefill_scheduler' not in garnet.backend_info()):raise ValueError('Native grouped scheduler requires the bounded B4/T128 Mistral extension')
++    tracked_rows=prefix or bulk_chunks>0
+     prefill_schedule=profile.get('prefill_schedule','whole')
+     if prefill_schedule not in ('whole','chunked'):raise ValueError('Explicit supported prefill scheduling mode required')
+     chunked=prefill_schedule=='chunked'
+     cached_chunks=profile.get('native_cached_chunks',False)
+-    if type(cached_chunks) is not bool or (cached_chunks and (not prefix or not chunked or family!='mistral_7b')):
++    if type(cached_chunks) is not bool or (cached_chunks and (not tracked_rows or not chunked or family!='mistral_7b')):
+         raise ValueError('Native cached chunks require an explicit Mistral token-prefix/chunked profile')
++    if bulk_chunks and not cached_chunks:raise ValueError('Bulk scheduling requires native tracked chunk progress')
+     if cached_chunks and 'native_cached_prefill_scheduler' not in garnet.backend_info():
+         raise ValueError('Native cached-progress scheduler extension required')
+     residency_budget=profile.get('affine_weight_residency_budget_bytes',0)
+@@ -281,6 +286,9 @@
+         if prefix:
+             if 'native_hybrid_token_prefix' not in garnet.backend_info():raise ValueError('Native hybrid token prefix extension required')
+             decoder.session.configure_token_prefix(profile['prefix_identity'],profile.get('prefix_entries',2),profile.get('prefix_host_bytes',384*1024*1024))
++        elif bulk_chunks:
++            decoder.session.configure_token_tracking(profile['prefix_identity'])
++            emit(dict(event='native_tracking_only_prepared',retention_enabled=False,stats=json.loads(decoder.session.token_prefix_stats_json())))
+         graphs=decoder._resident_prefill_graphs(chunk)
+         if alias_groups:
+             alias_layout=[dict(groups=graph.shared_prefill_alias_groups,slots=graph.shared_prefill_alias_slots,
+@@ -317,6 +325,9 @@
+         if split_capable:
+             decoder.session.split_score_set_enabled(split_scores)
+             emit(dict(event='native_split_score_prepared',enabled=split_scores,chunk=128,minimum_visible=512))
++        if bulk_chunks:
++            if not decoder.session.diagnostic_layer_bulk_prepare(graphs,bulk_chunks):raise ValueError('Native bulk profile preparation failed')
++            emit(dict(event='native_bulk_prefill_prepared',maximum_chunks=bulk_chunks,chunk_tokens=128,physical_rows=4))
+         policy=garnet.continuous_scheduler();policy.initialize(decoder.session,16)
+         if family=='mistral_7b':
+             native_maximum=512 if wide_owner else dense_limit//batch
+@@ -326,6 +337,10 @@
+                 maximum_chunk=min(capacity,native_maximum),oversized_chunk_rejected=True,whole_prompt_rejected=True,
+                 owner_adaptive=wide_owner))
+         if chunked and not policy.set_prefill_chunk(512 if wide_owner else chunk):raise ValueError('Native prefill chunk configuration rejected')
++        if bulk_chunks:
++            if wide_owner or not policy.set_bulk_prefill(bulk_chunks):raise ValueError('Native bulk scheduling configuration rejected')
++            if policy.set_bulk_prefill(0) or policy.set_bulk_prefill(17):raise ValueError('Native scheduler accepted invalid bulk bounds')
++
+         tokenizer=garnet.tokenizer();tokenizer.open(folder)
+         if family=='mistral_7b':
+             stops=[config['eos_token_id']]
+@@ -412,7 +427,7 @@
+             return result
+         def execute(graphs,hidden,positions,slots,active,prediction,epochs,ids):
+             started=time.monotonic() if trace_stages else 0
+-            if prefix:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
++            if tracked_rows:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
+             else:result=decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
+             ended=time.monotonic() if trace_stages else 0
+             elapsed=(ended-started)*1000 if trace_stages else 0
+@@ -654,6 +669,31 @@
+                 if wide_owner and (type(plan_chunk) is not int or plan_chunk not in (1,2,4,8,16,32,64,128,256,512)):
+                     raise ValueError('Native owner-prefill shape is outside prepared profiles')
+                 emit(dict(event='native_batch',stage=plan['stage'],active_rows=plan['active_rows'],requests=plan['requests'],prefill_chunk=plan_chunk))
++                if plan.get('prefill_group_chunks',0):
++                    n=plan['prefill_group_chunks']
++                    if not bulk_chunks or n!=bulk_chunks or plan_chunk!=128 or len(plans)!=1 or plan['stage']!='prefill' or plan.get('execution')!='native_leased_bulk':raise ValueError('Grouped scheduler plan violates profile/fairness contract')
++                    requests={request['row']:request for request in plan['requests']}
++                    if set(requests)!=set(range(4)):raise ValueError('Grouped scheduler must cover all four leased rows')
++                    hidden=[]
++                    for c in range(n):
++                        ids=[]
++                        for row in range(4):
++                            request=requests[row];job=jobs[request['id']]
++                            if request['prefill_tokens']!=n*128:raise ValueError('Grouped native per-row count differs')
++                            if cached_chunks:job['cached_tokens']=request['cached_tokens']
++                            ids.extend(job['prompt'][request['prefill_offset']+c*128:request['prefill_offset']+(c+1)*128])
++                        if len(ids)!=512:raise ValueError('Grouped embedding tokens do not cover the live group')
++                        hidden.append(embedding(ids,True))
++                    began=time.monotonic();predicted=policy.run_bulk_prefill(hidden,plan['bulk_ticket']);ended=time.monotonic()
++                    stats=json.loads(decoder.session.diagnostic_layer_bulk_stats_json())
++                    if stats['chunks']!=n or stats['rows']!=n*512 or stats['appended']!=[n*128]*4 or stats['bulk_calls']!=96 or stats['silu_half_calls']!=32:raise ValueError('Native bulk route differs from scheduled execution')
++                    emit(dict(event='native_bulk_prefill_execution',ticket=plan['bulk_ticket'],chunks=n,stats=stats,began_monotonic=began,ended_monotonic=ended,run_wall_ms=(ended-began)*1000))
++                    for request in plan['requests']:
++                        final=request['prefill_offset']+request['prefill_tokens']==len(jobs[request['id']]['prompt'])
++                        if final:deliver(request,predicted[request['row']],'prefill')
++                        elif not complete_chunk(request['id'],request['prefill_tokens']):raise ValueError('Native grouped progress completion rejected')
++                        emit(dict(event='native_prefill_chunk',native_request=request['id'],row=request['row'],epoch=request['epoch'],offset=request['prefill_offset'],tokens=request['prefill_tokens'],final=final,group_chunks=n))
++                    continue
+                 if plan['stage']=='prefill' and chunked:
+                     requests={request['row']:request for request in plan['requests']}
+                     ids=[];flags=[];slots=[];final_epochs=[0]*batch
+diff --git a/test2026/native/scheduler_bulk_group_test.cpp b/test2026/native/scheduler_bulk_group_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/native/scheduler_bulk_group_test.cpp
+@@ -0,0 +1,63 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "../../src/runtime/scheduler/continuous_batch_scheduler.h"
++#include "../../src/runtime/scheduler/request_row_leases.h"
++#include "../../src/runtime/scheduler/packed_token_plan.h"
++#include "../../src/runtime/kv/paged_kv_pool.h"
++#include <iostream>
++#include <stdexcept>
++#include <type_traits>
++#include <unordered_map>
++using namespace Garnet;
++static_assert(std::is_base_of<KVSequenceAllocator,PagedKVPool>::value,"CUDA pool must retain allocator compatibility");
++void Check(bool value){if(!value)throw std::runtime_error("Portable scheduler row invariant failed");}
++// Test-only metadata allocator. Actual Metal admission must bind its claims to
++// the native session's state-clearing callbacks; this fixture allocates no GPU KV.
++class FixedRows final:public KVSequenceAllocator {
++    struct State{RequestRowLease lease;int length=0,cached=0;bool ready=false;};
++    RequestRowLeases rows_{4};
++    std::unordered_map<uint64_t,State> states_;
++    std::unordered_map<uint64_t,std::pair<int,bool>> restored_;
++    int capacity_;
++public:
++    explicit FixedRows(int capacity=64):capacity_(capacity){}
++    void SeedPrefix(uint64_t id,int tokens,bool ready=true){restored_[id]={tokens,ready};}
++    bool Reserve(uint64_t id,int capacity) override {
++        if(!id||capacity<0||capacity>capacity_||states_.size()==4||states_.count(id))return false;
++        auto restored=restored_.count(id)?restored_.at(id):std::make_pair(0,false);
++        states_.emplace(id,State{rows_.Claim(id),restored.first,restored.first,restored.second});return true;
++    }
++    bool EnsureCapacity(uint64_t id,int capacity) override{return states_.count(id)&&capacity>=0&&capacity<=capacity_;}
++    bool CommitLength(uint64_t id,int length) override {
++        if(!EnsureCapacity(id,length))return false;states_.at(id).length=length;return true;
++    }
++    bool Release(uint64_t id) override {
++        auto found=states_.find(id);if(found==states_.end())return false;
++        Check(rows_.Release(found->second.lease.row,found->second.lease.epoch));states_.erase(found);return true;
++    }
++    int LogicalLength(uint64_t id) const override {auto it=states_.find(id);return it==states_.end()?-1:it->second.length;}
++    std::vector<int> PageTable(uint64_t) const override{return {};}
++    KVSequencePlacement Placement(uint64_t id) const override {
++        auto it=states_.find(id);return it==states_.end()?KVSequencePlacement{}:
++            KVSequencePlacement{int(it->second.lease.row),it->second.lease.epoch};
++    }
++    int RestoredPrefixTokens(uint64_t id) const override {auto it=states_.find(id);return it==states_.end()?0:it->second.cached;}
++    bool PrefixPredictionReady(uint64_t id) const override {auto it=states_.find(id);return it!=states_.end()&&it->second.ready;}
++};
++int main(){try{
++ ContinuousBatchSchedulerConfig cfg;cfg.decodeBuckets={4};cfg.maxPrefillBatch=4;cfg.maxPrefillTokensPerTick=512;cfg.prefillChunkTokens=128;
++ auto submit=[](ContinuousBatchScheduler& scheduler,int length,bool vision=false,int delta=0){GenerationRequest request;request.promptTokens=length;request.maxNewTokens=8;request.hasVision=vision;request.positionDelta=delta;auto id=scheduler.Submit(request);Check(id>0);return id;};
++ {
++  FixedRows storage(4096);ContinuousBatchScheduler scheduler(cfg);Check(!scheduler.SetPrefillGrouping(128,1,8192)&&!scheduler.SetPrefillGrouping(128,17,9000)&&!scheduler.SetPrefillGrouping(128,16,8191));Check(scheduler.SetPrefillGrouping(128,16,8192));std::vector<uint64_t> ids;for(int row=0;row<4;++row)ids.push_back(submit(scheduler,2051));
++  auto tick=scheduler.Schedule(storage);Check(tick.batches.size()==1);const auto& group=tick.batches[0];Check(group.prefillGroupChunks==16&&group.prefillChunkTokens==128&&group.scheduledTokens==8192);auto packed=BuildPackedTokenPlan(tick,storage,8192,4096);Check(packed.tokenCount==8192&&packed.segments.size()==4);
++  Check(!scheduler.SetPrefillGrouping(128,2,1024));for(auto id:ids){Check(!scheduler.CompletePrefill(id,8,storage));Check(!scheduler.CompletePrefillChunk(id,2047,storage));Check(scheduler.CompletePrefillChunk(id,2048,storage));Check(!scheduler.CompletePrefillChunk(id,2048,storage));Check(storage.LogicalLength(id)==2048);}
++  tick=scheduler.Schedule(storage);Check(tick.batches.size()==1&&tick.batches[0].prefillGroupChunks==0&&tick.batches[0].scheduledTokens==12);for(auto id:ids){Check(!scheduler.CompletePrefillChunk(id,3,storage));Check(scheduler.CompletePrefill(id,17,storage));}tick=scheduler.Schedule(storage);Check(tick.batches.size()==1&&tick.batches[0].stage==RequestStage::Decode&&tick.batches[0].requests.size()==4);
++ }
++ {
++  FixedRows storage(4096);ContinuousBatchScheduler scheduler(cfg);Check(scheduler.SetPrefillGrouping(128,16,8192));std::vector<uint64_t> ids;for(int row=0;row<4;++row)ids.push_back(submit(scheduler,4095));auto first=scheduler.Schedule(storage);auto old=storage.Placement(ids[0]);std::vector<KVSequencePlacement> survivors;for(int row=1;row<4;++row)survivors.push_back(storage.Placement(ids[row]));Check(scheduler.Cancel(ids[0],storage));for(int row=1;row<4;++row){Check(scheduler.AbandonPrefillChunk(ids[row]));Check(!scheduler.CompletePrefillChunk(ids[row],2048,storage));Check(storage.LogicalLength(ids[row])==0);}auto next=submit(scheduler,4095);auto tick=scheduler.Schedule(storage);Check(tick.batches.size()==1&&tick.batches[0].prefillGroupChunks==16);auto replacement=storage.Placement(next);Check(replacement.requestRow==old.requestRow&&replacement.rowEpoch!=old.rowEpoch);for(int row=1;row<4;++row){auto got=storage.Placement(ids[row]);Check(got.requestRow==survivors[row-1].requestRow&&got.rowEpoch==survivors[row-1].rowEpoch);}
++ }
++ for(int kind=0;kind<4;++kind){
++  FixedRows storage(4096);ContinuousBatchScheduler scheduler(cfg);Check(scheduler.SetPrefillGrouping(128,16,8192));std::vector<uint64_t> ids;for(int row=0;row<4;++row)ids.push_back(submit(scheduler,row==0&&kind==0?128:2048,row==0&&kind==2,row==0&&kind==3?1:0));if(kind==1)storage.SeedPrefix(ids[0],2048);auto tick=scheduler.Schedule(storage);Check(tick.batches.size()==1&&tick.batches[0].prefillGroupChunks==0&&tick.batches[0].scheduledTokens<=512);
++  if(kind<2){Check(scheduler.CompletePrefill(ids[0],42,storage));for(int row=1;row<4;++row)Check(scheduler.CompletePrefillChunk(ids[row],128,storage));tick=scheduler.Schedule(storage);Check(tick.batches.size()==2&&tick.batches[0].stage==RequestStage::Decode&&tick.batches[0].requests.size()==1&&tick.batches[1].prefillGroupChunks==0&&tick.batches[1].scheduledTokens==384);}
++ }
++ std::cout<<"Native grouped scheduling policy PASS: shared8192 budget, actual128 chunks, tails, decoder fairness, head-only cache, vision/delta fallback, abandon/cancel and epoch reuse\n";return 0;
++ }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+diff --git a/test2026/metal/packed_fulltile_test.cpp b/test2026/metal/packed_fulltile_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/packed_fulltile_test.cpp
+@@ -0,0 +1,108 @@
++// SPDX-License-Identifier: Apache-2.0
++// Bounded streaming operator qualification. Full saved outputs require the
++// independent offline FP64 audit; this executable also samples FP64 directly.
++#include "../../src/backends/metal/metal_context.h"
++#include "../../src/model/affine_int4_codec.h"
++#include "nlohmann/json.hpp"
++#include <algorithm>
++#include <cmath>
++#include <cstring>
++#include <filesystem>
++#include <fstream>
++#include <iostream>
++#include <limits>
++#include <numeric>
++#include <set>
++using namespace Garnet;using JSON=nlohmann::json;
++void Need(bool b,const char* s){if(!b)throw std::runtime_error(s);}
++template<class F> void Reject(F f){bool rejected=false;try{f();}catch(const std::exception&){rejected=true;}Need(rejected,"Expected guard rejection");}
++template<class T> void Save(const std::filesystem::path& p,const std::vector<T>& data){std::ofstream f(p,std::ios::binary);f.write(reinterpret_cast<const char*>(data.data()),data.size()*sizeof(T));Need(bool(f),"Cannot save payload");}
++struct Fixture {
++    MetalContext gpu;size_t m,n,k;AffineInt4Layout layout;
++    std::vector<float> input,poison;std::vector<uint32_t> packed;std::vector<uint16_t> scales,biases;
++    MetalAffineInt4Weight weight;MetalMatrix a,out,inputOwner,outputOwner;std::vector<float> inputParent,outputParent;bool eligible;std::filesystem::path root;
++    Fixture(size_t rows,size_t outputs,size_t inner,std::filesystem::path directory):m(rows),n(outputs),k(inner),layout(AffineInt4Layout::Create(n,k,AffineInt4CoefficientType::FP16)),root(directory) {
++        input.resize(m*k);packed.resize(layout.weightBytes/4);scales.resize(layout.coefficientBytes/2);biases.resize(scales.size());
++        uint32_t seed=37;for(auto& x:input){seed=1664525u*seed+1013904223u;x=float(int((seed>>8)%65521)-32760)*0x1p-18f;}
++        for(size_t i=0;i<packed.size();++i){seed=1664525u*seed+1013904223u;packed[i]=seed;}
++        for(size_t i=0;i<scales.size();++i){scales[i]=Float32ToFloat16RNE(float(int(i%13)-6)*.00171f);biases[i]=Float32ToFloat16RNE(float(int(i%17)-8)*.00313f);}
++        weight=gpu.UploadAffineInt4(packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,n,k,true);
++        poison.assign(m*n,std::numeric_limits<float>::quiet_NaN());inputParent.assign((m+2)*k,42.5f);std::copy(input.begin(),input.end(),inputParent.begin()+k);std::fill(inputParent.end()-k,inputParent.end(),-37.25f);
++        outputParent.assign((m+2)*n,std::numeric_limits<float>::quiet_NaN());std::fill_n(outputParent.begin(),n,42.5f);std::fill(outputParent.end()-n,outputParent.end(),-37.25f);
++        inputOwner=gpu.Upload(inputParent,m+2,k);outputOwner=gpu.Upload(outputParent,m+2,n);a=gpu.PrepareDiagnosticDenseView(inputOwner,k,m,k);out=gpu.PrepareDiagnosticDenseView(outputOwner,n,m,n);
++        Need(gpu.PrepareAffineInt4Profile(a,weight,out,m),"Cannot prepare affine controls");
++        eligible=gpu.PreparePackedAffineProfile(a,weight,out,m);
++        Need(eligible==(m>=128&&((k==4096&&(n==4096||n==14336))||(k==14336&&n==4096))),"Wrong packed preparation selection");
++        const auto plans=gpu.PackedAffinePlanCount();const auto owners=MetalContext::ProfileOwnerStats();
++        Need(gpu.PreparePackedAffineProfile(a,weight,out,m)==eligible&&gpu.PackedAffinePlanCount()==plans&&MetalContext::ProfileOwnerStats().matrices==owners.matrices,"Repeated preparation allocates");
++        size_t bytes=0;std::set<uintptr_t> unique;for(const auto& scratch:std::array<MetalMatrix,1>{gpu.PackedAffineScratch()}){auto info=MetalContext::MatrixBufferInfo(scratch);if(info.identity){bytes+=info.lengthBytes;unique.insert(info.identity);}}
++        Need(bytes==(eligible?14680064u:0u)&&unique.size()==(eligible?1u:0u),"Scratch is not one bounded set");
++        if(!root.empty()){Need(std::filesystem::create_directory(root),"Fresh case directory required");Save(root/"input.f32",input);Save(root/"input-parent.f32",inputParent);Save(root/"weight.u32",packed);Save(root/"scales.f16",scales);Save(root/"biases.f16",biases);}
++    }
++
++    JSON Cell(size_t count,bool reversed,bool dense,bool benchmark) {
++        std::vector<size_t> ids(count);std::vector<bool> active(m);for(size_t i=0;i<count;++i){ids[i]=dense?i:(i*127+5)%m;active[ids[i]]=true;}if(reversed)std::reverse(ids.begin(),ids.end());
++        gpu.SetPackedAffineEnabled(false);gpu.SetDiagnosticPackedFullTileEnabled(0);gpu.Update(out,poison);gpu.Begin();
++        if(dense)gpu.EncodeAffineInt4MatMul(a,weight,out);else gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);
++        gpu.SubmitAndWait();Need(gpu.LastPackedAffineDispatches()==0&&gpu.LastDiagnosticPackedFullTileDispatches()==0,"Nonpacked control selected packed");auto reference=gpu.Download(out);gpu.SetPackedAffineEnabled(true);
++        std::array<std::vector<float>,2> first,firstParent;std::array<std::vector<double>,2> times;JSON order=JSON::array();std::array<size_t,2> maximumThreads{};const size_t plans=gpu.PackedAffinePlanCount(),pipelines=gpu.AffineProfilePipelineCount();auto owners=MetalContext::ProfileOwnerStats();size_t checks=0,words=0;double maximum=0;
++        const int reps=benchmark?9:1,warmups=benchmark?3:0;
++        for(int rep=-warmups;rep<reps;++rep)for(size_t step=0;step<2;++step){size_t v=(step+size_t(rep+warmups))%2;
++            gpu.SetDiagnosticPackedFullTileEnabled(v);gpu.Update(out,poison);gpu.Begin();
++            if(dense)gpu.EncodeAffineInt4MatMul(a,weight,out);else gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);
++            gpu.SubmitAndWait();bool selected=eligible&&count>=128;Need(gpu.LastPackedAffineDispatches()==size_t(selected),"Wrong original packed route");Need(gpu.LastDiagnosticPackedFullTileDispatches()==size_t(v&&selected&&(count==128||count==256||count==512||(count==384&&n==4096&&k==4096))),"Wrong diagnostic geometry route");
++            Need(gpu.LastAffineProfileMisses()==0&&gpu.LastAffineProfileDispatches()==size_t(count>0),"Native profile accounting differs");Need(gpu.LastIndexedAffineDispatches()==size_t(!dense&&count>0),"Indexed accounting differs");
++            Need(gpu.PackedAffinePlanCount()==plans&&gpu.AffineProfilePipelineCount()==pipelines,"Request-time plan creation");auto values=gpu.Download(out);auto parent=gpu.Download(outputOwner);for(size_t i=0;i<n;++i)Need(parent[i]==42.5f&&parent[parent.size()-n+i]==-37.25f,"PackedFullTile external output guards changed");auto readInput=gpu.Download(inputOwner);Need(std::memcmp(readInput.data(),inputParent.data(),inputParent.size()*4)==0,"PackedFullTile wrote input/guards");
++            for(size_t i=0;i<values.size();++i){Need(std::isfinite(values[i]),"Missing/nonfinite output after poison");if(!active[i/n])Need(values[i]==0,"Inactive output changed");}
++            Need(std::memcmp(reference.data(),values.data(),values.size()*4)==0,"PackedFullTile candidate differs from original nonpacked native control");
++            if(first[v].empty()){first[v]=values;firstParent[v]=parent;}else Need(std::memcmp(first[v].data(),values.data(),values.size()*4)==0,"Nondeterministic projection");
++            maximumThreads[v]=gpu.LastAffineProfileMaxThreads();if(rep>=0)times[v].push_back(gpu.LastGPUMs());words+=values.size();order.push_back(JSON{{"rep",rep},{"mode",v},{"packed",gpu.LastPackedAffineDispatches()},{"diagnostic",gpu.LastDiagnosticPackedFullTileDispatches()}});
++        }
++        AffineInt4View view(layout,packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes);std::vector<float> decoded(k);JSON oracle=JSON::array();
++        for(size_t col:std::set<size_t>{0,1,15,16,31,32,63,64,n/2,n-1}){view.DecodeRow(col,decoded.data(),k);if(count)for(size_t row:std::set<size_t>{0,count/2,count-1}) {
++            double sum=0,absolute=0;for(size_t j=0;j<k;++j){double product=double(Float16ToFloat32(Float32ToFloat16RNE(input[ids[row]*k+j])))*Float16ToFloat32(Float32ToFloat16RNE(decoded[j]));sum+=product;absolute+=std::abs(product);}
++            for(size_t v=0;v<2;++v){double fraction=std::abs(double(first[v][ids[row]*n+col])-sum)/(2e-6+4e-6*absolute);Need(fraction<=1,"Original FP64 bound exceeded");maximum=std::max(maximum,fraction);++checks;}
++            oracle.push_back(JSON{{"row",ids[row]},{"column",col},{"sum",sum},{"sum_abs",absolute}});
++        }}
++        auto after=MetalContext::ProfileOwnerStats();Need(owners.matrices==after.matrices&&owners.affineWeights==after.affineWeights&&owners.pipelineSets==after.pipelineSets,"Runtime owner allocation");std::string label=std::to_string(count)+(reversed?"-reverse":"-perm")+(dense?"-dense":"-indexed");
++        if(!root.empty())for(size_t v=0;v<2;++v){Save(root/(label+"-mode"+std::to_string(v)+"-parent.f32"),firstParent[v]);}
++        return JSON{{"rows",m},{"outputs",n},{"inner",k},{"active",ids},{"label",label},{"eligible",eligible},{"packed",eligible&&count>=128},{"dense",dense},{"fp64_samples",checks},{"max_fp64_fraction",maximum},{"gpu_ms",times},{"maximum_threads",maximumThreads},{"execution_order",order},{"warmups",warmups},{"repetitions",reps},{"checked_runtime_words",words},{"plans",plans},{"oracle",oracle},{"external_parent_guards",true},{"input_and_guards_unchanged",true},{"atomic_writer_map_instrumented",false},{"candidate_geometry",{{"M_policy","original128or256"},{"N",64},{"stageK",128},{"threads",256},{"threadgroup_bytes",17408}}}};
++    }
++    void Guards(){
++        gpu.SetDiagnosticPackedFullTileEnabled(false);Need(!gpu.DiagnosticPackedFullTileEnabled(),"Default geometry selection differs");
++        std::vector<size_t> ids(m);std::iota(ids.begin(),ids.end(),0);auto bad=ids;bad[1]=bad[0];gpu.SetPackedAffineEnabled(true);gpu.Update(out,std::vector<float>(m*n,17.f));auto before=gpu.Download(out);
++        gpu.Begin();Reject([&]{gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,bad);});Reject([&]{gpu.SetDiagnosticPackedFullTileEnabled(1);});gpu.Abort();Need(gpu.Download(out)==before,"Invalid call wrote output");
++        gpu.SetDiagnosticPackedFullTileEnabled(true);gpu.Begin();gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);gpu.Abort();Need(gpu.LastDiagnosticPackedFullTileDispatches()==0,"Abort retained diagnostic count");Reject([&]{gpu.Download(out);});
++        Reject([&]{gpu.Update(out,poison);});gpu.Begin();Reject([&]{gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);});gpu.Abort();gpu.Update(outputOwner,outputParent);
++        gpu.Begin();gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);gpu.SubmitAndWait();Need(gpu.LastDiagnosticPackedFullTileDispatches()==size_t(eligible),"Recovery route differs");
++        gpu.Begin();gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);gpu.Flush();Reject([&]{gpu.SetDiagnosticPackedFullTileEnabled(0);});gpu.SubmitAndWait();gpu.SetDiagnosticPackedFullTileEnabled(0);
++    }
++};
++
++JSON FullTileWriterProof(){
++ size_t cases=0,positions=0;
++ for(size_t tile:{128,256})for(size_t actual=1;actual<=512;++actual){
++  if(actual%tile)continue;std::vector<unsigned> counts(actual*64,0);
++  for(size_t group=0;group<actual/tile;++group)for(size_t simd=0;simd<8;++simd)for(size_t lane=0;lane<32;++lane){
++   size_t quad=lane>>2,row=(quad&4)|((lane>>1)&3),column=((quad&2)|(lane&1))*4;
++   for(size_t acc=0;acc<tile/64;++acc)for(size_t part=0;part<2;++part)for(size_t fragment=0;fragment<2;++fragment)for(size_t j=0;j<4;++j){
++    size_t r=group*tile+(simd/2)*(tile/4)+acc*16+row+fragment*8,c=(simd%2)*32+part*16+column+j;
++    Need(r<actual&&c<64,"Fulltile register map exceeds actual compact rows");++counts[r*64+c];
++   }
++  }
++  Need(std::all_of(counts.begin(),counts.end(),[](unsigned v){return v==1;}),"Fulltile register writer map notbijective");++cases;positions+=counts.size();
++ }
++ Need(cases==6&&positions==131072,"Missingfulltile coordinateproof");return {{"cases",cases},{"logical_output_coordinates",positions},{"each_coordinate_once",true},{"all_compact_rows_within_actual_count",true},{"scope","CPUcoordinate proof bound to originalnative cooperativeABI startupguard; notatomicGPUwriter instrumentation"}};
++}
++
++int main(int argc,char** argv){try{
++    Need(argc==1||argc==2,"Optional fresh output directory");bool collect=argc==2;std::filesystem::path root=collect?argv[1]:"";if(collect)Need(std::filesystem::create_directory(root),"Fresh output required");
++    JSON report={{"scope","Actualnative fulltile bounds-proof screen. PreservedoriginalM128/256,N64,K128,256thread compacthalf/vectorQ4/orderedK16/F32 math. Candidate removes only provenabsent compactrow load/store checks; partialtiles and unsupportedshapes use originalfallback. Upperbound512 is notpadding. No model/HTTP/quality admission."},{"cases",JSON::array()}};size_t index=0;report["fulltile_coordinate_proof"]=FullTileWriterProof();
++    for(auto shape:std::vector<std::array<size_t,2>>{{14336,4096},{4096,14336},{4096,4096},{1024,4096}}){if(!collect&&shape!=std::array<size_t,2>{4096,4096})continue;
++        Fixture f(512,shape[0],shape[1],collect?root/("case-"+std::to_string(index)):std::filesystem::path{});
++        for(size_t count:std::vector<size_t>{0,4,127,128,129,255,256,257,383,384,511,512}){auto c=f.Cell(count,false,false,collect&&f.eligible&&count==512);c["fixture"]=index;report["cases"].push_back(c);}
++        auto a=f.Cell(512,true,false,false);a["fixture"]=index;report["cases"].push_back(a);a=f.Cell(512,false,true,collect&&f.eligible);a["fixture"]=index;report["cases"].push_back(a);f.Guards();std::cout<<"packed_fulltile_shape "<<index++<<" PASS\n"<<std::flush;
++    }
++    if(collect)for(size_t rows:{128,256})for(auto shape:std::vector<std::array<size_t,2>>{{14336,4096},{4096,14336},{4096,4096}}){Fixture f(rows,shape[0],shape[1],root/("case-"+std::to_string(index)));auto a=f.Cell(rows,false,true,true);a["fixture"]=index;report["cases"].push_back(a);f.Guards();std::cout<<"packed_fulltile_shape "<<index++<<" PASS\n"<<std::flush;}
++    auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Retained native owners after close");Need(report["cases"].size()==(collect?62:14),"Missing profile cells");report["passed"]=true;report["all_native_owners_closed"]=true;report["close_metal_bytes"]=MetalContext::MemoryStats().allocated;if(collect){std::ofstream f(root/"results.json");f<<report.dump(2)<<'\n';Need(bool(f),"Cannot save report");}return 0;
++}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+diff --git a/test2026/metal/bulk_append_policy_test.cpp b/test2026/metal/bulk_append_policy_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/bulk_append_policy_test.cpp
+@@ -0,0 +1,11 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "../../src/backends/metal/bulk_append_policy.h"
++#include <functional>
++#include <iostream>
++using namespace Garnet;
++void Need(bool v){if(!v)throw std::runtime_error("Bulk append policy assertion");}
++void Reject(std::function<void()> fn){bool bad=false;try{fn();}catch(const std::invalid_argument&){bad=true;}Need(bad);}
++BulkAppendValidator Fresh(){return {{0,9,3,4095},{true,true,true,true},{1,0,3,4},4096,32768};}
++int main(){try{auto v=Fresh();float z[]{0,0,0},three[]{3,3,3},last[]{4095,4095,4095};v.Step(0,1,0,z,9);v.Step(1,0,0,z,0);v.Step(2,1,3,three,19);v.Step(3,1,4095,last,29);v.Finish(true);Need(v.Counts()==std::array<size_t,4>{1,0,1,1});
++ for(size_t kind=0;kind<13;++kind)Reject([&]{auto p=Fresh();float zero[]{0,0,0},wrong[]{1,0,0};switch(kind){case 0:p.Step(4,1,0,zero,0);break;case 1:p.Step(0,.5f,0,zero,0);break;case 2:p.Step(0,1,0,zero,-1);break;case 3:p.Step(0,1,0,zero,32768);break;case 4:p.Step(1,1,0,zero,0);break;case 5:p.Step(0,1,0,wrong,0);break;case 6:p.Step(0,0,1,zero,0);break;case 7:p.Step(0,0,0,wrong,0);break;case 8:p.Step(0,0,0,zero,0);p.Step(0,1,0,zero,0);break;case 9:p.Step(3,1,4095,last,0);p.Step(3,1,4095,last,0);break;case 10:p.Finish(true);break;case 11:p.Step(0,1,0,zero,0);p.Finish(false);break;default:{BulkAppendValidator bad({0,0,0,0},{false,true,true,true},{1,2,3,4},4096,32768);bad.Step(0,1,0,zero,0);}}});
++ std::cout<<"Bulk tracked append policy PASS: independent starts, ragged end, exact capacity, 13 invalid cases\n";return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+diff --git a/test2026/metal/diagnostic_bulk_view_test.cpp b/test2026/metal/diagnostic_bulk_view_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/diagnostic_bulk_view_test.cpp
+@@ -0,0 +1,14 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "metal_context.h"
++#include <vector>
++#include <limits>
++#include <iostream>
++using namespace Garnet;
++void Need(bool v,const char* m){if(!v)throw std::runtime_error(m);}
++template<class F>void Reject(F f){bool yes=false;try{f();}catch(const std::exception&){yes=true;}Need(yes,"Expected dense view guard");}
++int main(){try{{MetalContext gpu;std::vector<float> original(1024);for(size_t i=0;i<1024;++i)original[i]=float(i);auto owner=gpu.Upload(original,16,64);auto one=gpu.PrepareDiagnosticDenseView(owner,0,4,128),two=gpu.PrepareDiagnosticDenseView(owner,512,4,128);Need(one.SharesStorage(owner)&&two.SharesStorage(owner),"Lost parent ownership");
++Reject([&]{gpu.PrepareDiagnosticDenseView(owner,1024,1,4);});Reject([&]{gpu.PrepareDiagnosticDenseView(owner,1,1,4);});Reject([&]{gpu.PrepareDiagnosticDenseView(owner,0,0,4);});Reject([&]{gpu.PrepareDiagnosticDenseView(owner,0,8193,4);});Reject([&]{gpu.PrepareDiagnosticDenseView(owner,0,1,std::numeric_limits<size_t>::max());});
++auto a=gpu.Upload(std::vector<float>(512,1.f),4,128),b=gpu.Upload(std::vector<float>(512,2.f),4,128);gpu.Begin();Reject([&]{gpu.PrepareDiagnosticDenseView(owner,0,4,128);});gpu.EncodeAdd(a,b,one);gpu.EncodeAdd(a,a,two);gpu.SubmitAndWait();auto values=gpu.Download(owner);for(size_t i=0;i<1024;++i)Need(values[i]==(i<512?3.f:2.f),"Dense span writer or offset wrong");
++gpu.Begin();gpu.EncodeAdd(a,b,one);gpu.Abort();Reject([&]{gpu.Download(owner);});Reject([&]{gpu.Update(two,std::vector<float>(512,1.f));});gpu.Update(owner,original);Need(gpu.Download(one)==std::vector<float>(original.begin(),original.begin()+512),"Parent restore did not restore views");
++gpu.Begin();gpu.EncodeAdd(a,b,one);gpu.Flush();Reject([&]{gpu.PrepareDiagnosticDenseView(owner,0,4,128);});gpu.SubmitAndWait();}
++auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.pipelineSets,"Dense spans retain owners");std::cout<<"Dense bulk views PASS; complete1024 words, shared readiness, abort/full-parent restore, bounds and pending preparation guards\n";return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+diff --git a/test2026/metal/bulk_silu_half_test.cpp b/test2026/metal/bulk_silu_half_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/bulk_silu_half_test.cpp
+@@ -0,0 +1,44 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "metal_context.h"
++#include "../../src/backends/metal/bulk_silu_half_policy.h"
++#include "../../src/model/affine_int4_codec.h"
++#include "nlohmann/json.hpp"
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <cstring>
++#include <filesystem>
++#include <fstream>
++#include <iostream>
++#include <limits>
++#include <vector>
++using namespace Garnet;using JSON=nlohmann::json;
++void Need(bool v,const char* m){if(!v)throw std::runtime_error(m);}
++template<class F>void Reject(F f){bool yes=false;try{f();}catch(const std::exception&){yes=true;}Need(yes,"Missing SiLU-half guard");}
++template<class T>void Save(const std::filesystem::path& p,const std::vector<T>& v){std::ofstream f(p,std::ios::binary);f.write(reinterpret_cast<const char*>(v.data()),v.size()*sizeof(T));Need(bool(f),"Cannot save raw half fixture");}
++std::vector<uint16_t> Halves(MetalContext& gpu,const MetalMatrix& carrier,size_t count){auto values=gpu.Download(carrier);Need(values.size()*2==count,"Half carrier extent differs");std::vector<uint16_t> out(count);std::memcpy(out.data(),values.data(),count*2);return out;}
++int main(int argc,char** argv){try{Need(argc==1||argc==2,"Optional fresh output directory");std::filesystem::path root;if(argc==2){root=argv[1];Need(std::filesystem::create_directory(root),"Fresh output directory required");}
++ Need(BulkSiluHalfSupported(8192,14336,14344,14352,14368),"Valid padded uint32 profile rejected");for(auto p:std::vector<std::array<uint64_t,5>>{{0,14336,14336,14336,14336},{8193,14336,14336,14336,14336},{1,14335,14336,14336,14336},{8192,14336,0xffffffffull,14336,14336},{4,14336,14336,0,14336},{4,14336,14336,14336,0x100000000ull}})Need(!BulkSiluHalfSupported(p[0],p[1],p[2],p[3],p[4]),"Invalid half profile admitted");
++ JSON report={{"scope","Actual native FP32 SiLU plus existing bulk GPU cast versus same-context fused SiLU-to-half, exact complete half words. No model/performance admission."},{"cases",JSON::array()}};size_t cases=0,total=0,finiteSamples=0;
++ for(bool edges:{false,true})for(auto shape:std::vector<std::array<size_t,2>>{{1,14336},{4,14336},{128,14336},{129,14336},{257,14336},{511,14336},{512,14336},{8192,14336},{512,4096},{8192,4096}}){
++  size_t m=shape[0],k=shape[1],count=m*k;std::vector<float> g(count),u(count);uint32_t seed=37;for(size_t i=0;i<count;++i){seed=1664525u*seed+1013904223u;g[i]=float(int((seed>>8)%65521)-32760)*0x1p-10f;seed=1664525u*seed+1013904223u;u[i]=float(int((seed>>8)%65521)-32760)*0x1p-12f;}
++  uint32_t special[]{0,0x80000000u,1,0x80000001u,0x00800000u,0x80800000u,0x3f800000u,0xbf800000u,0x42b00000u,0xc2b00000u,0x42c80000u,0xc2c80000u,0x477fe000u,0x47800000u,0x7f800000u,0xff800000u,0x7fc01234u,0x7fa01234u};if(edges)for(size_t i=0;i<count;i+=257){auto bits=special[(i/257)%18];std::memcpy(g.data()+i,&bits,4);if((i/257)%3==0){bits=special[(i/257+7)%18];std::memcpy(u.data()+i,&bits,4);}}
++  MetalContext gpu;auto a=gpu.Upload(g,m,k),b=gpu.Upload(u,m,k),f32=gpu.Allocate(m,k);uint32_t poison=0x7eab7eab;float pf;std::memcpy(&pf,&poison,4);std::vector<float> poisoned(count/2,pf);auto reference=gpu.Upload(poisoned,m,k/2),candidate=gpu.Upload(poisoned,m,k/2);
++  auto layout=AffineInt4Layout::Create(4096,k,AffineInt4CoefficientType::FP16);std::vector<uint32_t> words(layout.weightBytes/4,0);std::vector<uint16_t> scales(layout.coefficientBytes/2,0x3c00u),biases(scales.size(),0);auto weight=gpu.UploadAffineInt4(words.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,4096,k,true);auto out=gpu.Allocate(m,4096);Need(gpu.PrepareDiagnosticBulkAffine(f32,weight,out),"Cannot prepare actual native cast reference");auto owners=MetalContext::ProfileOwnerStats();
++  gpu.Begin();gpu.EncodeSiluMul(a,b,f32);gpu.EncodeDiagnosticHalfCastReference(f32,reference);gpu.SubmitAndWait();Need(gpu.LastDiagnosticSiluHalfDispatches()==0,"Reference selected fusion");auto expected=Halves(gpu,reference,count);auto original=gpu.Download(f32);
++  gpu.Begin();gpu.EncodeDiagnosticSiluHalf(a,b,candidate);gpu.SubmitAndWait();Need(gpu.LastDiagnosticSiluHalfDispatches()==1,"Fusion not selected");auto actual=Halves(gpu,candidate,count);
++  if(!root.empty()){auto path=root/("case-"+std::to_string(cases));Need(std::filesystem::create_directory(path),"Fresh case directory required");Save(path/"gate.f32",g);Save(path/"up.f32",u);Save(path/"original-silu.f32",original);Save(path/"reference.f16",expected);Save(path/"candidate.f16",actual);}
++Need(actual==expected,"Fused half words differ from actual native SiLU plus GPU cast");
++  for(size_t j=0;j<128;++j){size_t i=(j*104729+19)%count;if(!std::isfinite(g[i])||!std::isfinite(u[i]))continue;double value=(double(g[i])/(1.+std::exp(-double(g[i]))))*double(u[i]);if(!std::isfinite(original[i]))continue;Need(std::abs(double(original[i])-value)<=2e-6+4e-6*std::abs(value),"Original finite FP32 oracle bound");++finiteSamples;}
++  auto after=MetalContext::ProfileOwnerStats();Need(after.matrices==owners.matrices&&after.pipelineSets==owners.pipelineSets&&after.affineWeights==owners.affineWeights,"SiLU request-time owners changed");
++  report["cases"].push_back(JSON{{"index",cases},{"edge",edges},{"rows",m},{"columns",k},{"checked_half_words",count},{"equal",true}});total+=count;++cases;std::cout<<"bulk_silu_half "<<cases<<" PASS\n"<<std::flush;
++ }
++ {
++  MetalContext gpu;const size_t rows=4,k=4096;auto a=gpu.Upload(std::vector<float>(rows*k,.25f),rows,k),b=gpu.Upload(std::vector<float>(rows*k,.5f),rows,k),unready=gpu.Allocate(rows,k);auto parent=gpu.Upload(std::vector<float>(rows*k,17.f),rows*2,k/2),view=gpu.PrepareDiagnosticDenseView(parent,0,rows,k/2);auto before=gpu.Download(parent);
++  gpu.Begin();Reject([&]{gpu.EncodeDiagnosticSiluHalf(unready,b,view);});gpu.Abort();Need(gpu.Download(parent)==before,"Unready input wrote carrier");
++  auto alias=gpu.PrepareDiagnosticDenseView(a,0,rows,k/2);auto original=gpu.Download(a);gpu.Begin();Reject([&]{gpu.EncodeDiagnosticSiluHalf(a,b,alias);});gpu.Abort();Need(gpu.Download(a)==original,"Alias guard wrote input");
++  auto wrong=gpu.Upload(std::vector<float>((rows-1)*k,1.f),rows-1,k);gpu.Begin();Reject([&]{gpu.EncodeDiagnosticSiluHalf(a,wrong,view);});gpu.Abort();Need(gpu.Download(parent)==before,"Shape guard wrote output");
++  gpu.Begin();gpu.EncodeDiagnosticSiluHalf(a,b,view);gpu.Abort();Need(gpu.LastDiagnosticSiluHalfDispatches()==0,"Abort retained half observer");Reject([&]{gpu.Download(parent);});Reject([&]{gpu.Update(view,std::vector<float>(rows*k/2,0.f));});gpu.Update(parent,before);gpu.Begin();gpu.EncodeDiagnosticSiluHalf(a,b,view);gpu.SubmitAndWait();Need(gpu.LastDiagnosticSiluHalfDispatches()==1,"Half recovery failed");auto restored=gpu.Download(parent);Need(std::equal(restored.begin()+rows*k/2,restored.end(),before.begin()+rows*k/2),"Partial half writer changed unselected parent tail");
++ }
++ auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Half test retained native owners");Need(cases==20,"Missing half cases");report["passed"]=true;report["checked_half_words"]=total;report["finite_FP64_samples"]=finiteSamples;if(!root.empty()){std::ofstream f(root/"results.json");f<<report.dump(2)<<'\n';Need(bool(f),"Cannot save report");}std::cout<<"Actual native bulk SiLU-half PASS cases="<<cases<<" exact_half_words="<<total<<" finite_FP64_samples="<<finiteSamples<<"\n";return 0;
++}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+diff --git a/test2026/metal/bulk_kv_projection_test.cpp b/test2026/metal/bulk_kv_projection_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/bulk_kv_projection_test.cpp
+@@ -0,0 +1,49 @@
++// SPDX-License-Identifier: Apache-2.0
++// Actual native chunk/bulk projection feasibility, no model/serving admission.
++#include "../../src/backends/metal/metal_context.h"
++#include "../../src/model/affine_int4_codec.h"
++#include "nlohmann/json.hpp"
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <cstring>
++#include <filesystem>
++#include <fstream>
++#include <iostream>
++#include <limits>
++#include <set>
++#include <vector>
++using namespace Garnet;using JSON=nlohmann::json;
++void Need(bool v,const char* m){if(!v)throw std::runtime_error(m);}
++template<class F>void Reject(F f){bool no=false;try{f();}catch(const std::exception&){no=true;}Need(no,"Missing native guard");}
++template<class T>void Save(const std::filesystem::path& p,const std::vector<T>& v){std::ofstream f(p,std::ios::binary);f.write(reinterpret_cast<const char*>(v.data()),v.size()*sizeof(T));Need(bool(f),"Cannot save full payload");}
++int main(int argc,char** argv){try{Need(argc==1||argc==2,"Optional fresh output directory");std::filesystem::path root;if(argc==2){root=argv[1];Need(std::filesystem::create_directory(root),"Fresh output required");}JSON report={{"scope","Actual native K/V-width1024 gate. Existing indexed FP16-operand/F32-accumulator512-row control versus diagnostic bulk MPS, full word and FP64 checks. No model/serving admission."},{"cases",JSON::array()}};size_t index=0;bool allExact=true;
++for(bool edges:{false,true})for(auto shape:std::vector<std::array<size_t,2>>{{1024,4096}})for(size_t chunks:{1,4,16}){
++ const size_t n=shape[0],k=shape[1],m=512*chunks;std::filesystem::path dir;if(!root.empty()){dir=root/("case-"+std::to_string(index));Need(std::filesystem::create_directory(dir),"Fresh case required");}
++ MetalContext gpu;auto layout=AffineInt4Layout::Create(n,k,AffineInt4CoefficientType::FP16);std::vector<float> input(m*k);std::vector<uint32_t> words(layout.weightBytes/4);std::vector<uint16_t> scales(layout.coefficientBytes/2),biases(scales.size());uint32_t seed=37;
++ for(auto& x:input){seed=1664525u*seed+1013904223u;x=float(int((seed>>8)%65521)-32760)*0x1p-18f;}
++ for(auto& x:words){seed=1664525u*seed+1013904223u;x=seed;}for(size_t i=0;i<scales.size();++i){scales[i]=Float32ToFloat16RNE(float(int(i%13)-6)*.00171f);biases[i]=Float32ToFloat16RNE(float(int(i%17)-8)*.00313f);}
++ if(edges){const float values[]{0.f,-0.f,0x1p-24f,-0x1p-24f,0x1p-14f,-0x1p-14f,1.f+0x1p-11f,-1.f-0x1p-11f,8.f,-8.f,0x1p-12f,-0x1p-12f};for(size_t i=0;i<input.size();i+=257)input[i]=values[(i/257)%12];for(size_t i=0;i<scales.size();i+=131){scales[i]=(i%2)?uint16_t(0):uint16_t(0x8000);biases[i]=(i%3)?uint16_t(0x1400):uint16_t(0x9400);}}
++ auto weight=gpu.UploadAffineInt4(words.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,n,k,true);std::vector<MetalMatrix> ins,outs;std::vector<float> poison(512*n,std::numeric_limits<float>::quiet_NaN());
++ for(size_t c=0;c<chunks;++c){std::vector<float> part(input.begin()+c*512*k,input.begin()+(c+1)*512*k);ins.push_back(gpu.Upload(part,512,k));outs.push_back(gpu.Upload(poison,512,n));Need(gpu.PrepareAffineInt4Profile(ins.back(),weight,outs.back(),512),"Cannot prepare native control");}
++ Need(!gpu.PreparePackedAffineProfile(ins.back(),weight,outs.back(),512),"Original packed shape guard changed");auto all=gpu.Upload(input,m,k),output=gpu.Upload(std::vector<float>(m*n,std::numeric_limits<float>::quiet_NaN()),m,n);Need(gpu.PrepareDiagnosticBulkAffine(all,weight,output),"Cannot prepare bulk plan");auto owners=MetalContext::ProfileOwnerStats();size_t scratchBytes=0;std::set<uintptr_t> seen;
++ for(const auto& x:gpu.DiagnosticBulkScratch()){auto b=MetalContext::MatrixBufferInfo(x);Need(b.identity&&seen.insert(b.identity).second,"Missing/aliased bulk workspace");scratchBytes+=b.lengthBytes;}Need(scratchBytes==352321536,"Bulk workspace not bounded");
++ const auto plans=gpu.PackedAffinePlanCount(),pipes=gpu.AffineProfilePipelineCount();std::array<std::vector<float>,2> first;std::array<std::vector<double>,2> times;JSON execution=JSON::array();size_t checked=0,exactComparisons=0;
++ for(int rep=-3;rep<9;++rep)for(size_t order=0;order<2;++order){size_t mode=(order+size_t(rep+3))%2;
++  if(mode)gpu.Update(output,std::vector<float>(m*n,std::numeric_limits<float>::quiet_NaN()));else for(auto& x:outs)gpu.Update(x,poison);
++  gpu.Begin();if(mode)gpu.EncodeDiagnosticBulkAffine(all,weight,output);else for(size_t c=0;c<chunks;++c)gpu.EncodeAffineInt4MatMul(ins[c],weight,outs[c]);gpu.SubmitAndWait();
++  Need(gpu.LastPackedAffineDispatches()==0&&gpu.LastDiagnosticBulkDispatches()==mode&&gpu.LastMPPAffineDispatches()==(mode?0:chunks),"Wrong actual native route");Need(gpu.LastAffineProfileMisses()==0&&gpu.LastAffineProfileDispatches()==(mode?0:chunks),"Native profile observations differ");
++  std::vector<float> values;if(mode)values=gpu.Download(output);else{values.resize(m*n);for(size_t c=0;c<chunks;++c){auto p=gpu.Download(outs[c]);std::copy(p.begin(),p.end(),values.begin()+c*512*n);}}
++  for(float v:values)Need(std::isfinite(v),"Missing/nonfinite writer after poison");if(first[mode].empty())first[mode]=values;else Need(std::memcmp(first[mode].data(),values.data(),values.size()*4)==0,"Unstable native output");checked+=values.size();if(rep>=0)times[mode].push_back(gpu.LastGPUMs());
++  execution.push_back(JSON{{"rep",rep},{"mode",mode},{"packed",gpu.LastPackedAffineDispatches()},{"mpp",gpu.LastMPPAffineDispatches()},{"bulk",gpu.LastDiagnosticBulkDispatches()}});auto now=MetalContext::ProfileOwnerStats();Need(now.matrices==owners.matrices&&now.pipelineSets==owners.pipelineSets&&now.affineWeights==owners.affineWeights&&gpu.PackedAffinePlanCount()==plans&&gpu.AffineProfilePipelineCount()==pipes,"Request-time allocation/preparation");
++ }
++ double maxDiff=0;for(size_t i=0;i<first[0].size();++i){if(std::memcmp(first[0].data()+i,first[1].data()+i,4)==0)++exactComparisons;maxDiff=std::max(maxDiff,std::abs(double(first[0][i])-first[1][i]));}
++ AffineInt4View view(layout,words.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes);std::vector<float> decoded(k);JSON oracle=JSON::array();double fraction=0.;
++ for(size_t col:std::set<size_t>{0,1,15,16,31,32,63,64,n/2,n-1}){view.DecodeRow(col,decoded.data(),k);for(size_t row:std::set<size_t>{0,511,m/2,m-1}){double total=0,absolute=0;for(size_t j=0;j<k;++j){double p=double(Float16ToFloat32(Float32ToFloat16RNE(input[row*k+j])))*Float16ToFloat32(Float32ToFloat16RNE(decoded[j]));total+=p;absolute+=std::abs(p);}for(size_t mode=0;mode<2;++mode){double f=std::abs(double(first[mode][row*n+col])-total)/(2e-6+4e-6*absolute);Need(f<=1,"Original FP64 sample bound failed");fraction=std::max(fraction,f);}oracle.push_back(JSON{{"row",row},{"column",col},{"sum",total},{"sum_abs",absolute}});}}
++ // Guard checks run outside collection and after complete outputs are saved.
++ if(!root.empty()){Save(dir/"input.f32",input);Save(dir/"weight.u32",words);Save(dir/"scales.f16",scales);Save(dir/"biases.f16",biases);Save(dir/"chunked.f32",first[0]);Save(dir/"bulk.f32",first[1]);}
++ gpu.Begin();Reject([&]{gpu.PrepareDiagnosticBulkAffine(all,weight,output);});gpu.Abort();auto unready=gpu.Allocate(m,k);gpu.Begin();Reject([&]{gpu.EncodeDiagnosticBulkAffine(unready,weight,output);});gpu.Abort();
++ gpu.Begin();gpu.EncodeDiagnosticBulkAffine(all,weight,output);gpu.Abort();Need(gpu.LastDiagnosticBulkDispatches()==0,"Abort counter not reset");Reject([&]{gpu.Download(output);});gpu.Begin();gpu.EncodeDiagnosticBulkAffine(all,weight,output);gpu.SubmitAndWait();Need(gpu.LastDiagnosticBulkDispatches()==1,"Recovery route differs");
++ allExact=allExact&&(exactComparisons==m*n);JSON cell={{"edge",edges},{"index",index},{"rows",m},{"chunks",chunks},{"outputs",n},{"inner",k},{"gpu_ms",times},{"execution",execution},{"warmups",3},{"repetitions",9},{"scratch_bytes",scratchBytes},{"checked_runtime_words",checked},{"equal_output_words",exactComparisons},{"total_output_words",m*n},{"maximum_absolute_difference",maxDiff},{"maximum_FP64_sample_fraction",fraction},{"oracle",oracle}};report["cases"].push_back(cell);std::cout<<"bulk_projection "<<index++<<" PASS\n"<<std::flush;
++}
++auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Native owners retained");report["passed"]=true;Need(index==6,"Missing K/V profile cells");report["exact_state_gate_passed"]=allExact;if(!root.empty()){std::ofstream f(root/"results.json");f<<report.dump(2)<<'\n';Need(bool(f),"Cannot save raw report");}std::cout<<"Native K/V projection finite/FP64 PASS, bit-state gate="<<allExact<<"\n";return allExact?0:2;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+diff --git a/test2026/metal/bulk_projection_native_benchmark.cpp b/test2026/metal/bulk_projection_native_benchmark.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/bulk_projection_native_benchmark.cpp
+@@ -0,0 +1,48 @@
++// SPDX-License-Identifier: Apache-2.0
++// Actual native chunk/bulk projection feasibility, no model/serving admission.
++#include "../../src/backends/metal/metal_context.h"
++#include "../../src/model/affine_int4_codec.h"
++#include "nlohmann/json.hpp"
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <cstring>
++#include <filesystem>
++#include <fstream>
++#include <iostream>
++#include <limits>
++#include <set>
++#include <vector>
++using namespace Garnet;using JSON=nlohmann::json;
++void Need(bool v,const char* m){if(!v)throw std::runtime_error(m);}
++template<class F>void Reject(F f){bool no=false;try{f();}catch(const std::exception&){no=true;}Need(no,"Missing native guard");}
++template<class T>void Save(const std::filesystem::path& p,const std::vector<T>& v){std::ofstream f(p,std::ios::binary);f.write(reinterpret_cast<const char*>(v.data()),v.size()*sizeof(T));Need(bool(f),"Cannot save full payload");}
++int main(int argc,char** argv){try{Need(argc==2,"Fresh output directory required");std::filesystem::path root=argv[1];Need(std::filesystem::create_directory(root),"Fresh output required");JSON report={{"scope","Actual native projection-only amortization screen. Chunk512 current packed path versus one dense bulk MPS product, all input packing/weight decoding in timing. No layer-major runtime, causal attention, TTFT or quality qualification."},{"cases",JSON::array()}};size_t index=0;
++for(auto shape:std::vector<std::array<size_t,2>>{{14336,4096},{4096,14336},{4096,4096}})for(size_t chunks:{1,4,16}){
++ const size_t n=shape[0],k=shape[1],m=512*chunks;auto dir=root/("case-"+std::to_string(index));Need(std::filesystem::create_directory(dir),"Fresh case required");
++ MetalContext gpu;auto layout=AffineInt4Layout::Create(n,k,AffineInt4CoefficientType::FP16);std::vector<float> input(m*k);std::vector<uint32_t> words(layout.weightBytes/4);std::vector<uint16_t> scales(layout.coefficientBytes/2),biases(scales.size());uint32_t seed=37;
++ for(auto& x:input){seed=1664525u*seed+1013904223u;x=float(int((seed>>8)%65521)-32760)*0x1p-18f;}
++ for(auto& x:words){seed=1664525u*seed+1013904223u;x=seed;}for(size_t i=0;i<scales.size();++i){scales[i]=Float32ToFloat16RNE(float(int(i%13)-6)*.00171f);biases[i]=Float32ToFloat16RNE(float(int(i%17)-8)*.00313f);}
++ auto weight=gpu.UploadAffineInt4(words.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,n,k,true);std::vector<MetalMatrix> ins,outs;std::vector<float> poison(512*n,std::numeric_limits<float>::quiet_NaN());
++ for(size_t c=0;c<chunks;++c){std::vector<float> part(input.begin()+c*512*k,input.begin()+(c+1)*512*k);ins.push_back(gpu.Upload(part,512,k));outs.push_back(gpu.Upload(poison,512,n));Need(gpu.PrepareAffineInt4Profile(ins.back(),weight,outs.back(),512)&&gpu.PreparePackedAffineProfile(ins.back(),weight,outs.back(),512),"Cannot prepare native control");}
++ auto all=gpu.Upload(input,m,k),output=gpu.Upload(std::vector<float>(m*n,std::numeric_limits<float>::quiet_NaN()),m,n);Need(gpu.PrepareDiagnosticBulkAffine(all,weight,output),"Cannot prepare bulk plan");auto owners=MetalContext::ProfileOwnerStats();size_t scratchBytes=0;std::set<uintptr_t> seen;
++ for(const auto& x:gpu.DiagnosticBulkScratch()){auto b=MetalContext::MatrixBufferInfo(x);Need(b.identity&&seen.insert(b.identity).second,"Missing/aliased bulk workspace");scratchBytes+=b.lengthBytes;}Need(scratchBytes==352321536,"Bulk workspace not bounded");
++ const auto plans=gpu.PackedAffinePlanCount(),pipes=gpu.AffineProfilePipelineCount();std::array<std::vector<float>,2> first;std::array<std::vector<double>,2> times;JSON execution=JSON::array();size_t checked=0,exactComparisons=0;
++ for(int rep=-3;rep<9;++rep)for(size_t order=0;order<2;++order){size_t mode=(order+size_t(rep+3))%2;
++  if(mode)gpu.Update(output,std::vector<float>(m*n,std::numeric_limits<float>::quiet_NaN()));else for(auto& x:outs)gpu.Update(x,poison);
++  gpu.Begin();if(mode)gpu.EncodeDiagnosticBulkAffine(all,weight,output);else for(size_t c=0;c<chunks;++c)gpu.EncodeAffineInt4MatMul(ins[c],weight,outs[c]);gpu.SubmitAndWait();
++  Need(gpu.LastPackedAffineDispatches()==(mode?0:chunks)&&gpu.LastDiagnosticBulkDispatches()==mode,"Wrong actual native route");Need(gpu.LastAffineProfileMisses()==0&&gpu.LastAffineProfileDispatches()==(mode?0:chunks),"Native profile observations differ");
++  std::vector<float> values;if(mode)values=gpu.Download(output);else{values.resize(m*n);for(size_t c=0;c<chunks;++c){auto p=gpu.Download(outs[c]);std::copy(p.begin(),p.end(),values.begin()+c*512*n);}}
++  for(float v:values)Need(std::isfinite(v),"Missing/nonfinite writer after poison");if(first[mode].empty())first[mode]=values;else Need(std::memcmp(first[mode].data(),values.data(),values.size()*4)==0,"Unstable native output");checked+=values.size();if(rep>=0)times[mode].push_back(gpu.LastGPUMs());
++  execution.push_back(JSON{{"rep",rep},{"mode",mode},{"packed",gpu.LastPackedAffineDispatches()},{"bulk",gpu.LastDiagnosticBulkDispatches()}});auto now=MetalContext::ProfileOwnerStats();Need(now.matrices==owners.matrices&&now.pipelineSets==owners.pipelineSets&&now.affineWeights==owners.affineWeights&&gpu.PackedAffinePlanCount()==plans&&gpu.AffineProfilePipelineCount()==pipes,"Request-time allocation/preparation");
++ }
++ double maxDiff=0;for(size_t i=0;i<first[0].size();++i){if(std::memcmp(first[0].data()+i,first[1].data()+i,4)==0)++exactComparisons;maxDiff=std::max(maxDiff,std::abs(double(first[0][i])-first[1][i]));}
++ AffineInt4View view(layout,words.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes);std::vector<float> decoded(k);JSON oracle=JSON::array();double fraction=0.;
++ for(size_t col:std::set<size_t>{0,1,15,16,31,32,63,64,n/2,n-1}){view.DecodeRow(col,decoded.data(),k);for(size_t row:std::set<size_t>{0,511,m/2,m-1}){double total=0,absolute=0;for(size_t j=0;j<k;++j){double p=double(Float16ToFloat32(Float32ToFloat16RNE(input[row*k+j])))*Float16ToFloat32(Float32ToFloat16RNE(decoded[j]));total+=p;absolute+=std::abs(p);}for(size_t mode=0;mode<2;++mode){double f=std::abs(double(first[mode][row*n+col])-total)/(2e-6+4e-6*absolute);Need(f<=1,"Original FP64 sample bound failed");fraction=std::max(fraction,f);}oracle.push_back(JSON{{"row",row},{"column",col},{"sum",total},{"sum_abs",absolute}});}}
++ // Guard checks run outside collection and after complete outputs are saved.
++ Save(dir/"input.f32",input);Save(dir/"weight.u32",words);Save(dir/"scales.f16",scales);Save(dir/"biases.f16",biases);Save(dir/"chunked.f32",first[0]);Save(dir/"bulk.f32",first[1]);
++ gpu.Begin();Reject([&]{gpu.PrepareDiagnosticBulkAffine(all,weight,output);});gpu.Abort();auto unready=gpu.Allocate(m,k);gpu.Begin();Reject([&]{gpu.EncodeDiagnosticBulkAffine(unready,weight,output);});gpu.Abort();
++ gpu.Begin();gpu.EncodeDiagnosticBulkAffine(all,weight,output);gpu.Abort();Need(gpu.LastDiagnosticBulkDispatches()==0,"Abort counter not reset");Reject([&]{gpu.Download(output);});gpu.Begin();gpu.EncodeDiagnosticBulkAffine(all,weight,output);gpu.SubmitAndWait();Need(gpu.LastDiagnosticBulkDispatches()==1,"Recovery route differs");
++ JSON cell={{"index",index},{"rows",m},{"chunks",chunks},{"outputs",n},{"inner",k},{"gpu_ms",times},{"execution",execution},{"warmups",3},{"repetitions",9},{"scratch_bytes",scratchBytes},{"checked_runtime_words",checked},{"equal_output_words",exactComparisons},{"total_output_words",m*n},{"maximum_absolute_difference",maxDiff},{"maximum_FP64_sample_fraction",fraction},{"oracle",oracle}};report["cases"].push_back(cell);std::cout<<"bulk_projection "<<index++<<" PASS\n"<<std::flush;
++}
++auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Native owners retained");report["passed"]=true;Need(index==9,"Missing bulk profile cells");std::ofstream f(root/"results.json");f<<report.dump(2)<<'\n';Need(bool(f),"Cannot save raw report");return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+diff --git a/test2026/metal/bulk_qo_alias_test.cpp b/test2026/metal/bulk_qo_alias_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/bulk_qo_alias_test.cpp
+@@ -0,0 +1,43 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "metal_context.h"
++#include "../../src/model/affine_int4_codec.h"
++#include "nlohmann/json.hpp"
++#include <array>
++#include <cmath>
++#include <cstring>
++#include <filesystem>
++#include <fstream>
++#include <iostream>
++#include <limits>
++#include <set>
++#include <vector>
++using namespace Garnet;using JSON=nlohmann::json;
++void Need(bool v,const char* m){if(!v)throw std::runtime_error(m);}
++template<class F>void Reject(F f){bool yes=false;try{f();}catch(const std::exception&){yes=true;}Need(yes,"Missing native Q/O guard");}
++template<class T>void Save(const std::filesystem::path& p,const std::vector<T>& v){std::ofstream f(p,std::ios::binary);f.write(reinterpret_cast<const char*>(v.data()),v.size()*sizeof(T));Need(bool(f),"Cannot save Q/O payload");}
++void Equal(const std::vector<float>& a,const std::vector<float>& b){Need(a.size()==b.size(),"Q/O extent mismatch");for(auto v:b)Need(std::isfinite(v),"Nonfinite/unwritten Q/O value");Need(std::memcmp(a.data(),b.data(),a.size()*4)==0,"Q/O complete output bits differ");}
++struct Weight {AffineInt4Layout layout;std::vector<uint32_t> words;std::vector<uint16_t> scales,biases;MetalAffineInt4Weight gpu;};
++Weight Make(MetalContext& gpu,uint32_t& seed,bool edge){Weight w;w.layout=AffineInt4Layout::Create(4096,4096,AffineInt4CoefficientType::FP16);w.words.resize(w.layout.weightBytes/4);w.scales.resize(w.layout.coefficientBytes/2);w.biases.resize(w.scales.size());for(auto& v:w.words){seed=1664525u*seed+1013904223u;v=seed;}for(size_t i=0;i<w.scales.size();++i){w.scales[i]=Float32ToFloat16RNE(float(int((i+seed)%13)-6)*.00171f);w.biases[i]=Float32ToFloat16RNE(float(int((i+seed)%17)-8)*.00313f);}if(edge)for(size_t i=0;i<w.scales.size();i+=131){w.scales[i]=i%2?0:0x8000;w.biases[i]=i%3?0x1400:0x9400;}w.gpu=gpu.UploadAffineInt4(w.words.data(),w.layout.weightBytes,w.scales.data(),w.layout.coefficientBytes,w.biases.data(),w.layout.coefficientBytes,4096,4096,true);return w;}
++JSON Oracle(const Weight& w,const std::vector<float>& input,const std::vector<float>& ref,const std::vector<float>& got,size_t rows){AffineInt4View view(w.layout,w.words.data(),w.layout.weightBytes,w.scales.data(),w.layout.coefficientBytes,w.biases.data(),w.layout.coefficientBytes);std::vector<float> decoded(4096);JSON out=JSON::array();for(size_t col:std::set<size_t>{0,1,15,16,31,32,63,64,2048,4095}){view.DecodeRow(col,decoded.data(),4096);for(size_t row:std::set<size_t>{0,511,rows/2,rows-1}){double total=0,absolute=0;for(size_t k=0;k<4096;++k){double v=double(Float16ToFloat32(Float32ToFloat16RNE(input[row*4096+k])))*Float16ToFloat32(Float32ToFloat16RNE(decoded[k]));total+=v;absolute+=std::abs(v);}for(auto value:{ref[row*4096+col],got[row*4096+col]})Need(std::abs(double(value)-total)<=2e-6+4e-6*absolute,"Unchanged FP64 Q/O sample bound failed");out.push_back(JSON{{"row",row},{"column",col},{"sum",total},{"sum_abs",absolute}});}}return out;}
++int main(int argc,char** argv){try{Need(argc==1||argc==2,"Optional fresh output directory");std::filesystem::path root;if(argc==2){root=argv[1];Need(std::filesystem::create_directory(root),"Fresh Q/O output directory required");}JSON report={{"scope","Untimed actual-native4096x4096 Q/O bit/FP64 and norm/residual alias writer gate; context is Q+input surrogate, not attention/model/serving/quality admission."},{"cases",JSON::array()}};size_t index=0;
++for(bool edge:{false,true})for(size_t chunks:{size_t(1),size_t(4),size_t(16)}){
++ MetalContext gpu;const size_t n=4096,rows=chunks*512,cells=rows*n;uint32_t seed=37;std::vector<float> input(cells);for(auto& v:input){seed=1664525u*seed+1013904223u;v=float(int((seed>>8)%65521)-32760)*0x1p-18f;}if(edge){const float vals[]{0.f,-0.f,0x1p-24f,-0x1p-24f,0x1p-14f,-0x1p-14f,1.f+0x1p-11f,-1.f-0x1p-11f,8.f,-8.f};for(size_t i=0;i<cells;i+=257)input[i]=vals[(i/257)%10];}
++ auto q=Make(gpu,seed,edge),o=Make(gpu,seed,edge);const float front=42.5f,back=-37.25f;std::vector<float> normInit((rows+2)*n,front),resInit((rows+2)*n,std::numeric_limits<float>::quiet_NaN());std::copy(input.begin(),input.end(),normInit.begin()+n);std::fill(normInit.end()-n,normInit.end(),back);std::fill(resInit.begin(),resInit.begin()+n,front);std::fill(resInit.end()-n,resInit.end(),back);
++ auto original=gpu.Upload(input,rows,n),normOwner=gpu.Upload(normInit,rows+2,n),resOwner=gpu.Upload(resInit,rows+2,n);auto norm=gpu.PrepareDiagnosticDenseView(normOwner,n,rows,n),res=gpu.PrepareDiagnosticDenseView(resOwner,n,rows,n);auto qRef=gpu.Allocate(rows,n),ctxRef=gpu.Allocate(rows,n),oRef=gpu.Allocate(rows,n),finalRef=gpu.Allocate(rows,n);gpu.Zero(qRef);gpu.Zero(ctxRef);gpu.Zero(oRef);gpu.Zero(finalRef);
++ std::vector<MetalMatrix> inputViews,normViews,resViews,qViews,ctxViews,oViews,finalViews;for(size_t c=0;c<chunks;++c){const size_t at=c*512*n;inputViews.push_back(gpu.PrepareDiagnosticDenseView(original,at,512,n));normViews.push_back(gpu.PrepareDiagnosticDenseView(normOwner,n+at,512,n));resViews.push_back(gpu.PrepareDiagnosticDenseView(resOwner,n+at,512,n));qViews.push_back(gpu.PrepareDiagnosticDenseView(qRef,at,512,n));ctxViews.push_back(gpu.PrepareDiagnosticDenseView(ctxRef,at,512,n));oViews.push_back(gpu.PrepareDiagnosticDenseView(oRef,at,512,n));finalViews.push_back(gpu.PrepareDiagnosticDenseView(finalRef,at,512,n));Need(gpu.PrepareAffineInt4Profile(inputViews.back(),q.gpu,qViews.back(),512)&&gpu.PreparePackedAffineProfile(inputViews.back(),q.gpu,qViews.back(),512)&&gpu.PrepareAffineInt4Profile(ctxViews.back(),o.gpu,oViews.back(),512)&&gpu.PreparePackedAffineProfile(ctxViews.back(),o.gpu,oViews.back(),512),"Cannot prepare original Q/O profiles");}
++ Need(gpu.PrepareDiagnosticBulkAffine(norm,q.gpu,res)&&gpu.PrepareDiagnosticBulkAffine(norm,o.gpu,res),"Cannot prepare bounded Q/O products");Reject([&]{gpu.PrepareDiagnosticBulkAffine(norm,q.gpu,norm);});gpu.Begin();Reject([&]{gpu.EncodeAdd(original,res,res);});gpu.Abort();const auto owners=MetalContext::ProfileOwnerStats();const auto plans=gpu.PackedAffinePlanCount(),pipes=gpu.AffineProfilePipelineCount();
++ gpu.Begin();for(size_t c=0;c<chunks;++c){gpu.EncodeAffineInt4MatMul(inputViews[c],q.gpu,qViews[c]);gpu.EncodeAdd(qViews[c],inputViews[c],ctxViews[c]);}for(size_t c=0;c<chunks;++c){gpu.EncodeAffineInt4MatMul(ctxViews[c],o.gpu,oViews[c]);gpu.EncodeAdd(inputViews[c],oViews[c],finalViews[c]);}gpu.SubmitAndWait();Need(gpu.LastPackedAffineDispatches()==2*chunks&&gpu.LastDiagnosticBulkDispatches()==0&&gpu.LastAffineProfileDispatches()==2*chunks&&gpu.LastAffineProfileMisses()==0,"Original Q/O route differs");auto qr=gpu.Download(qRef),cr=gpu.Download(ctxRef),orr=gpu.Download(oRef),fr=gpu.Download(finalRef);
++ auto contexts=[&](bool skip){gpu.EncodeDiagnosticBulkAffine(norm,q.gpu,res);for(size_t c=0;c<chunks;++c)if(!skip||c+1<chunks)gpu.EncodeAdd(resViews[c],inputViews[c],normViews[c]);};
++ gpu.Begin();contexts(false);gpu.SubmitAndWait();Need(gpu.LastDiagnosticBulkDispatches()==1&&gpu.LastPackedAffineDispatches()==0,"Q/context probe route differs");auto qGot=gpu.Download(res),ctxGot=gpu.Download(norm),contextWords=gpu.Download(normOwner);Equal(qr,qGot);Equal(cr,ctxGot);
++ auto chain=[&](bool skip){contexts(skip);gpu.EncodeDiagnosticBulkAffine(norm,o.gpu,res);gpu.EncodeAdd(original,res,norm);};
++ gpu.Update(normOwner,normInit);gpu.Update(resOwner,resInit);gpu.Begin();chain(false);Reject([&]{gpu.Download(resOwner);});gpu.SubmitAndWait();Need(gpu.LastDiagnosticBulkDispatches()==2&&gpu.LastPackedAffineDispatches()==0,"Alias chain route differs");auto finalGot=gpu.Download(norm),oGot=gpu.Download(res),finalWords=gpu.Download(normOwner),resWords=gpu.Download(resOwner);Equal(fr,finalGot);Equal(orr,oGot);for(const auto& parent:{finalWords,resWords})for(size_t j=0;j<n;++j)Need(parent[j]==front&&parent[parent.size()-n+j]==back,"Q/O parent guard overwritten");
++ auto qOracle=Oracle(q,input,qr,qGot,rows),oOracle=Oracle(o,cr,orr,oGot,rows);
++ // Deliberately omit the last context writer: finite stale norm values must
++ // still be rejected by complete output equality, rather than finiteness alone.
++ gpu.Update(normOwner,normInit);gpu.Update(resOwner,resInit);gpu.Begin();contexts(true);gpu.SubmitAndWait();auto badContext=gpu.Download(norm);gpu.Begin();gpu.EncodeDiagnosticBulkAffine(norm,o.gpu,res);gpu.EncodeAdd(original,res,norm);gpu.SubmitAndWait();auto badFinal=gpu.Download(norm);Need(std::memcmp(badContext.data(),cr.data(),cells*4)!=0&&std::memcmp(badFinal.data(),fr.data(),cells*4)!=0,"Missing context producer escaped complete comparison");
++ gpu.Update(normOwner,normInit);gpu.Update(resOwner,resInit);gpu.Begin();gpu.EncodeDiagnosticBulkAffine(norm,q.gpu,res);gpu.EncodeAdd(resViews[0],inputViews[0],normViews[0]);gpu.Abort();Reject([&]{gpu.Download(normOwner);});Reject([&]{gpu.Download(resOwner);});Reject([&]{gpu.Update(normViews[0],std::vector<float>(512*n,0.f));});gpu.Update(normOwner,normInit);gpu.Update(resOwner,resInit);gpu.Begin();chain(false);gpu.SubmitAndWait();Equal(fr,gpu.Download(norm));
++ auto now=MetalContext::ProfileOwnerStats();Need(now.matrices==owners.matrices&&now.affineWeights==owners.affineWeights&&now.pipelineSets==owners.pipelineSets&&gpu.PackedAffinePlanCount()==plans&&gpu.AffineProfilePipelineCount()==pipes,"Q/O owner/profile growth");
++ if(!root.empty()){auto dir=root/("case-"+std::to_string(index));Need(std::filesystem::create_directory(dir),"Fresh Q/O case required");Save(dir/"input.f32",input);Save(dir/"q.weight.u32",q.words);Save(dir/"q.scales.f16",q.scales);Save(dir/"q.biases.f16",q.biases);Save(dir/"o.weight.u32",o.words);Save(dir/"o.scales.f16",o.scales);Save(dir/"o.biases.f16",o.biases);Save(dir/"q.ref.f32",qr);Save(dir/"q.bulk.f32",qGot);Save(dir/"context.ref.f32",cr);Save(dir/"context.parent.f32",contextWords);Save(dir/"o.ref.f32",orr);Save(dir/"o.bulk.f32",oGot);Save(dir/"final.ref.f32",fr);Save(dir/"final.parent.f32",finalWords);if(index==0){Save(dir/"missing-context.f32",badContext);Save(dir/"missing-final.f32",badFinal);}}
++ report["cases"].push_back(JSON{{"index",index},{"edge",edge},{"chunks",chunks},{"rows",rows},{"columns",n},{"offset_elements",n},{"parent_rows",rows+2},{"guard_front",front},{"guard_back",back},{"paired_stage_words",4*cells},{"paired_guard_words",4*n},{"reference_packed_dispatches",2*chunks},{"alias_bulk_dispatches",2},{"q_probe_dispatches",1},{"o_probe_dispatches",0},{"missing_writer_detected",true},{"abort_parent_guards_passed",true},{"q_oracle",qOracle},{"o_oracle",oOracle}});std::cout<<"Q/O native alias gate "<<index++<<" PASS\n"<<std::flush;
++}
++auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Q/O owners retained");Need(index==6,"Missing Q/O gate cells");report["passed"]=true;if(!root.empty()){std::ofstream file(root/"results.json");file<<report.dump(2)<<'\n';Need(bool(file),"Cannot save Q/O gate report");}return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+diff --git a/src/backends/metal/bulk_append_policy.h b/src/backends/metal/bulk_append_policy.h
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/bulk_append_policy.h
+@@ -0,0 +1,29 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++#include <array>
++#include <vector>
++#include <cstdint>
++#include <stdexcept>
++namespace Garnet {
++// Pure preflight: complete before any device write or tracked-history commit.
++class BulkAppendValidator {
++ std::array<size_t,4> starts_,counts_{};
++ std::array<bool,4> valid_,ended_{};
++ std::array<uint64_t,4> epochs_;
++ size_t capacity_,vocabulary_;bool any_=false;
++public:
++ BulkAppendValidator(std::array<size_t,4> starts,std::array<bool,4> valid,std::array<uint64_t,4> epochs,size_t capacity,size_t vocabulary):starts_(starts),valid_(valid),epochs_(epochs),capacity_(capacity),vocabulary_(vocabulary) {
++  if(!capacity||!vocabulary)throw std::invalid_argument("Missing native bulk token domain");
++ }
++ void Step(size_t row,float active,float slot,const float* pos,int64_t token) {
++  if(row>=4||token<0||uint64_t(token)>=vocabulary_||(active!=0&&active!=1))throw std::invalid_argument("Invalid bulk active/token domain");
++  if(active==0){ended_[row]=true;if(slot!=0||pos[0]!=0||pos[1]!=0||pos[2]!=0)throw std::invalid_argument("Inactive bulk controls must be zero");return;}
++  if(!epochs_[row]||!valid_[row]||ended_[row]||starts_[row]>capacity_||counts_[row]>=capacity_-starts_[row])throw std::invalid_argument("Bulk row has no contiguous tracked lease history");
++  const float next=float(starts_[row]+counts_[row]);
++  if(slot!=next||pos[0]!=next||pos[1]!=next||pos[2]!=next)throw std::invalid_argument("Bulk append positions do not follow native token history");
++  ++counts_[row];any_=true;
++ }
++ const std::array<size_t,4>& Counts() const{return counts_;}
++ void Finish(bool lastChunkActive)const{if(!any_||!lastChunkActive)throw std::invalid_argument("Bulk request has no live trailing chunk");}
++};
++}
+diff --git a/src/backends/metal/packed_fulltile_diagnostic_shader.h b/src/backends/metal/packed_fulltile_diagnostic_shader.h
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/packed_fulltile_diagnostic_shader.h
+@@ -0,0 +1,204 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++namespace Garnet {
++// Prepared aligned Mistral projections. Compact half input, inline Q4-to-half
++// weights, strict MPP float accumulation and float output. Actual rows are
++// dynamic within an up-to512 profile; inactive output rows are cleared by host.
++inline constexpr const char* kPackedFullTileDiagnosticShader=R"METAL(
++#include <metal_stdlib>
++#include <MetalPerformancePrimitives/MetalPerformancePrimitives.h>
++using namespace metal;
++using namespace mpp::tensor_ops;
++struct PackedFullTileParams {ulong rows,inner,columns,aStride,oStride;};
++kernel void fulltile_m128k128(device const half* input [[buffer(0)]],device const uint* packed [[buffer(1)]],
++ device const ushort* scales [[buffer(2)]],device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
++ constant PackedFullTileParams& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],uint2 group [[threadgroup_position_in_grid]],
++ uint tid [[thread_index_in_threadgroup]],uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
++ GARNET_AFFINE_PARAMETERS(PackedFullTileParams);
++ constexpr uint stageK=128,weightStride=stageK+8,packet=64*stageK/256;
++ threadgroup half weights[64*weightStride];
++ constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<descriptor,execution_simdgroup> multiply;
++ auto left=multiply.get_left_input_cooperative_tensor<half,half,float>();
++ auto right=multiply.get_right_input_cooperative_tensor<half,half,float>();
++ auto c0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c1=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ for(ushort i=0;i<c0.get_capacity();++i){c0[i]=0;c1[i]=0;}
++ const uint quad=lane>>2,fragmentRow=(quad&4)|((lane>>1)&3),fragmentColumn=((quad&2)|(lane&1))*4;
++ const uint firstRow=group.y*128+(simd/2)*32,firstColumn=group.x*64+(simd%2)*32;
++ const uint localN=tid/(stageK/packet),localK=(tid%(stageK/packet))*packet,n=group.x*64+localN;
++ for(uint base=0;base<p.inner;base+=stageK) {
++  const uint offset=n*(p.inner/8)+(base+localK)/8,coefficient=n*(p.inner/64)+(base+localK)/64;
++  const float scale=garnet_affine_coefficient(scales[coefficient]),bias=garnet_affine_coefficient(biases[coefficient]);
++  const uint4 words=*reinterpret_cast<device const uint4*>(packed+offset);
++  #pragma clang loop unroll(full)
++  for(uint i=0;i<packet/4;++i) {
++   const uint4 codes=(uint4(words[i/2])>>(uint4(0,4,8,12)+(i%2)*16))&15u;
++   *reinterpret_cast<threadgroup half4*>(weights+localN*weightStride+localK+4*i)=half4(fma(float4(codes),float4(scale),float4(bias)));
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++  for(uint local=0;local<stageK;local+=16) {
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[((simd%2)*32+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+0+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=*reinterpret_cast<device const half4*>(input+row*p.inner+k);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c0);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+16+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=*reinterpret_cast<device const half4*>(input+row*p.inner+k);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c1);
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c0[ci],c0[ci+1],c0[ci+2],c0[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+16+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c1[ci],c1[ci+1],c1[ci+2],c1[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++}
++kernel void fulltile_m256k128(device const half* input [[buffer(0)]],device const uint* packed [[buffer(1)]],
++ device const ushort* scales [[buffer(2)]],device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
++ constant PackedFullTileParams& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],uint2 group [[threadgroup_position_in_grid]],
++ uint tid [[thread_index_in_threadgroup]],uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
++ GARNET_AFFINE_PARAMETERS(PackedFullTileParams);
++ constexpr uint stageK=128,weightStride=stageK+8,packet=64*stageK/256;
++ threadgroup half weights[64*weightStride];
++ constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<descriptor,execution_simdgroup> multiply;
++ auto left=multiply.get_left_input_cooperative_tensor<half,half,float>();
++ auto right=multiply.get_right_input_cooperative_tensor<half,half,float>();
++ auto c0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c1=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c2=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c3=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ for(ushort i=0;i<c0.get_capacity();++i){c0[i]=0;c1[i]=0;c2[i]=0;c3[i]=0;}
++ const uint quad=lane>>2,fragmentRow=(quad&4)|((lane>>1)&3),fragmentColumn=((quad&2)|(lane&1))*4;
++ const uint firstRow=group.y*256+(simd/2)*64,firstColumn=group.x*64+(simd%2)*32;
++ const uint localN=tid/(stageK/packet),localK=(tid%(stageK/packet))*packet,n=group.x*64+localN;
++ for(uint base=0;base<p.inner;base+=stageK) {
++  const uint offset=n*(p.inner/8)+(base+localK)/8,coefficient=n*(p.inner/64)+(base+localK)/64;
++  const float scale=garnet_affine_coefficient(scales[coefficient]),bias=garnet_affine_coefficient(biases[coefficient]);
++  const uint4 words=*reinterpret_cast<device const uint4*>(packed+offset);
++  #pragma clang loop unroll(full)
++  for(uint i=0;i<packet/4;++i) {
++   const uint4 codes=(uint4(words[i/2])>>(uint4(0,4,8,12)+(i%2)*16))&15u;
++   *reinterpret_cast<threadgroup half4*>(weights+localN*weightStride+localK+4*i)=half4(fma(float4(codes),float4(scale),float4(bias)));
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++  for(uint local=0;local<stageK;local+=16) {
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[((simd%2)*32+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+0+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=*reinterpret_cast<device const half4*>(input+row*p.inner+k);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c0);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+16+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=*reinterpret_cast<device const half4*>(input+row*p.inner+k);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c1);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+32+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=*reinterpret_cast<device const half4*>(input+row*p.inner+k);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c2);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+48+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=*reinterpret_cast<device const half4*>(input+row*p.inner+k);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c3);
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c0[ci],c0[ci+1],c0[ci+2],c0[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+16+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c1[ci],c1[ci+1],c1[ci+2],c1[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+32+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c2[ci],c2[ci+1],c2[ci+2],c2[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+48+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c3[ci],c3[ci+1],c3[ci+2],c3[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++}
++)METAL";
++}
+diff --git a/src/backends/metal/bulk_silu_half_policy.h b/src/backends/metal/bulk_silu_half_policy.h
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/bulk_silu_half_policy.h
+@@ -0,0 +1,12 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++#include <cstdint>
++#include <limits>
++#include <initializer_list>
++namespace Garnet {
++inline bool BulkSiluHalfSupported(uint64_t rows,uint64_t columns,uint64_t aStride,uint64_t bStride,uint64_t halfStride){
++ if(!rows||rows>8192||(columns!=4096&&columns!=14336))return false;
++ for(auto stride:{aStride,bStride,halfStride})if(stride<columns||stride>std::numeric_limits<uint32_t>::max()/rows)return false;
++ return true;
++}
++}
+diff --git a/src/backends/metal/diagnostic_layer_bulk.cpp b/src/backends/metal/diagnostic_layer_bulk.cpp
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/diagnostic_layer_bulk.cpp
+@@ -0,0 +1,110 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "decoder_session.h"
++#include "lowering_context.h"
++#include <algorithm>
++#include <chrono>
++#include <set>
++#include <sstream>
++#include <iomanip>
++#include <stdexcept>
++namespace Garnet {
++namespace {
++MetalCompiledGraph* BulkGraph(X::Value value,X3PackageHost* host){if(value.runtime()!=host->runtime)throw std::invalid_argument("Bulk graph runtime mismatch");auto g=value.NativeData<MetalCompiledGraph>();if(!g)throw std::invalid_argument("Bulk needs compiled graphs");return g;}
++X::Value CopyInput(X3PackageHost* host,X::Value value,const std::vector<int64_t>& shape){X::Tensor t(value);auto lease=t.Acquire();auto info=t.Info();size_t count=1;for(auto n:shape)count*=size_t(n);if(info.dtype!=X3_TENSOR_FLOAT32||info.symbolic||info.device_type||!info.data||info.rank!=shape.size()||!std::equal(shape.begin(),shape.end(),info.shape)||info.byte_size!=count*4||!IsContiguousTensor(t))throw std::invalid_argument("Invalid bulk host input profile");return X::Tensor::Create(host,X3_TENSOR_FLOAT32,shape,info.data,count*4);}
++}
++bool MetalDecoderSession::PrepareDiagnosticLayerBulk(X::Value graphs,int64_t chunks) {
++ std::lock_guard<std::mutex> lock(mutex_);
++ if(!gpu_||poisoned_||diagnosticLayerBulk_||chunks<1||chunks>16||states_.size()!=32||states_[0].rows!=4||!head_||!head_->ready_||graphs.runtime()!=Host()->runtime||!graphs.IsList()||graphs.Size()!=32)throw std::invalid_argument("Prepare one bounded B4/32-layer bulk diagnostic");
++#ifdef GARNET_METAL_CONTINUOUS_ROWS
++ if(managedRows_)throw std::logic_error("Bulk diagnostic does not support leased rows");
++#endif
++#ifdef GARNET_METAL_MTP_BRIDGE
++ if(mtp_)throw std::logic_error("Bulk diagnostic does not support MTP");
++#endif
++ std::vector<MetalCompiledGraph*> locked{head_};for(size_t i=0;i<32;++i){locked.push_back(BulkGraph(graphs.Get(i),Host()));locked.push_back(BulkGraph(owners_[i],Host()));}
++ std::sort(locked.begin(),locked.end(),std::less<MetalCompiledGraph*>());locked.erase(std::unique(locked.begin(),locked.end()),locked.end());std::vector<std::unique_lock<std::mutex>> locks;for(auto g:locked)locks.emplace_back(g->mutex_);
++ auto plan=std::make_unique<DiagnosticLayerBulk>();plan->graphs=graphs;plan->chunks=size_t(chunks);const size_t rows=512*size_t(chunks);
++ for(size_t i=0;i<32;++i){auto g=BulkGraph(graphs.Get(i),Host()),owner=BulkGraph(owners_[i],Host());
++  if(!g->ready_||!owner->ready_||g->verificationTokens_||!g->SharesVerificationWeights(*owner)||g->inputs_.size()!=6||g->inputShapes_[0]!=std::vector<int64_t>{4,128,4096}||g->inputShapes_[1]!=states_[i].shape[0]||g->inputShapes_[2]!=states_[i].shape[1]||!g->CanUpdateKVInPlace(1)||!g->CanUpdateKVInPlace(2))throw std::invalid_argument("Bulk layer owner/cache profile differs");
++  DiagnosticBulkLayer layer;layer.graph=g;layer.generation=g->generation_;layer.ffn=g->DescribeDiagnosticFfn();layer.kv=g->DescribeDiagnosticKV();layer.qo=g->DescribeDiagnosticQO(layer.kv,layer.ffn);std::set<size_t> controls;for(size_t j=3;j<6;++j)controls.insert(g->inputs_[j]);for(const auto& v:g->controlSources_)controls.insert(v.first);layer.controlIds.assign(controls.begin(),controls.end());
++  plan->layers.push_back(std::move(layer));g->RetireResidentDefaults(i==0);PrepareHiddenPool(*g);
++ }
++ uint64_t estimate=uint64_t(rows)*(4*4096+2*14336+2*1024)*4+352321536ull+4*128*4096*4+4*4096*4;
++ for(const auto& layer:plan->layers)for(auto id:layer.controlIds)estimate+=uint64_t(chunks)*layer.graph->slots_[id].rows*layer.graph->slots_[id].columns*4;
++ auto mem=MetalContext::MemoryStats();if(!mem.recommended||estimate>mem.recommended||mem.allocated>mem.recommended-estimate)throw std::runtime_error("Bulk diagnostic workspace exceeds recommended device budget");
++ auto owned=[&](size_t n,size_t c){auto m=gpu_->Allocate(n,c);gpu_->Zero(m);return m;};
++ for(auto& tape:plan->tape)tape=owned(rows,4096);plan->residual=owned(rows,4096);plan->norm=owned(rows,4096);plan->gate=owned(rows,14336);plan->up=owned(rows,14336);plan->down=plan->norm;plan->hidden=owned(4,128*4096);plan->lastHidden=owned(4,4096);plan->key=owned(rows,1024);plan->value=owned(rows,1024);
++ for(size_t c=0;c<size_t(chunks);++c){for(size_t p=0;p<2;++p)plan->tapeViews[p].push_back(gpu_->PrepareDiagnosticDenseView(plan->tape[p],c*512*4096,4,128*4096));plan->residualViews.push_back(gpu_->PrepareDiagnosticDenseView(plan->residual,c*512*4096,512,4096));plan->keyViews.push_back(gpu_->PrepareDiagnosticDenseView(plan->key,c*512*1024,512,1024));plan->valueViews.push_back(gpu_->PrepareDiagnosticDenseView(plan->value,c*512*1024,512,1024));plan->normViews.push_back(gpu_->PrepareDiagnosticDenseView(plan->norm,c*512*4096,512,4096));}
++ for(auto& layer:plan->layers){auto g=layer.graph;layer.controls.resize(size_t(chunks));for(auto& bank:layer.controls)for(auto id:layer.controlIds)bank.push_back(owned(g->slots_[id].rows,g->slots_[id].columns));
++  const auto& f=layer.ffn;if(!gpu_->PrepareDiagnosticBulkAffine(plan->norm,g->slots_[f.gateWeight].affineInt4,plan->gate)||!gpu_->PrepareDiagnosticBulkAffine(plan->norm,g->slots_[f.upWeight].affineInt4,plan->up)||!gpu_->PrepareDiagnosticBulkAffine(plan->gate,g->slots_[f.downWeight].affineInt4,plan->down))throw std::logic_error("Cannot prepare bulk FFN products");
++ }
++ // Precompile every actual chunk count up to the profile bound. Views use
++ // only the live prefix of each owned root, without maximum-length padding.
++ for(size_t count=1;count<=size_t(chunks);++count){DiagnosticBulkGroup group;size_t n=count*512;
++  auto view=[&](const MetalMatrix& m,size_t c){return gpu_->PrepareDiagnosticDenseView(m,0,n,c);};
++  group.residual=view(plan->residual,4096);group.norm=view(plan->norm,4096);group.gate=view(plan->gate,14336);group.up=view(plan->up,14336);group.down=group.norm;group.key=view(plan->key,1024);group.value=view(plan->value,1024);for(size_t k=0;k<2;++k)group.tape[k]=view(plan->tape[k],4096);
++  auto g=plan->layers[0].graph;const auto& f=plan->layers[0].ffn;
++  if(!gpu_->PrepareDiagnosticBulkAffine(group.norm,g->slots_[f.gateWeight].affineInt4,group.gate)||!gpu_->PrepareDiagnosticBulkAffine(group.norm,g->slots_[f.upWeight].affineInt4,group.up)||!gpu_->PrepareDiagnosticBulkAffine(group.gate,g->slots_[f.downWeight].affineInt4,group.down))throw std::logic_error("Cannot prepare bounded live bulk group");
++  const auto& kv=plan->layers[0].kv;
++  if(!gpu_->PrepareDiagnosticBulkAffine(group.norm,g->slots_[kv.keyWeight].affineInt4,group.key)||!gpu_->PrepareDiagnosticBulkAffine(group.norm,g->slots_[kv.valueWeight].affineInt4,group.value))throw std::logic_error("Cannot prepare bounded K/V group");
++  const auto& qo=plan->layers[0].qo;
++  if(!gpu_->PrepareDiagnosticBulkAffine(group.norm,g->slots_[qo.queryWeight].affineInt4,group.residual)||!gpu_->PrepareDiagnosticBulkAffine(group.norm,g->slots_[qo.outputWeight].affineInt4,group.residual))throw std::logic_error("Cannot prepare bounded Q/O group");
++  plan->groups.push_back(std::move(group));
++ }
++ std::set<uintptr_t> identities;auto charge=[&](const MetalMatrix& v){auto b=MetalContext::MatrixBufferInfo(v);if(b.identity&&identities.insert(b.identity).second)plan->workspaceBytes+=b.lengthBytes;};
++ for(auto t:plan->tape)charge(t);for(auto t:{plan->residual,plan->norm,plan->gate,plan->up,plan->silu,plan->down,plan->hidden,plan->lastHidden,plan->key,plan->value})charge(t);for(auto t:gpu_->DiagnosticBulkScratch())charge(t);for(const auto& layer:plan->layers)for(const auto& bank:layer.controls)for(auto t:bank)charge(t);
++ if(plan->workspaceBytes!=estimate)throw std::logic_error("Bulk workspace inventory differs from preflight");diagnosticLayerBulk_=std::move(plan);return true;
++}
++bool MetalDecoderSession::SetDiagnosticBulkKV(bool enabled) {
++ std::lock_guard<std::mutex> lock(mutex_);if(!gpu_||poisoned_||!diagnosticLayerBulk_)return false;
++#ifdef GARNET_METAL_CONTINUOUS_ROWS
++ if(requestRows_)for(size_t row=0;row<4;++row)if(requestRows_->Owned(row))return false;
++#endif
++ if(!enabled&&diagnosticBulkQOEnabled_)return false;diagnosticBulkKVEnabled_=enabled;return true;
++}
++bool MetalDecoderSession::SetDiagnosticBulkQO(bool enabled) {
++ std::lock_guard<std::mutex> lock(mutex_);if(!gpu_||poisoned_||!diagnosticLayerBulk_||(enabled&&!diagnosticBulkKVEnabled_))return false;
++#ifdef GARNET_METAL_CONTINUOUS_ROWS
++ if(requestRows_)for(size_t row=0;row<4;++row)if(requestRows_->Owned(row))return false;
++#endif
++ diagnosticBulkQOEnabled_=enabled;return true;
++}
++X::Value MetalDecoderSession::RunDiagnosticLayerBulk(X::Value hiddenChunks,X::Value controls,bool enabled) {
++ std::lock_guard<std::mutex> lock(mutex_);auto* p=diagnosticLayerBulk_.get();if(!p||!gpu_||poisoned_||!hiddenChunks.IsList()||!controls.IsList()||hiddenChunks.Size()!=p->chunks||controls.Size()!=p->chunks)throw std::invalid_argument("Bulk input sequence differs from prepared profile");
++#ifdef GARNET_METAL_CONTINUOUS_ROWS
++ if(managedRows_)throw std::logic_error("Bulk diagnostic refuses leased request rows");
++#endif
++#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
++ if(tokenCache_)throw std::logic_error("Bulk diagnostic refuses prefix-cache state");
++#endif
++ std::vector<MetalCompiledGraph*> locked{head_};for(size_t i=0;i<32;++i){locked.push_back(p->layers[i].graph);locked.push_back(BulkGraph(owners_[i],Host()));}std::sort(locked.begin(),locked.end(),std::less<MetalCompiledGraph*>());locked.erase(std::unique(locked.begin(),locked.end()),locked.end());std::vector<std::unique_lock<std::mutex>> locks;for(auto g:locked)locks.emplace_back(g->mutex_);
++ if(!head_->ready_||head_->generation_!=headGeneration_)throw std::logic_error("Bulk head changed");for(size_t i=0;i<32;++i)if(!p->layers[i].graph->ready_||p->layers[i].graph->generation_!=p->layers[i].generation||!p->layers[i].graph->SharesVerificationWeights(*BulkGraph(owners_[i],Host())))throw std::logic_error("Prepared bulk graph changed");
++ std::vector<X::Value> h,cs;for(size_t c=0;c<p->chunks;++c){h.push_back(CopyInput(Host(),hiddenChunks.Get(c),{4,128,4096}));auto entry=controls.Get(c);if(!entry.IsList()||entry.Size()!=3)throw std::invalid_argument("Bulk control arity differs");auto copied=X::Value::List(Host());for(size_t v=0;v<3;++v)copied.Append(CopyInput(Host(),entry.Get(v),v?std::vector<int64_t>{4,128}:std::vector<int64_t>{4,128,3}));
++  X::Tensor position(copied.Get(uint64_t(0))),slot(copied.Get(1)),active(copied.Get(2));auto pl=position.Acquire(),sl=slot.Acquire(),al=active.Acquire();auto pd=static_cast<const float*>(position.Info().data),sd=static_cast<const float*>(slot.Info().data),ad=static_cast<const float*>(active.Info().data);
++  for(size_t b=0;b<4;++b)for(size_t t=0;t<128;++t){size_t at=b*128+t;float expected=float(c*128+t);if(ad[at]!=1||sd[at]!=expected||pd[at*3]!=expected||pd[at*3+1]!=expected||pd[at*3+2]!=expected)throw std::invalid_argument("Bulk diagnostic requires dense contiguous fresh text prefixes");}cs.push_back(copied);
++ }
++ if(diagnosticBulkKVEnabled_||diagnosticBulkQOEnabled_)throw std::logic_error("Bulk K/V and Q/O require the leased tracked route");
++ // Complete validation precedes reset. This isolated diagnostic owns the fresh
++ // unmanaged session; it never resets an active serving/request/cache context.
++ ResetUnlocked();hidden_=p->hidden;hiddenShape_={4,128,4096};rowFinalHidden_=p->lastHidden;rowFinalWidth_=4096;finalHiddenReady_.assign(4,0);gpu_->Zero(rowFinalHidden_);
++ double totalGpu=0;size_t packedCalls=0,bulkCalls=0,halfCalls=0;auto start=std::chrono::steady_clock::now();X::Value result=X::Value::List(Host());
++ if(!enabled){locks.clear();for(size_t c=0;c<p->chunks;++c){result=RunUnlocked(p->graphs,h[c],cs[c].Get(uint64_t(0)),cs[c].Get(1),cs[c].Get(2),c+1==p->chunks?127:-1);totalGpu+=gpu_->LastGPUMs();packedCalls+=gpu_->LastPackedAffineDispatches();} }
++ else {
++  std::vector<MetalPrefillScratch*> scratch;for(auto g:locked)if(g->prefillScratch_)scratch.push_back(g->prefillScratch_.get());std::sort(scratch.begin(),scratch.end(),std::less<MetalPrefillScratch*>());scratch.erase(std::unique(scratch.begin(),scratch.end()),scratch.end());std::vector<std::unique_lock<std::mutex>> scratchLocks;for(auto s:scratch)scratchLocks.emplace_back(s->mutex);
++  for(size_t c=0;c<p->chunks;++c){X::Tensor input(h[c]);auto lease=input.Acquire();gpu_->Update(p->tapeViews[0][c],static_cast<const float*>(input.Info().data),4*128*4096);}
++  poisoned_=true;
++  try {for(size_t layerIndex=0;layerIndex<32;++layerIndex){auto& layer=p->layers[layerIndex];auto g=layer.graph;const auto& f=layer.ffn;
++    // Snapshot each graph's complete validated control/derived-control bank
++    // before opening the session command. Per-chunk buffers never get
++    // overwritten on the CPU while their GPU consumers remain pending.
++    for(size_t c=0;c<p->chunks;++c){auto args=X::Value::List(Host());args.Append(X::Value());args.Append(X::Value());args.Append(X::Value());for(size_t v=0;v<3;++v)args.Append(cs[c].Get(v));g->PrepareInputs(args,{0,1,2});for(size_t v=0;v<layer.controlIds.size();++v)gpu_->Update(layer.controls[c][v],g->gpu_->Download(g->slots_[layer.controlIds[v]].matrix));}
++    gpu_->Begin();for(size_t c=0;c<p->chunks;++c){std::map<size_t,MetalMatrix> saved;auto bind=[&](size_t id,const MetalMatrix& matrix){saved.emplace(id,g->slots_[id].matrix);g->slots_[id].matrix=matrix;};bind(g->inputs_[0],p->tapeViews[layerIndex%2][c]);for(size_t k=0;k<2;++k){bind(g->inputs_[k+1],states_[layerIndex].matrix[k]);for(auto id:g->outputStorageGroups_[k+1])bind(id,states_[layerIndex].matrix[k]);}for(size_t v=0;v<layer.controlIds.size();++v)bind(layer.controlIds[v],layer.controls[c][v]);
++      auto restore=[&](){for(auto& v:saved)g->slots_[v.first].matrix=v.second;};try {g->EncodeDiagnosticPrefix(*gpu_,f.begin);auto residual=g->slots_[f.residual].matrix;gpu_->EncodeLayout(residual,residual,p->residualViews[c],0);}catch(...){restore();throw;}restore();}
++    gpu_->EncodeRMSNorm(p->residual,g->slots_[f.normWeight].matrix,p->norm,f.epsilon,f.offset);gpu_->EncodeDiagnosticBulkAffine(p->norm,g->slots_[f.gateWeight].affineInt4,p->gate);gpu_->EncodeDiagnosticBulkAffine(p->norm,g->slots_[f.upWeight].affineInt4,p->up);gpu_->EncodeDiagnosticBulkGatedDown(p->gate,p->up,g->slots_[f.downWeight].affineInt4,p->down);gpu_->EncodeAdd(p->residual,p->down,p->tape[(layerIndex+1)%2]);gpu_->SubmitAndWait();totalGpu+=gpu_->LastGPUMs();packedCalls+=gpu_->LastPackedAffineDispatches();bulkCalls+=gpu_->LastDiagnosticBulkDispatches();halfCalls+=gpu_->LastDiagnosticSiluHalfDispatches();
++   }
++   auto last=p->tapeViews[0].back();gpu_->Begin();gpu_->EncodeLayout(last,last,hidden_,0);gpu_->EncodeLastActiveHidden(hidden_,p->layers[0].controls.back().at(std::find(p->layers[0].controlIds.begin(),p->layers[0].controlIds.end(),p->layers[0].graph->inputs_[5])-p->layers[0].controlIds.begin()),rowFinalHidden_,128);auto& headInput=head_->slots_[head_->inputs_[0]];gpu_->EncodeSliceGroups(hidden_,headInput.matrix,1,128*4096,127*4096,4096);head_->EncodeGreedy(*gpu_,prediction_);gpu_->SubmitAndWait();totalGpu+=gpu_->LastGPUMs();auto ids=gpu_->Download(prediction_);for(size_t row=0;row<4;++row){if(ids[row*2+1]!=0)throw std::runtime_error("Nonfinite bulk logits");result.Append(X::Value(int64_t(ids[row*2])));}std::fill(finalHiddenReady_.begin(),finalHiddenReady_.end(),1);poisoned_=false;
++  }catch(...){gpu_->Abort();throw;}
++ }
++ auto wall=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();gpuMs_=totalGpu;inferenceMs_=wall;std::ostringstream stats;stats<<std::setprecision(17);stats<<"{\"enabled\":"<<(enabled?"true":"false")<<",\"chunks\":"<<p->chunks<<",\"layers\":32,\"rows\":"<<p->chunks*512<<",\"workspace_bytes\":"<<p->workspaceBytes<<",\"gpu_ms\":"<<totalGpu<<",\"body_wall_ms\":"<<wall<<",\"packed_calls\":"<<packedCalls<<",\"bulk_calls\":"<<bulkCalls<<",\"silu_half_calls\":"<<halfCalls<<"}";diagnosticLayerBulkStats_=stats.str();return result;
++}
++}
+diff --git a/src/backends/metal/bulk_silu_half_shader.h b/src/backends/metal/bulk_silu_half_shader.h
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/bulk_silu_half_shader.h
+@@ -0,0 +1,15 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++namespace Garnet {
++// Same FP32 expression and ordinary main-library math options, followed by the
++// same explicit half conversion as the separate native bulk-input cast.
++inline constexpr const char* kBulkSiluHalfShader=R"METAL(
++struct BulkSiluHalfParams {uint rows,columns,aStride,bStride,hStride;};
++kernel void bulk_silu_half(device const float* a [[buffer(0)]],device const float* b [[buffer(1)]],device half* h [[buffer(2)]],constant BulkSiluHalfParams& p [[buffer(3)]],uint id [[thread_position_in_grid]]){
++ if(id>=p.rows*p.columns)return;
++ uint row=id/p.columns,col=id%p.columns;float gate=a[row*p.aStride+col];
++ float value=(gate/(1.0f+exp(-gate)))*b[row*p.bStride+col];
++ h[row*p.hStride+col]=half(value);
++}
++)METAL";
++}
+diff --git a/src/backends/metal/diagnostic_leased_bulk.cpp b/src/backends/metal/diagnostic_leased_bulk.cpp
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/diagnostic_leased_bulk.cpp
+@@ -0,0 +1,80 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "decoder_session.h"
++#include "lowering_context.h"
++#include "bulk_append_policy.h"
++#include <algorithm>
++#include <chrono>
++#include <sstream>
++#include <iomanip>
++#include <stdexcept>
++namespace Garnet {
++namespace {
++MetalCompiledGraph* LeasedBulkGraph(X::Value value,X3PackageHost* host){if(value.runtime()!=host->runtime)throw std::invalid_argument("Leased bulk graph runtime differs");auto g=value.NativeData<MetalCompiledGraph>();if(!g)throw std::invalid_argument("Leased bulk requires compiled graphs");return g;}
++X::Value LeasedBulkCopy(X3PackageHost* host,X::Value value,const std::vector<int64_t>& shape){if(value.runtime()!=host->runtime)throw std::invalid_argument("Leased bulk input runtime differs");X::Tensor t(value);auto lease=t.Acquire();auto info=t.Info();size_t count=1;for(auto n:shape)count*=size_t(n);if(info.dtype!=X3_TENSOR_FLOAT32||info.symbolic||info.device_type||!info.data||info.rank!=shape.size()||!std::equal(shape.begin(),shape.end(),info.shape)||info.byte_size!=count*4||!IsContiguousTensor(t))throw std::invalid_argument("Leased bulk host input profile differs");return X::Tensor::Create(host,X3_TENSOR_FLOAT32,shape,info.data,count*4);}
++}
++X::Value MetalDecoderSession::RunDiagnosticLeasedBulk(X::Value hiddenChunks,X::Value controls,X::Value epochs,X::Value tokenChunks,bool enabled) {
++ std::lock_guard<std::mutex> lock(mutex_);auto* p=diagnosticLayerBulk_.get();
++ if(!p||!gpu_||poisoned_||!requestRows_||!managedRows_||!tokenCache_||states_.size()!=32||states_[0].rows!=4||rowTokens_.size()!=4||rowTokensValid_.size()!=4||hiddenChunks.runtime()!=Host()->runtime||controls.runtime()!=Host()->runtime||epochs.runtime()!=Host()->runtime||tokenChunks.runtime()!=Host()->runtime||!hiddenChunks.IsList()||!controls.IsList()||!epochs.IsList()||!tokenChunks.IsList()||epochs.Size()!=4||!hiddenChunks.Size()||hiddenChunks.Size()>p->chunks||controls.Size()!=hiddenChunks.Size()||tokenChunks.Size()!=hiddenChunks.Size())throw std::invalid_argument("Leased bulk requires bounded native tracked request rows");
++#ifdef GARNET_METAL_MTP_BRIDGE
++ if(mtp_)throw std::logic_error("Leased bulk MTP capture is not supported");
++#endif
++ const size_t chunks=size_t(hiddenChunks.Size());const auto& group=p->groups.at(chunks-1);
++ std::array<uint64_t,4> expectedArray{};std::vector<uint64_t> expected;
++ std::array<size_t,4> starts{};std::array<bool,4> valid{};
++ for(size_t row=0;row<4;++row){auto value=epochs.Get(row);if(!value.IsInt64()||value.ToInt64()<0)throw std::invalid_argument("Leased bulk epochs must be nonnegative integers");auto e=uint64_t(value.ToInt64());if(e&&!requestRows_->Matches(row,e))throw std::invalid_argument("Stale leased bulk epoch");expectedArray[row]=e;expected.push_back(e);starts[row]=rowTokens_[row].size();valid[row]=rowTokensValid_[row]!=0;}
++ BulkAppendValidator validator(starts,valid,expectedArray,tokenCapacity_,tokenVocabulary_);
++ std::vector<X::Value> h,cs;std::vector<std::vector<int64_t>> ids;std::array<std::vector<int64_t>,4> appended;bool lastChunkActive=false;
++ for(size_t c=0;c<chunks;++c){h.push_back(LeasedBulkCopy(Host(),hiddenChunks.Get(c),{4,128,4096}));auto entry=controls.Get(c),tokens=tokenChunks.Get(c);if(entry.runtime()!=Host()->runtime||!entry.IsList()||entry.Size()!=3||tokens.runtime()!=Host()->runtime||!tokens.IsList()||tokens.Size()!=512)throw std::invalid_argument("Leased bulk control/token arity differs");auto copied=X::Value::List(Host());for(size_t v=0;v<3;++v)copied.Append(LeasedBulkCopy(Host(),entry.Get(v),v?std::vector<int64_t>{4,128}:std::vector<int64_t>{4,128,3}));
++  X::Tensor position(copied.Get(uint64_t(0))),slot(copied.Get(1)),active(copied.Get(2));auto pl=position.Acquire(),sl=slot.Acquire(),al=active.Acquire();auto pd=static_cast<const float*>(position.Info().data),sd=static_cast<const float*>(slot.Info().data),ad=static_cast<const float*>(active.Info().data);std::vector<int64_t> chunkIds;chunkIds.reserve(512);lastChunkActive=false;
++  for(size_t row=0;row<4;++row)for(size_t t=0;t<128;++t){size_t at=row*128+t;auto token=tokens.Get(at);if(!token.IsInt64())throw std::invalid_argument("Leased bulk token must be integer");auto id=token.ToInt64();validator.Step(row,ad[at],sd[at],pd+at*3,id);chunkIds.push_back(id);if(ad[at]!=0){appended[row].push_back(id);lastChunkActive=true;}}
++  cs.push_back(copied);ids.push_back(std::move(chunkIds));
++ }
++ validator.Finish(lastChunkActive);const auto counts=validator.Counts();const bool bulkKV=enabled&&diagnosticBulkKVEnabled_&&std::all_of(counts.begin(),counts.end(),[&](size_t n){return n==chunks*128;});const bool bulkQO=bulkKV&&diagnosticBulkQOEnabled_;auto selectedEpochs=X::Value::List(Host());
++ for(size_t row=0;row<4;++row){selectedEpochs.Append(X::Value(counts[row]?int64_t(expected[row]):int64_t(0)));if(counts[row])rowTokens_[row].reserve(starts[row]+counts[row]);}
++ // Lock immutable graph/weight identities through candidate execution. The
++ // control reuses RunUnlocked's own graph locks under this same session lock.
++ std::vector<MetalCompiledGraph*> locked{head_};for(size_t i=0;i<32;++i){locked.push_back(p->layers[i].graph);locked.push_back(LeasedBulkGraph(owners_[i],Host()));}std::sort(locked.begin(),locked.end(),std::less<MetalCompiledGraph*>());locked.erase(std::unique(locked.begin(),locked.end()),locked.end());std::vector<std::unique_lock<std::mutex>> locks;for(auto g:locked)locks.emplace_back(g->mutex_);
++ if(!head_||!head_->ready_||head_->generation_!=headGeneration_)throw std::logic_error("Leased bulk head changed");for(size_t i=0;i<32;++i){auto& layer=p->layers[i];auto owner=LeasedBulkGraph(owners_[i],Host());if(!layer.graph->ready_||layer.graph->generation_!=layer.generation||!owner->ready_||owner->generation_!=states_[i].tokenOwnerGeneration||!layer.graph->SharesVerificationWeights(*owner))throw std::logic_error("Leased bulk graph/weight owner changed");}
++ if(rowFinalHidden_.Valid()&&(rowFinalWidth_!=4096||finalHiddenReady_.size()!=4))throw std::logic_error("Leased bulk final hidden bank differs");
++ // Every externally supplied value and all native lease/history/owner checks
++ // above precede mutation. There is deliberately no session or row reset.
++ if(!rowFinalHidden_.Valid()){rowFinalHidden_=p->lastHidden;rowFinalWidth_=4096;finalHiddenReady_.assign(4,0);}
++ double totalGpu=0;size_t packedCalls=0,bulkCalls=0,halfCalls=0,inputOpsSkipped=0;auto start=std::chrono::steady_clock::now();
++ try {
++  if(!enabled){locks.clear();for(size_t c=0;c<chunks;++c){RunUnlocked(p->graphs,h[c],cs[c].Get(uint64_t(0)),cs[c].Get(1),cs[c].Get(2),-1,&expected,&ids[c]);totalGpu+=gpu_->LastGPUMs();packedCalls+=gpu_->LastPackedAffineDispatches();}}
++  else {
++#ifdef GARNET_METAL_DIRTY_PREFIX_RESET
++   for(auto& state:states_)for(size_t k=0;k<2;++k)state.zeroOutsideDirty[k]=false;
++#endif
++#ifdef GARNET_METAL_DENSE_PREFIX_CACHE
++   prefixFreshReset_=false;
++#endif
++   std::vector<MetalPrefillScratch*> scratch;for(auto g:locked)if(g->prefillScratch_)scratch.push_back(g->prefillScratch_.get());std::sort(scratch.begin(),scratch.end(),std::less<MetalPrefillScratch*>());scratch.erase(std::unique(scratch.begin(),scratch.end()),scratch.end());std::vector<std::unique_lock<std::mutex>> scratchLocks;for(auto v:scratch)scratchLocks.emplace_back(v->mutex);
++   for(size_t c=0;c<chunks;++c){X::Tensor input(h[c]);auto lease=input.Acquire();gpu_->Update(p->tapeViews[0][c],static_cast<const float*>(input.Info().data),4*128*4096);}
++   hidden_=p->hidden;hiddenShape_={4,128,4096};poisoned_=true;
++   for(size_t layerIndex=0;layerIndex<32;++layerIndex){auto& layer=p->layers[layerIndex];auto g=layer.graph;const auto& f=layer.ffn;
++    for(size_t c=0;c<chunks;++c){auto args=X::Value::List(Host());args.Append(X::Value());args.Append(X::Value());args.Append(X::Value());for(size_t v=0;v<3;++v)args.Append(cs[c].Get(v));g->PrepareInputs(args,{0,1,2});for(size_t v=0;v<layer.controlIds.size();++v)gpu_->Update(layer.controls[c][v],g->gpu_->Download(g->slots_[layer.controlIds[v]].matrix));}
++    gpu_->Begin();
++    // The complete actual group is dense and active. Future K/V stay private;
++    // the original per-chunk rope, attention and cache commits still run.
++    if(bulkKV){const auto& kv=layer.kv;gpu_->EncodeRMSNorm(group.tape[layerIndex%2],g->slots_[kv.normWeight].matrix,group.norm,kv.epsilon,kv.offset);gpu_->EncodeDiagnosticBulkAffine(group.norm,g->slots_[kv.keyWeight].affineInt4,group.key);gpu_->EncodeDiagnosticBulkAffine(group.norm,g->slots_[kv.valueWeight].affineInt4,group.value);if(bulkQO)gpu_->EncodeDiagnosticBulkAffine(group.norm,g->slots_[layer.qo.queryWeight].affineInt4,group.residual);}
++    for(size_t c=0;c<chunks;++c){std::map<size_t,MetalMatrix> saved;auto bind=[&](size_t id,const MetalMatrix& m){saved.emplace(id,g->slots_[id].matrix);g->slots_[id].matrix=m;};bind(g->inputs_[0],p->tapeViews[layerIndex%2][c]);for(size_t k=0;k<2;++k){bind(g->inputs_[k+1],states_[layerIndex].matrix[k]);for(auto id:g->outputStorageGroups_[k+1])bind(id,states_[layerIndex].matrix[k]);}for(size_t v=0;v<layer.controlIds.size();++v)bind(layer.controlIds[v],layer.controls[c][v]);if(bulkKV){bind(layer.kv.keyOut,p->keyViews[c]);bind(layer.kv.valueOut,p->valueViews[c]);}if(bulkQO){bind(layer.qo.queryOut,p->residualViews[c]);inputOpsSkipped+=layer.qo.inputOps.size();}auto restore=[&](){for(auto& v:saved)g->slots_[v.first].matrix=v.second;};try{if(bulkQO){g->EncodeDiagnosticAttentionPrefix(*gpu_,layer.kv,layer.qo);auto context=g->slots_[layer.qo.context].matrix;gpu_->EncodeLayout(context,context,p->normViews[c],0);}else{g->EncodeDiagnosticPrefix(*gpu_,f.begin,bulkKV?&layer.kv:nullptr);auto residual=g->slots_[f.residual].matrix;gpu_->EncodeLayout(residual,residual,p->residualViews[c],0);}}catch(...){restore();throw;}restore();}
++    if(bulkQO){gpu_->EncodeDiagnosticBulkAffine(group.norm,g->slots_[layer.qo.outputWeight].affineInt4,group.residual);gpu_->EncodeAdd(group.tape[layerIndex%2],group.residual,group.norm);}
++    // Add keeps its distinct-output contract. Once O consumed all contexts,
++    // norm becomes the complete residual, and the dead Q/O root becomes FFN
++    // norm/down storage. This rotates roles without another GPU allocation.
++    const auto& ffnResidual=bulkQO?group.norm:group.residual;const auto& ffnNorm=bulkQO?group.residual:group.norm;
++    gpu_->EncodeRMSNorm(ffnResidual,g->slots_[f.normWeight].matrix,ffnNorm,f.epsilon,f.offset);gpu_->EncodeDiagnosticBulkAffine(ffnNorm,g->slots_[f.gateWeight].affineInt4,group.gate);gpu_->EncodeDiagnosticBulkAffine(ffnNorm,g->slots_[f.upWeight].affineInt4,group.up);gpu_->EncodeDiagnosticBulkGatedDown(group.gate,group.up,g->slots_[f.downWeight].affineInt4,ffnNorm);gpu_->EncodeAdd(ffnResidual,ffnNorm,group.tape[(layerIndex+1)%2]);gpu_->SubmitAndWait();totalGpu+=gpu_->LastGPUMs();packedCalls+=gpu_->LastPackedAffineDispatches();bulkCalls+=gpu_->LastDiagnosticBulkDispatches();halfCalls+=gpu_->LastDiagnosticSiluHalfDispatches();
++   }
++   // Each row can end in a different chunk. Preserve unselected bank rows and
++   // select the last active token across the actual group, including ragged tails.
++   auto& first=p->layers[0];auto found=std::find(first.controlIds.begin(),first.controlIds.end(),first.graph->inputs_[5]);if(found==first.controlIds.end())throw std::logic_error("Missing prepared active controls");const size_t activeIndex=size_t(found-first.controlIds.begin());
++   for(size_t c=0;c<chunks;++c){gpu_->Begin();auto last=p->tapeViews[0][c];gpu_->EncodeLayout(last,last,p->hidden,0);gpu_->EncodeLastActiveHidden(p->hidden,first.controls[c].at(activeIndex),rowFinalHidden_,128);gpu_->SubmitAndWait();totalGpu+=gpu_->LastGPUMs();}
++   for(size_t row=0;row<4;++row)if(counts[row]){rowTokens_[row].insert(rowTokens_[row].end(),appended[row].begin(),appended[row].end());finalHiddenReady_[row]=1;}
++   reconcileHiddenPending_=false;poisoned_=false;scratchLocks.clear();locks.clear();
++  }
++  auto result=PredictRowsUnlocked(selectedEpochs);totalGpu+=gpu_->LastGPUMs();gpuMs_=totalGpu;inferenceMs_=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
++  std::ostringstream stats;stats<<std::setprecision(17)<<"{\"leased\":true,\"enabled\":"<<(enabled?"true":"false")<<",\"chunks\":"<<chunks<<",\"bound_chunks\":"<<p->chunks<<",\"rows\":"<<chunks*512<<",\"workspace_bytes\":"<<p->workspaceBytes<<",\"gpu_ms\":"<<totalGpu<<",\"body_wall_ms\":"<<inferenceMs_<<",\"packed_calls\":"<<packedCalls<<",\"bulk_calls\":"<<bulkCalls<<",\"kv_bulk_calls\":"<<(bulkKV?64:0)<<",\"kv_bulk_enabled\":"<<(diagnosticBulkKVEnabled_?"true":"false")<<",\"qo_bulk_enabled\":"<<(diagnosticBulkQOEnabled_?"true":"false")<<",\"qo_bulk_calls\":"<<(bulkQO?64:0)<<",\"qo_input_ops_skipped\":"<<inputOpsSkipped<<",\"silu_half_calls\":"<<halfCalls<<",\"appended\":[";for(size_t row=0;row<4;++row){if(row)stats<<',';stats<<counts[row];}stats<<"]}";diagnosticLayerBulkStats_=stats.str();return result;
++ }catch(...){gpu_->Abort();poisoned_=true;throw;}
++}
++}

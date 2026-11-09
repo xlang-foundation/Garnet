@@ -1,0 +1,40 @@
+{
+  "profile_id": "mistral7b-b1-bounded192-native-scheduler-v1",
+  "runtime_inputs": {
+    "target_model": "/Users/shawn/CantorAI/out/models/Mistral-7B-Instruct-v0.3-MLX-4bit",
+    "draft_model": "/Users/shawn/CantorAI/out/models/Qwen2.5-Coder-0.5B-Instruct-MLX-4bit",
+    "draft_revision": "6b16732e5af5cd9bd600186ad59fa618867ef7a4",
+    "draft_tokenizer_sha256": "a8506e7111b80c6d8635951a02eab0f4e1a8e4e5772da83846579e97b16f61bf",
+    "target_stops": [
+      2
+    ],
+    "draft_stops": [
+      151643,
+      151645
+    ],
+    "capacity": 4096,
+    "output_limit": 128,
+    "draft_token_limit": 8,
+    "draft_checkpoint_format": "mlx_qwen2_affine_int4_g64_fp16",
+    "draft_capacity": 512,
+    "confidence_threshold": 1.0,
+    "draft_source_repo": "mlx-community/Qwen2.5-Coder-0.5B-Instruct-4bit",
+    "draft_context_policy": {
+      "name": "fixed_user_tail192_v1",
+      "user_token_limit": 192,
+      "full_target_prompt_unchanged": true,
+      "draft_base_prompt_tokens": 221,
+      "append_only_already_generated_target_text": true
+    },
+    "target_tokenizer_sha256": "e553af6fff7d7ad76e830608b218c5c0b0822998d5a1a96099a74cd3c1cb1a49"
+  },
+  "helper_chat_prefix": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\n",
+  "helper_chat_suffix": "<|im_end|>\n<|im_start|>assistant\n",
+  "active_rows": 1,
+  "max_pending": 16,
+  "prefill_chunk": 128,
+  "prefix_cache": false,
+  "model": "local-mistral-7b",
+  "scope": "Diagnostic B1 native-scheduled speculation serving; C4/T4 capability remains unqualified",
+  "goal_complete": false
+}

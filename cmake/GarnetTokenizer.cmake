@@ -5,7 +5,7 @@ if(NOT CMAKE_C_COMPILER_LOADED)
 endif()
 
 # Shared native C++ tokenizer code for every inference backend. PCRE2 supplies
-# Unicode regex splitting for Llama/DeepSeek; it is C, with no Rust/Python ABI.
+# Checkpoint-defined Unicode splitting/normalization; no Rust/Python ABI.
 function(garnet_configure_tokenizers target)
     if(NOT TARGET garnet_tokenizers)
         include(FetchContent)
@@ -31,9 +31,14 @@ function(garnet_configure_tokenizers target)
         get_filename_component(garnet_source_root "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/.." ABSOLUTE)
         add_library(garnet_tokenizers STATIC
             "${garnet_source_root}/src/tokenizer/qwen_tokenizer.cpp"
+            "${garnet_source_root}/src/tokenizer/tokenizer_regex.cpp"
+            "${garnet_source_root}/src/tokenizer/unigram_tokenizer.cpp"
             "${garnet_source_root}/src/tokenizer/json_bpe_tokenizer.cpp"
             "${garnet_source_root}/src/tokenizer/tokenizer_factory.cpp")
         target_compile_features(garnet_tokenizers PUBLIC cxx_std_17)
+        if(MSVC)
+            target_compile_options(garnet_tokenizers PRIVATE /utf-8)
+        endif()
         set_target_properties(garnet_tokenizers PROPERTIES POSITION_INDEPENDENT_CODE ON)
         target_include_directories(garnet_tokenizers PUBLIC "${garnet_source_root}/src/tokenizer"
             PRIVATE "${garnet_source_root}/third_party")

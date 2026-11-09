@@ -1,0 +1,134 @@
+{
+  "passed": true,
+  "scope": "Isolated operator evidence only; no native/model/serving admission",
+  "cases": 440,
+  "parent_word_pairs": 230704320,
+  "probability_words_checked": 461373440,
+  "independent_fp64_head_samples": 480,
+  "all_probability_parent_words_exact": true,
+  "fresh_process_results_exact": true,
+  "readonly_before_after_exact": true,
+  "negative_controls_rejected": [
+    "probability_word",
+    "shared_wrong_probability_cpu",
+    "inactive_row",
+    "causal_suffix",
+    "stride_padding",
+    "boundary_guard",
+    "profile_stride",
+    "fake_gpu_duration",
+    "overlapping_host_commands",
+    "missing_timing_cell",
+    "input_guard"
+  ],
+  "timing": [
+    {
+      "cohort": 1,
+      "first": 508,
+      "mask": 1,
+      "control_ms": 0.31212507747113705,
+      "split_ms": 0.20974990911781788,
+      "ratio": 1.4880820629858502
+    },
+    {
+      "cohort": 1,
+      "first": 508,
+      "mask": 15,
+      "control_ms": 0.8759167976677418,
+      "split_ms": 0.7133749313652515,
+      "ratio": 1.2278491423737288
+    },
+    {
+      "cohort": 1,
+      "first": 2044,
+      "mask": 1,
+      "control_ms": 1.683166716247797,
+      "split_ms": 1.0121248196810484,
+      "ratio": 1.6630031034889694
+    },
+    {
+      "cohort": 1,
+      "first": 2044,
+      "mask": 15,
+      "control_ms": 1.7919999081641436,
+      "split_ms": 1.3000001199543476,
+      "ratio": 1.3784613406243944
+    },
+    {
+      "cohort": 1,
+      "first": 4092,
+      "mask": 1,
+      "control_ms": 1.471000025048852,
+      "split_ms": 0.6708335131406784,
+      "ratio": 2.1927944806483946
+    },
+    {
+      "cohort": 1,
+      "first": 4092,
+      "mask": 15,
+      "control_ms": 3.0233750585466623,
+      "split_ms": 1.612749882042408,
+      "ratio": 1.8746707671234302
+    },
+    {
+      "cohort": 2,
+      "first": 508,
+      "mask": 1,
+      "control_ms": 0.15037483535706997,
+      "split_ms": 0.07858313620090485,
+      "ratio": 1.913576406172225
+    },
+    {
+      "cohort": 2,
+      "first": 508,
+      "mask": 15,
+      "control_ms": 0.30783331021666527,
+      "split_ms": 0.21999981254339218,
+      "ratio": 1.399243511427761
+    },
+    {
+      "cohort": 2,
+      "first": 2044,
+      "mask": 1,
+      "control_ms": 0.42174989357590675,
+      "split_ms": 0.21774997003376484,
+      "ratio": 1.9368539683863524
+    },
+    {
+      "cohort": 2,
+      "first": 2044,
+      "mask": 15,
+      "control_ms": 1.2207916006445885,
+      "split_ms": 0.8142499718815088,
+      "ratio": 1.4992835650011425
+    },
+    {
+      "cohort": 2,
+      "first": 4092,
+      "mask": 1,
+      "control_ms": 1.0625834111124277,
+      "split_ms": 0.4206250887364149,
+      "ratio": 2.5262007416259866
+    },
+    {
+      "cohort": 2,
+      "first": 4092,
+      "mask": 15,
+      "control_ms": 3.063624957576394,
+      "split_ms": 1.6131666488945484,
+      "ratio": 1.8991373021973883
+    }
+  ],
+  "declared_component_gate_passed": true,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-screen1/audit1.py": "16a9b1beb01c6388f0f61e21444abbd805cc32b8eb0b7dfeee6107b8d9d27920",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-screen1/preflight1.json": "8a2112de372b52174cdb5776a05e4f8cdc14a83e70b30f38a82061a05fceace8",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-screen1/postflight1.json": "d80f81478084ed7f852cba4e52aea878a7562f70bcaaacb87291c87007115095",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-screen1/cohort1/result1.json": "ec9321a221b7edb25784dba59141e3398bfe5744f1b2212350b238840cd6d7ca",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-screen1/cohort2/result1.json": "46aea6027f947bfa05cbdf5719d38f4a51c789c5e1a86d3ed53ef9d7a46a06aa"
+  },
+  "native_integration_qualified": false,
+  "serving_speed_claim": false,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

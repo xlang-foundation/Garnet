@@ -72,39 +72,7 @@ X::Value GarnetAPI::TensorToDevice(const X::ARGS& args, const X::KWARGS&) {
     if (info.device_type == TensorHelper::CudaDevice && info.device_id == destination) return source;
     if (info.device_type != 0 && info.device_type != TensorHelper::CudaDevice)
         throw X::Error("unsupported source tensor device");
-    // Acquire waits for the source producer's completion, including another GPU.
-    auto read = source.Acquire();
-    std::vector<int64_t> shape(info.shape, info.shape + info.rank);
-    uint64_t expected = TensorHelper::ItemSize(info.dtype);
-    for (size_t i = shape.size(); i-- > 0;) {
-        if (shape[i] < 0 || (shape[i] && expected > SIZE_MAX / static_cast<uint64_t>(shape[i])))
-            throw X::Error("invalid transfer shape");
-        if (info.strides && info.strides[i] != static_cast<int64_t>(expected))
-            throw X::Error("pipeline transfer requires a contiguous tensor");
-        expected *= shape[i];
-    }
-    if (expected > info.byte_size) throw X::Error("transfer storage is too small");
-    DeviceScope scope(destination);
-    auto output = TensorHelper::CreateGPU(Host(), info.dtype, shape);
-    auto write = output.Acquire(X3_TENSOR_WRITE);
-    if (expected) {
-        if (info.device_type == 0) {
-            Check(cudaMemcpy(output.Info().data, info.data, expected, cudaMemcpyHostToDevice));
-        } else {
-            int peer = 0; Check(cudaDeviceCanAccessPeer(&peer, destination, info.device_id));
-            if (peer) {
-                auto enabled = cudaDeviceEnablePeerAccess(info.device_id, 0);
-                if (enabled == cudaErrorPeerAccessAlreadyEnabled) cudaGetLastError();
-                else Check(enabled);
-                Check(cudaMemcpyPeer(output.Info().data, destination, info.data, info.device_id, expected));
-            } else {
-                // RTX configurations can lack P2P. Preserve correctness via host RAM.
-                auto cpu = TensorHelper::CopyToCPU(source);
-                Check(cudaMemcpy(output.Info().data, cpu.Info().data, expected, cudaMemcpyHostToDevice));
-            }
-        }
-    }
-    return output;
+    return TensorHelper::CopyToDevice(source,destination);
 }
 X::Value GarnetAPI::TensorZeros(const X::ARGS& args, const X::KWARGS&) {
     if (args.size() != 2 || !args[0].IsList()) throw X::Error("tensor_zeros(shape, dtype) expected");

@@ -57,6 +57,7 @@ namespace Garnet
         std::vector<ScheduledRequest> requests;
         std::vector<int> activeMask;
         int prefillChunkTokens = 0; // Optional prepared input shape; zero is legacy.
+        int prefillGroupChunks = 0; // More than one uses a separately bounded executor.
     };
 
     struct SchedulerTick
@@ -71,9 +72,13 @@ namespace Garnet
         int maxPrefillTokensPerTick = 2048;
         int maxActiveRequests = 256;
         int prefillChunkTokens = 0; // Zero retains whole-prompt scheduling.
+        // Opt-in FIFO completion policy: a bounded cohort of prefill owners.
+        // Ready decode batches still run first. The default rotates all owners.
+        bool completePrefillFirst = false;
         // Optional backend profile choice after row placement/prefix restore.
         // The second argument is the budget left after actual decode tokens.
         std::function<int(const BatchPlan&,int)> prefillChunkSelector;
+        int prefillCompletionOwners = 1;
     };
 
     // Backend-neutral policy engine. It creates tensor-ready batch metadata;
@@ -94,6 +99,7 @@ namespace Garnet
         };
 
         ContinuousBatchSchedulerConfig m_config;
+        int m_groupChunkTokens=0,m_groupChunks=0,m_groupBudget=0;
         std::unordered_map<std::uint64_t, State> m_requests;
         std::deque<std::uint64_t> m_prefillQueue;
         std::vector<std::uint64_t> m_decode;
@@ -111,6 +117,12 @@ namespace Garnet
         bool Cancel(std::uint64_t requestId, KVSequenceAllocator& kvPool);
         SchedulerTick Schedule(KVSequenceAllocator& kvPool);
         bool SetPrefillChunkTokens(int tokens);
+        bool SetPrefillCompletionPriority(bool enabled);
+        bool PrefillCompletionPriority() const {return m_config.completePrefillFirst;}
+        bool SetPrefillCompletionOwners(int owners);
+        int PrefillCompletionOwners() const {return m_config.prefillCompletionOwners;}
+        bool SetPrefillGrouping(int chunkTokens,int chunks,int tokenBudget);
+        bool AbandonPrefillChunk(std::uint64_t requestId);
         bool CompletePrefillChunk(std::uint64_t requestId, int tokens, KVSequenceAllocator& kvPool);
         bool CompletePrefill(
             std::uint64_t requestId,

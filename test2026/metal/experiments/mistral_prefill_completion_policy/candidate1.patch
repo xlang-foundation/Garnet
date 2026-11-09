@@ -1,0 +1,211 @@
+--- a/src/backends/metal/continuous_scheduler.cpp
++++ b/src/backends/metal/continuous_scheduler.cpp
+@@ -220,6 +220,11 @@
+     catch(...){failed_=true;throw;}
+ }
+ #endif
++bool MetalContinuousScheduler::SetPrefillCompletionPriority(bool enabled) {
++    std::lock_guard<std::mutex> lock(mutex_);Ready();
++    if(!inflight_.empty())return false;
++    return scheduler_->SetPrefillCompletionPriority(enabled);
++}
+ bool MetalContinuousScheduler::SetPrefillChunk(int64_t tokens) {
+     std::lock_guard<std::mutex> lock(mutex_);Ready();
+     if(tokens<0||uint64_t(tokens)>kSchedulerPrefillChunkLimit||uint64_t(tokens)>capacity_||!inflight_.empty())return false;
+@@ -461,7 +466,7 @@
+ std::string MetalContinuousScheduler::StatusJson() {
+     std::lock_guard<std::mutex> lock(mutex_);Ready();
+     return nlohmann::json{{"active",scheduler_->ActiveRequestCount()},{"queued",scheduler_->QueuedRequestCount()},
+-        {"tracked",scheduler_->TrackedRequestCount()},{"inflight",inflight_.size()},{"rows",rows_},{"capacity",capacity_}}.dump();
++        {"tracked",scheduler_->TrackedRequestCount()},{"inflight",inflight_.size()},{"rows",rows_},{"capacity",capacity_},{"prefill_completion_priority",scheduler_->PrefillCompletionPriority()}}.dump();
+ }
+ bool MetalContinuousScheduler::CloseUnlocked() {
+     bool result=!allocator_||allocator_->Clear();
+--- a/src/backends/metal/continuous_scheduler.h
++++ b/src/backends/metal/continuous_scheduler.h
+@@ -39,6 +39,7 @@
+     ~MetalContinuousScheduler();
+     bool Initialize(X::Value session,int64_t maxPending);
+     bool SetPrefillChunk(int64_t tokens);
++    bool SetPrefillCompletionPriority(bool enabled);
+ #if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE)
+     bool SetBulkPrefill(int64_t chunks);
+     X::Value RunBulkPrefill(X::Value hiddenChunks,int64_t ticket);
+@@ -64,6 +65,7 @@
+         APISET().AddFunc<2>("run_bulk_prefill",&MetalContinuousScheduler::RunBulkPrefill);
+ #endif
+         APISET().AddFunc<1>("set_prefill_chunk",&MetalContinuousScheduler::SetPrefillChunk);
++        APISET().AddFunc<1>("set_prefill_completion_priority",&MetalContinuousScheduler::SetPrefillCompletionPriority);
+         APISET().AddFunc<2>("complete_prefill_chunk",&MetalContinuousScheduler::CompletePrefillChunk);
+         APISET().AddFunc<3>("submit",&MetalContinuousScheduler::Submit);
+ #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -335,7 +335,7 @@
+ #ifdef GARNET_METAL_REQUEST_ROWS
+         info+="; request_row_reset";
+ #ifdef GARNET_METAL_CONTINUOUS_ROWS
+-        info+="; native_request_row_leases; native_continuous_scheduler; chunked_prefill_scheduler; packed_token_plan";
++        info+="; native_request_row_leases; native_continuous_scheduler; chunked_prefill_scheduler; packed_token_plan; native_prefill_completion_priority_optional";
+ #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+         info+="; row_final_hidden";
+ #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+--- a/src/runtime/scheduler/continuous_batch_scheduler.cpp
++++ b/src/runtime/scheduler/continuous_batch_scheduler.cpp
+@@ -15,6 +15,8 @@
+     {
+         if (m_config.prefillChunkTokens < 0 || m_config.prefillChunkTokens > m_config.maxPrefillTokensPerTick)
+             throw std::invalid_argument("Invalid native prefill chunk budget");
++        if(m_config.completePrefillFirst && !m_config.prefillChunkTokens)
++            throw std::invalid_argument("Completion-first prefill requires bounded chunks");
+         std::sort(m_config.decodeBuckets.begin(), m_config.decodeBuckets.end());
+         m_config.decodeBuckets.erase(
+             std::unique(
+@@ -138,7 +140,7 @@
+         int examined = static_cast<int>(m_prefillQueue.size());
+         while (examined-- > 0 &&
+                static_cast<int>(prefill.requests.size()) <
+-                   m_config.maxPrefillBatch) {
++                   (m_config.completePrefillFirst ? std::min(1,m_config.maxPrefillBatch) : m_config.maxPrefillBatch)) {
+             const std::uint64_t id = m_prefillQueue.front();
+             m_prefillQueue.pop_front();
+             auto found = m_requests.find(id);
+@@ -250,21 +252,29 @@
+     }
+ 
+     bool ContinuousBatchScheduler::SetPrefillGrouping(int chunkTokens,int chunks,int tokenBudget) {
+-        if(!m_requests.empty()||chunkTokens<1||chunks<2||chunks>16||tokenBudget<1||
++        if(m_config.completePrefillFirst||!m_requests.empty()||chunkTokens<1||chunks<2||chunks>16||tokenBudget<1||
+            chunkTokens!=m_config.prefillChunkTokens||int64_t(chunkTokens)*chunks*m_config.maxPrefillBatch>tokenBudget)return false;
+         m_groupChunkTokens=chunkTokens;m_groupChunks=chunks;m_groupBudget=tokenBudget;return true;
+     }
+     bool ContinuousBatchScheduler::AbandonPrefillChunk(std::uint64_t id) {
+         auto found=m_requests.find(id);if(found==m_requests.end())return false;auto& state=found->second;
+         if(state.stage!=RequestStage::Prefill||state.prefillScheduled<=0)return false;
+-        state.prefillScheduled=0;state.cachedHeadScheduled=false;m_prefillQueue.push_back(id);return true;
++        state.prefillScheduled=0;state.cachedHeadScheduled=false;
++        if(m_config.completePrefillFirst)m_prefillQueue.push_front(id);else m_prefillQueue.push_back(id);
++        return true;
+     }
+ 
+     bool ContinuousBatchScheduler::SetPrefillChunkTokens(int tokens)
+     {
+-        if (tokens < 0 || tokens > m_config.maxPrefillTokensPerTick || !m_requests.empty()) return false;
++        if (tokens < 0 || tokens > m_config.maxPrefillTokensPerTick || !m_requests.empty() || (m_config.completePrefillFirst && !tokens)) return false;
+         m_config.prefillChunkTokens = tokens;
+         return true;
++    }
++
++    bool ContinuousBatchScheduler::SetPrefillCompletionPriority(bool enabled)
++    {
++        if(!m_requests.empty() || (enabled && (!m_config.prefillChunkTokens || m_groupChunks>1)))return false;
++        m_config.completePrefillFirst=enabled;return true;
+     }
+ 
+     bool ContinuousBatchScheduler::CompletePrefillChunk(
+@@ -279,7 +289,7 @@
+         if (!kvPool.CommitLength(requestId, length)) return false;
+         state.prefillProcessed = length;
+         state.prefillScheduled = 0;
+-        m_prefillQueue.push_back(requestId);
++        if(m_config.completePrefillFirst)m_prefillQueue.push_front(requestId);else m_prefillQueue.push_back(requestId);
+         return true;
+     }
+ 
+--- a/src/runtime/scheduler/continuous_batch_scheduler.h
++++ b/src/runtime/scheduler/continuous_batch_scheduler.h
+@@ -72,6 +72,9 @@
+         int maxPrefillTokensPerTick = 2048;
+         int maxActiveRequests = 256;
+         int prefillChunkTokens = 0; // Zero retains whole-prompt scheduling.
++        // Opt-in FIFO completion policy: one bounded prefill owner at a time.
++        // Ready decode batches still run first. The default rotates all owners.
++        bool completePrefillFirst = false;
+         // Optional backend profile choice after row placement/prefix restore.
+         // The second argument is the budget left after actual decode tokens.
+         std::function<int(const BatchPlan&,int)> prefillChunkSelector;
+@@ -113,6 +116,8 @@
+         bool Cancel(std::uint64_t requestId, KVSequenceAllocator& kvPool);
+         SchedulerTick Schedule(KVSequenceAllocator& kvPool);
+         bool SetPrefillChunkTokens(int tokens);
++        bool SetPrefillCompletionPriority(bool enabled);
++        bool PrefillCompletionPriority() const {return m_config.completePrefillFirst;}
+         bool SetPrefillGrouping(int chunkTokens,int chunks,int tokenBudget);
+         bool AbandonPrefillChunk(std::uint64_t requestId);
+         bool CompletePrefillChunk(std::uint64_t requestId, int tokens, KVSequenceAllocator& kvPool);
+--- a/test2026/native/scheduler_fixed_rows_test.cpp
++++ b/test2026/native/scheduler_fixed_rows_test.cpp
+@@ -43,7 +43,73 @@
+     int RestoredPrefixTokens(uint64_t id) const override {auto it=states_.find(id);return it==states_.end()?0:it->second.cached;}
+     bool PrefixPredictionReady(uint64_t id) const override {auto it=states_.find(id);return it!=states_.end()&&it->second.ready;}
+ };
++
++void CompletionPriorityChecks() {
++    ContinuousBatchSchedulerConfig config;config.decodeBuckets={1,2,4};config.maxPrefillBatch=4;
++    config.maxPrefillTokensPerTick=16;config.prefillChunkTokens=4;
++    GenerationRequest a;a.promptTokens=11;a.maxNewTokens=3;
++    GenerationRequest b=a;b.promptTokens=7;GenerationRequest c=a;c.promptTokens=3;
++    // Disabled policy retains the existing three-owner round-robin plan.
++    FixedRows oldRows;ContinuousBatchScheduler old(config);
++    old.Submit(a);old.Submit(b);old.Submit(c);
++    auto oldTick=old.Schedule(oldRows);Check(oldTick.batches.size()==1&&oldTick.batches[0].requests.size()==3);
++    FixedRows rows;ContinuousBatchScheduler policy(config);
++    Check(!policy.PrefillCompletionPriority()&&policy.SetPrefillCompletionPriority(true));
++    Check(policy.PrefillCompletionPriority()&&!policy.SetPrefillChunkTokens(0));
++    Check(!policy.SetPrefillGrouping(4,2,32));
++    auto ai=policy.Submit(a),bi=policy.Submit(b),ci=policy.Submit(c);
++    Check(ai&&bi&&ci&&!policy.SetPrefillCompletionPriority(false));
++    auto only=[&](const SchedulerTick& tick,RequestStage stage,uint64_t id,int offset,int count) {
++        const BatchPlan* selected=nullptr;
++        for(const auto& batch:tick.batches)if(batch.stage==stage){Check(selected==nullptr);selected=&batch;}
++        Check(selected&&selected->requests.size()==1);
++        const auto& r=selected->requests[0];Check(r.id==id&&r.prefillOffset==offset&&r.prefillTokens==count);
++        Check(r.requestRow==rows.Placement(id).requestRow&&r.rowEpoch==rows.Placement(id).rowEpoch);
++    };
++    auto tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,ai,0,4);
++    auto ap=rows.Placement(ai);Check(rows.LogicalLength(bi)==-1&&rows.LogicalLength(ci)==-1);
++    Check(!policy.CompletePrefillChunk(ai,3,rows)&&policy.CompletePrefillChunk(ai,4,rows));
++    tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,ai,4,4);
++    Check(rows.Placement(ai).rowEpoch==ap.rowEpoch&&policy.CompletePrefillChunk(ai,4,rows));
++    tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,ai,8,3);
++    Check(!policy.CompletePrefillChunk(ai,3,rows)&&policy.CompletePrefill(ai,41,rows));
++    tick=policy.Schedule(rows);Check(tick.batches.size()==2&&tick.batches[0].stage==RequestStage::Decode);
++    Check(tick.batches[0].requests[0].id==ai);only(tick,RequestStage::Prefill,bi,0,4);
++    auto bp=rows.Placement(bi);Check(bp.requestRow!=ap.requestRow);
++    Check(policy.CompleteDecode(ai,42,false,rows)&&policy.CompletePrefillChunk(bi,4,rows));
++    tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,bi,4,3);
++    Check(rows.Placement(bi).rowEpoch==bp.rowEpoch);
++    Check(policy.CompleteDecode(ai,43,false,rows)&&rows.LogicalLength(ai)==-1);
++    Check(policy.CompletePrefill(bi,51,rows));
++    tick=policy.Schedule(rows);Check(tick.batches[0].stage==RequestStage::Decode);
++    only(tick,RequestStage::Prefill,ci,0,3);auto cp=rows.Placement(ci);
++    Check(cp.requestRow==ap.requestRow&&cp.rowEpoch!=ap.rowEpoch);
++    Check(policy.CompleteDecode(bi,52,false,rows)&&policy.CompletePrefill(ci,61,rows));
++    tick=policy.Schedule(rows);Check(tick.batches.size()==1&&tick.batches[0].requests.size()==2);
++    Check(policy.Cancel(bi,rows)&&policy.Cancel(ci,rows));
++    Check(policy.ForgetFinished(ai)&&policy.ForgetFinished(bi)&&policy.ForgetFinished(ci));
++    Check(policy.SetPrefillCompletionPriority(false)&&!policy.PrefillCompletionPriority());
++    // Abandon/retry keeps the current owner; cancellation admits the next owner.
++    ai=policy.Submit(a);bi=policy.Submit(b);Check(policy.Cancel(ai,rows)&&policy.Cancel(bi,rows));
++    Check(policy.ForgetFinished(ai)&&policy.ForgetFinished(bi)&&policy.SetPrefillCompletionPriority(true));
++    ai=policy.Submit(a);bi=policy.Submit(b);
++    tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,ai,0,4);
++    Check(policy.AbandonPrefillChunk(ai));tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,ai,0,4);
++    Check(policy.Cancel(ai,rows)&&!policy.CompletePrefillChunk(ai,4,rows));
++    tick=policy.Schedule(rows);only(tick,RequestStage::Prefill,bi,0,4);Check(policy.Cancel(bi,rows));
++    // A full prefix hit still schedules its zero-token prediction step.
++    FixedRows cached;ContinuousBatchScheduler hit(config);Check(hit.SetPrefillCompletionPriority(true));
++    auto hi=hit.Submit(c);cached.SeedPrefix(hi,3,true);tick=hit.Schedule(cached);
++    Check(tick.batches.size()==1&&tick.batches[0].requests[0].prefillTokens==0&&hit.CompletePrefill(hi,71,cached));
++    Check(hit.Cancel(hi,cached));
++    ContinuousBatchScheduler grouped(config);Check(grouped.SetPrefillGrouping(4,2,32)&&!grouped.SetPrefillCompletionPriority(true));
++    ContinuousBatchSchedulerConfig unbounded;ContinuousBatchScheduler whole(unbounded);Check(!whole.SetPrefillCompletionPriority(true));
++    unbounded.completePrefillFirst=true;bool rejected=false;
++    try{ContinuousBatchScheduler invalid(unbounded);}catch(const std::invalid_argument&){rejected=true;}Check(rejected);
++}
++
+ int main() {
++    CompletionPriorityChecks();
+     FixedRows storage;
+     ContinuousBatchSchedulerConfig config;config.decodeBuckets={1,2,4};config.maxPrefillBatch=4;
+     ContinuousBatchScheduler scheduler(config);

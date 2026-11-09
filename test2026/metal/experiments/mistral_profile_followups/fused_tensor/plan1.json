@@ -1,0 +1,28 @@
+{
+  "scope": "Whole MLP, actual learned layers0/15/31 and512 dense identity rows; operator qualification only.",
+  "base_native": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-helper1",
+  "base_native_provenance_sha256": "57edce73e4d6ce74ed3ee83a9c4b657d840e8b7a897416adf7c57f8563d4a617",
+  "trained_root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-trained1",
+  "trained_provenance_sha256": "191c7098368d3a1d2fdfdac3bafad93c3f897d8c8674cba96e8e4c83b843b04a",
+  "current_fused_control_sha256": "a1589752c72abff9c35c4b2850fe86e46052b3ca206675b5b04b8d296608a817",
+  "shader_sha256": "6fb45c0be6259d4099be8a94a8cdf08387553cb6b28437aae3937b2fef85b992",
+  "new_shader_sha256": "0d806ef14d8101e87626165ac11d5e3cc21a75e53fb237623535dfa0eeaa7cd7",
+  "host_sha256": "2bea569a2adb71bc69df9b9e713877c713352a08f1c165e8967617140587cf12",
+  "ordinary_shader": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-trained1/ordinary1.metal",
+  "methods": {
+    "0": "Existing fused gate/up and existing down",
+    "1": "Existing fused gate/up and qualified tensor down",
+    "2": "New tensor fused gate/up and qualified tensor down",
+    "3": "New tensor fused gate/up and existing down"
+  },
+  "variants": [
+    "full FP32 shadows",
+    "no intermediates",
+    "full GPU writer map"
+  ],
+  "fast_gate_up_safe_down": true,
+  "half_output_and_down_must_match_every_bit": true,
+  "no_xmodel_operator_changes": true,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

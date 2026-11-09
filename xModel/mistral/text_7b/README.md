@@ -186,3 +186,45 @@ with it disabled. Flash remains off in the serving measurement. The separate
 serving observation does not establish a speed improvement; all2x/half-TTFT
 and coding-quality targets remain open. See the research document for paired
 timing results, exact scope and remaining projection work.
+
+
+`GARNET_METAL_MPP_AFFINE_REUSE128=ON` optionally prepares a128x64 projection
+tile with256 threads. It retains strict FP16 operands/coefficients and FP32
+accumulation, and requires bounded index32 affine profiles plus cooperative64
+fallbacks. Actual row counts select the candidate only for128..512 rows with an
+even number of64-row tiles and the existing output threshold. Missing candidate
+profiles reject before writes; runtime compilation is not permitted. Layer APIs
+and private KV owners are unchanged. Backend policy tags and separate native
+64/128 dispatch counters allow serving-route audits.
+
+The extension defaults off. Native tests pass26 enabled/25 disabled; all nine
+old/new full-state cases and all22 serving output sequences match exactly.
+The dedicated `garnet_reuse128_affine_test --benchmark NEW_DIRECTORY` shows
+modest eligible operator gains; it does not qualify serving speed. The older
+FP16 projection benchmark assumes the64-only route and is not qualified with
+this extension. The single-wave HTTP collection is slower than the earlier
+compact128 run, and all2x/half-TTFT and quality targets remain open. See the
+research document for the full comparison and paired body measurements.
+
+The opposite-order full2048-token body study preserves complete KV, hidden and
+prediction identity across24 measurements. Four-owner body ratios are1.126 and
+1.319 in favor of the candidate; one-owner results change direction. Control
+process timing also varies substantially, so the body observations do not
+establish a repeated serving gain or isolate a causal effect of that size.
+Ready-state Metal allocation is unchanged. The extension remains off by default.
+
+
+With reuse128 and `GARNET_METAL_VERIFY_ATTENTION` enabled, the verification-only
+method `session.verification_set_affine_reuse128(bool)` selects between the two
+already-prepared projection routes for same-session model comparisons. It
+rejects changes during an open or undrained GPU batch and is serialized by the
+session lock. Normal route selection, layer APIs, precision and private KV
+ownership are unchanged. The dedicated alternating driver checks full state,
+actual native counters and paired prefill timings; it is not a serving baseline.
+
+The same-session alternating study passes24 measured full prefills plus six
+warmups with exact state/prediction parity and a fixed affine pipeline count.
+One/two-owner body gains are modest, while four-owner pairs change direction.
+This does not confirm the earlier separate-process1.32x timing as a reliable
+performance advantage. The projection extension remains off by default; all
+2x/half-TTFT and coding-quality targets remain open.

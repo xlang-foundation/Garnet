@@ -1,0 +1,62 @@
+{
+  "scope": "Pilot direct device-tensor matrix operands on actual trained gate/down inputs; no native/model/serving admission.",
+  "prior_distinct": "Prepared-half study retained manual M16/N32/K16 cooperative fragments; descriptor-only studies retained manual fragments and inline unpack. This uses row-major half tensor operands, M32/N32/K128 or larger tiles, two-by-two SIMD groups, and no threadgroup weight staging.",
+  "base_native": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-helper1",
+  "base_library_sha256": "4b3a0b8802dddc5f66095bbf69c3a833182a2b753de6f756f1b306d12d794ff9",
+  "original_control_source_sha256": "fe5505941ae89e475a2cafc0b983bb5cda433e999cb74c81809234cfca3096f8",
+  "base_shader_sha256": "49ef7a4d49965ac4a980440cc35797d49ca7b3da62b3c7a00fceea350c6b712a",
+  "new_shader_sha256": "1c646edfa301fa8413cc39165666955a7aaae71958d27dc4c85b1556903a31a2",
+  "combined_sha256": "ef9aae69712b37d78b55935bf4b2941a20709db4df633a9d1384996b3d6b9110",
+  "trained_assets": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-trained1/assets1",
+  "trained_captures": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-trained1/captures1",
+  "layer": 15,
+  "rows": 512,
+  "shapes": [
+    "gate:4096->14336",
+    "down:14336->4096"
+  ],
+  "modes": {
+    "inline": "Unchanged native Q4 gather plus packed projection",
+    "manual": "Prepared row-major half, original manual K16 consumer",
+    "tensor32": "Direct tensor operands,32x32x128",
+    "tensor64m": "Direct tensor operands,64x32x128",
+    "tensor64n": "Direct tensor operands,32x64x128"
+  },
+  "required_cost_accounting": "Report consumer-only and weight-expansion+consumer costs separately; neither is model/HTTP speed.",
+  "reference": "https://developer.apple.com/download/files/Metal-Performance-Primitives-Programming-Guide.pdf",
+  "no_comparator_execution": true,
+  "xmodel_operator_changes": false,
+  "goal_complete": false,
+  "shader": "combined4.metal",
+  "attempt1_compile_failure_preserved": true,
+  "typing_fix": "Dependent member template qualifier; non-const half tensor views required by MPP. Read-only behavior verified across complete input/weight parents.",
+  "new_candidate": "Same native Q4 shared tile, direct MPP tensor operands,32x64x128 per SIMD and eight SIMD groups along M,256x64 threadgroup tile; identity/full512 actual rows only.",
+  "cost": "No full expanded-weight matrix or extra output/scatter temporary for this candidate.",
+  "dispatch_variants": [
+    {
+      "base": "half_m256k128",
+      "variant": "half_rowfast_m256k128",
+      "policy": "rowfast",
+      "source_sha256": "33b3fc51f8bd1e982bcf8139ffed68d7a562ba470afe986fe2f3d7e4a0b99565"
+    },
+    {
+      "base": "half_m256k128",
+      "variant": "half_pair_m256k128",
+      "policy": "pair",
+      "source_sha256": "29b8d49589e06f62d0bda9213ba191e7b00e05b3ced9a3e6082442a6e7cf7824"
+    },
+    {
+      "base": "shared_tensor_m256",
+      "variant": "shared_tensor_rowfast",
+      "policy": "rowfast",
+      "source_sha256": "28d35f3cc6ef91191bfe72607676ae6d3d52dab3c45a082322d63170faf7ddb4"
+    },
+    {
+      "base": "shared_tensor_m256",
+      "variant": "shared_tensor_pair",
+      "policy": "pair",
+      "source_sha256": "8358da54b7757045a32fc84ffd9b860528efb2d6832c30a771461376bceb12f0"
+    }
+  ],
+  "arithmetic_bodies_unchanged_for_walk_variants": true
+}

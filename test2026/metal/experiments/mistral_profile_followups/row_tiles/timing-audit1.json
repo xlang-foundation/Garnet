@@ -1,0 +1,190 @@
+{
+  "passed": true,
+  "cohorts": [
+    {
+      "cohort": "forward",
+      "shape": "gate",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 4.677458317019045,
+          "native_over_method": 1.0,
+          "tensor256_over_method": 0.9520171962206881
+        },
+        "tensor256": {
+          "gpu_median_ms": 4.45302075240761,
+          "native_over_method": 1.0504011944004727,
+          "tensor256_over_method": 1.0
+        },
+        "row512n64": {
+          "gpu_median_ms": 5.232124938629568,
+          "native_over_method": 0.8939882689888892,
+          "tensor256_over_method": 0.8510922052969887
+        },
+        "row512n32": {
+          "gpu_median_ms": 4.580166656523943,
+          "native_over_method": 1.0212419476825196,
+          "tensor256_over_method": 0.972239895695667
+        },
+        "row256n64t128": {
+          "gpu_median_ms": 6.250999984331429,
+          "native_over_method": 0.7482736088215363,
+          "tensor256_over_method": 0.712369343076215
+        },
+        "row256n32t128": {
+          "gpu_median_ms": 4.405645770020783,
+          "native_over_method": 1.0616964143708223,
+          "tensor256_over_method": 1.010753243646868
+        }
+      }
+    },
+    {
+      "cohort": "forward",
+      "shape": "down",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 5.157687468454242,
+          "native_over_method": 1.0,
+          "tensor256_over_method": 0.933998195836882
+        },
+        "tensor256": {
+          "gpu_median_ms": 4.8172707902267575,
+          "native_over_method": 1.0706658797172288,
+          "tensor256_over_method": 1.0
+        },
+        "row512n64": {
+          "gpu_median_ms": 6.095499964430928,
+          "native_over_method": 0.8461467473629557,
+          "tensor256_over_method": 0.7902995354502467
+        },
+        "row512n32": {
+          "gpu_median_ms": 5.098249996080995,
+          "native_over_method": 1.011658406790357,
+          "tensor256_over_method": 0.9448871267454078
+        },
+        "row256n64t128": {
+          "gpu_median_ms": 7.417458342388272,
+          "native_over_method": 0.6953443120778714,
+          "tensor256_over_method": 0.6494503329661698
+        },
+        "row256n32t128": {
+          "gpu_median_ms": 4.950479255057871,
+          "native_over_method": 1.0418561926473415,
+          "tensor256_over_method": 0.9730918042541001
+        }
+      }
+    },
+    {
+      "cohort": "reverse",
+      "shape": "gate",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 4.693187540397048,
+          "native_over_method": 1.0,
+          "tensor256_over_method": 0.9512458322970972
+        },
+        "tensor256": {
+          "gpu_median_ms": 4.464375087991357,
+          "native_over_method": 1.0512529632694103,
+          "tensor256_over_method": 1.0
+        },
+        "row512n64": {
+          "gpu_median_ms": 5.235562566667795,
+          "native_over_method": 0.8964055878686701,
+          "tensor256_over_method": 0.8527020795079018
+        },
+        "row512n32": {
+          "gpu_median_ms": 4.606249975040555,
+          "native_over_method": 1.0188738270453348,
+          "tensor256_over_method": 0.9691994816134682
+        },
+        "row256n64t128": {
+          "gpu_median_ms": 6.270270794630051,
+          "native_over_method": 0.7484824330739209,
+          "tensor256_over_method": 0.7119907950091584
+        },
+        "row256n32t128": {
+          "gpu_median_ms": 4.397583426907659,
+          "native_over_method": 1.0672196715315656,
+          "tensor256_over_method": 1.0151882646898789
+        }
+      }
+    },
+    {
+      "cohort": "reverse",
+      "shape": "down",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 5.146750132553279,
+          "native_over_method": 1.0,
+          "tensor256_over_method": 0.94781492625454
+        },
+        "tensor256": {
+          "gpu_median_ms": 4.878166597336531,
+          "native_over_method": 1.0550582949264986,
+          "tensor256_over_method": 1.0
+        },
+        "row512n64": {
+          "gpu_median_ms": 6.101604085415602,
+          "native_over_method": 0.8435077170698984,
+          "tensor256_over_method": 0.7994892046497412
+        },
+        "row512n32": {
+          "gpu_median_ms": 5.0966666312888265,
+          "native_over_method": 1.0098267171246764,
+          "tensor256_over_method": 0.9571288354213895
+        },
+        "row256n64t128": {
+          "gpu_median_ms": 7.555791642516851,
+          "native_over_method": 0.6811662332762375,
+          "tensor256_over_method": 0.6456195231597999
+        },
+        "row256n32t128": {
+          "gpu_median_ms": 4.97637502849102,
+          "native_over_method": 1.034236789447503,
+          "tensor256_over_method": 0.9802650663199174
+        }
+      }
+    }
+  ],
+  "candidates_above_three_percent_over_qualified_tensor256": {
+    "gate": [],
+    "down": []
+  },
+  "measured_gpu_commands": 288,
+  "warmup_gpu_commands": 144,
+  "pre_post_parent_witnesses": 48,
+  "negative_controls_rejected": [
+    "missing sample",
+    "unbalanced order",
+    "warmup admitted",
+    "false GPU duration",
+    "reversed clock",
+    "nonfinite wall",
+    "fabricated expansion",
+    "wrong output parent",
+    "changed input parent",
+    "wrong pipeline shared bytes",
+    "fabricated model admission"
+  ],
+  "input_gather_included": true,
+  "full_weight_expansion": false,
+  "extra_scatter": false,
+  "native_model_or_http_admitted": false,
+  "writer_map_gpu_qualified": false,
+  "no_comparator_execution": true,
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/timing-forward1/result1.json": "4474bbd9bed71cd8f81a7676ed87096da19f68723b7d3c8ccb34c11f53efadb2",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/timing-forward1-status.json": "523456be8a27876886c60cb060323182d77c8deacaf8f2ca6c96f9b393edea99",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/timing-forward1-command.json": "7e79d84e173b8e2522b94bd3af434a7dd615cb23a4cc49e64573618201fd9921",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/timing-reverse1/result1.json": "1b34e4e13588c1e36208e1accd9c5ddcbc6b592f446ad1cf2464b5c6a7bd5000",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/timing-reverse1-status.json": "e05df81231b076b2628e7461e4ce85da02c6bd74baf555bc9a570bbd65e42220",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/timing-reverse1-command.json": "d40146daf7720dd526c3e00473896ed021ee36518f640ca3e4e059245f020fbb",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/audit_timing1.py": "dd38f63a71d03a98891ee69f349e7dd999bb6a6aca4cb8c0f303575f3aa01361",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/pilot-audit1.json": "5e14f456359d1a895569ca104818f3a9e03cd4d3202f793890ee6a12447b72f1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/plan1.json": "452a9be61872109dee9290315e61fd653afb9c1f286fdeb6fd970972ba497fbd",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/timing1-preflight.json": "b7ac4386dd55c850e55bff90d0b96878f85ebc2c68969cf899ad393d2e6079a9",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/timing1-postflight.json": "94aaf8a8332dd4670f9b09a0a9b41b2931ad4257d21d9fb79a4ad82a4930fad0",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-row-tiles1/timing-preparation1.json": "0b5b7467b7f37c07f6cce585caef0c4721d32edcae9cc3e811af9f9859840389"
+  }
+}

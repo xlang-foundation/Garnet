@@ -1,0 +1,108 @@
+{
+  "passed": true,
+  "scope": "Audit prepared compact/verification coexistence, fixed profiles and lifecycle.",
+  "forward_summary": {
+    "native_decode_calls": 45,
+    "active_decode_occupancies": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "mixed_ticks": 17,
+    "full_four_row_state_digest_pairs": 2600,
+    "rejected_call_state_digest_pairs": 260,
+    "exact_output_ids": 102
+  },
+  "reverse_summary": {
+    "native_decode_calls": 45,
+    "active_decode_occupancies": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "mixed_ticks": 17,
+    "full_four_row_state_digest_pairs": 2600,
+    "rejected_call_state_digest_pairs": 260,
+    "exact_output_ids": 102
+  },
+  "full_four_row_state_digest_pairs": 5200,
+  "rejected_api_state_digest_pairs": 520,
+  "preparation_guard_state_digest_pairs": 1300,
+  "guards": [
+    {
+      "mode": "off-forward",
+      "rejections": [
+        "verification_after_compact_default_off"
+      ]
+    },
+    {
+      "mode": "off-reverse",
+      "rejections": [
+        "compact_after_verification_default_off"
+      ]
+    },
+    {
+      "mode": "on-owned",
+      "rejections": [
+        "late_verification_after_claim",
+        "late_compact_after_claim"
+      ]
+    },
+    {
+      "mode": "on-capacity",
+      "rejections": [
+        "unsupported_capacity"
+      ]
+    }
+  ],
+  "actual_profile_routes": [
+    [
+      4,
+      0
+    ],
+    [
+      128,
+      0
+    ],
+    [
+      256,
+      1
+    ],
+    [
+      512,
+      1
+    ]
+  ],
+  "b1_compact_calls_all_three_arms": 36,
+  "initial_full_batch_state_exact_prior_profile": true,
+  "all_full_state_and_outputs_exact_current_ordinary": true,
+  "preparation_orders": [
+    "compact_then_verification",
+    "verification_then_compact"
+  ],
+  "native_api_rejections_per_verifier_arm": 3,
+  "negative_controls_rejected": [
+    "survivor_kv",
+    "survivor_hidden",
+    "wrong_epoch",
+    "fake_budget",
+    "fake_compact_span",
+    "wrong_target_id",
+    "live_owner"
+  ],
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/audit_qualification1.py": "63ec9ad526b2765f7f27ac8f4d326b7f2cd1afc43c30df9492b46b201d687fb5",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/audit_core1.py": "566708846c0677d5aa4fba7088d8c929a3ce1a45b16b76c641ff1b78c96d02ce",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/ordinary-result1.json": "c916b73a257223f429d059573ec9e8fecfed7442ade1850846eec7179331248d",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/verify-result1.json": "9803962be003d7d060dc242e37e6d9b0826a0a60ed3c2e4e205082d4a1796579",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/reverse-result1.json": "fc9de2f78c05dd43bc21f14a670acf4e03ad4a5e6aaa754fe1d470d99ed0594d",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/qualification1-preflight.json": "8aa8063938ade5a271aa5155556eaee8c9faee8f5902d77d74cb766d6385be3c"
+  },
+  "b2_compact_interleave_qualified": false,
+  "c4t4_qualified": false,
+  "performance_measured": false,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

@@ -1,0 +1,442 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -1261,0 +1262,8 @@
++
++option(GARNET_METAL_FUSED_MISTRAL_MLP "Opt-in native Mistral gate/up-SiLU-half-down fusion" OFF)
++if(GARNET_METAL_FUSED_MISTRAL_MLP)
++    if(NOT GARNET_METAL_CHUNK_HALF_ATTENTION OR NOT GARNET_METAL_MISTRAL_PACKED_PREFILL OR NOT GARNET_METAL_AFFINE_FP16_COEFFICIENTS OR NOT GARNET_METAL_AFFINE_PROFILE_INDEX32)
++        message(FATAL_ERROR "Fused MLP requires the bounded half-prefill/FP16 packed Mistral profile")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_FUSED_MISTRAL_MLP=1)
++endif()
+--- a/src/backends/metal/compiled_graph.cpp
++++ b/src/backends/metal/compiled_graph.cpp
+@@ -2,0 +3,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++#include "fused_mlp_use_proof.h"
++#endif
+@@ -280,0 +284,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++    fusedMlpSites_.clear();
++#endif
+@@ -1320,0 +1327,16 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++        fusedMlpSites_.assign(ops_.size(),0);
++        if(!mtpProgram_&&!verificationTokens_&&inputs_.size()==6&&inputShapes_[0].size()==3&&
++           inputShapes_[0][2]==4096&&outputParts_.size()==3&&residentOps_.size()==ops_.size()) {
++            std::vector<FusedMlpUseNode> uses;uses.reserve(ops_.size());
++            for(const auto& op:ops_){FusedMlpUseNode n;n.reads={canonical(op.a),canonical(op.b)};for(auto id:op.arguments)n.reads.push_back(canonical(id));n.writes={canonical(op.out)};if(op.auxiliaryOutput!=SIZE_MAX)n.writes.push_back(canonical(op.auxiliaryOutput));uses.push_back(std::move(n));}
++            std::vector<size_t> observable{canonical(output_)};for(auto id:inputs_)observable.push_back(canonical(id));for(auto id:outputParts_)observable.push_back(canonical(id));
++            auto projection=[&](const Op& op,size_t inner,size_t columns){return op.kind==Kind::MatMul&&op.transpose&&slots_[op.b].affineInt4.Valid()&&slots_[op.a].columns==inner&&slots_[op.out].columns==columns&&slots_[op.a].rows>=128&&slots_[op.a].rows<=512&&op.indexedTokenProjection&&!op.indexedDecodeProjection;};
++            for(size_t i=0;i+3<ops_.size();++i){const auto& gate=ops_[i];const auto& up=ops_[i+1];const auto& silu=ops_[i+2];const auto& down=ops_[i+3];
++                if(!projection(gate,4096,14336)||!projection(up,4096,14336)||!projection(down,14336,4096)||gate.a!=up.a||silu.kind!=Kind::Silu||silu.a!=gate.out||silu.b!=up.out||down.a!=silu.out||!residentOps_[i]||!residentOps_[i+1]||!residentOps_[i+2]||!residentOps_[i+3])continue;
++                auto protectedIds=observable;protectedIds.push_back(canonical(gate.a));protectedIds.push_back(canonical(down.out));
++                if(ProveFusedMlpUses(uses,i,{canonical(gate.out),canonical(up.out),canonical(silu.out)},protectedIds))fusedMlpSites_[i]=1;
++            }
++        }
++#endif
++
+@@ -1691,0 +1714,8 @@
++        }
++#endif
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++        if(!profileOps&&i<fusedMlpSites_.size()&&fusedMlpSites_[i]) {
++            const auto& up=ops_[i+1];const auto& silu=ops_[i+2];const auto& down=ops_[i+3];
++            const auto* selected=(selectedTokenRows&&op.indexedTokenProjection&&selectedTokenRows->size()<slots_[op.a].rows)?selectedTokenRows:nullptr;
++            if(gpu.TryEncodeFusedMistralMlp(a,slots_[op.b].affineInt4,slots_[up.b].affineInt4,
++                slots_[down.b].affineInt4,out,slots_[up.out].matrix,slots_[silu.out].matrix,slots_[down.out].matrix,selected)){i+=3;continue;}
+--- a/src/backends/metal/compiled_graph.h
++++ b/src/backends/metal/compiled_graph.h
+@@ -59,0 +60,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++    std::vector<uint8_t> fusedMlpSites_;
++#endif
+@@ -179,0 +183,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++    size_t FusedMlpSites() const {std::lock_guard<std::mutex> lock(mutex_);size_t n=0;for(auto v:fusedMlpSites_)n+=v!=0;return n;}
++#endif
+@@ -221,0 +228,3 @@
++#endif
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++        APISET().AddProp("fused_mlp_sites",&MetalCompiledGraph::FusedMlpSites);
+--- a/src/backends/metal/decoder_session.cpp
++++ b/src/backends/metal/decoder_session.cpp
+@@ -1283,0 +1284,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++    append(gpu_->FusedMistralMlpScratch(),SIZE_MAX,"fused_mlp_half_input",{});
++#endif
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -506,0 +507,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++    size_t FusedMlpBlocks(){std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastFusedMistralMlpBlocks():0;}
++#endif
+@@ -507,0 +511,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++        APISET().AddProp("fused_mlp_blocks",&MetalDecoderSession::FusedMlpBlocks);
++#endif
+--- /dev/null
++++ b/src/backends/metal/fused_mistral_mlp_shader.h
+@@ -0,0 +1,200 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++namespace Garnet {inline constexpr const char* kFusedMistralMlpShader=R"METAL(
++constant bool fused_shadow [[function_constant(20)]];
++constant bool fused_writers [[function_constant(21)]];
++
++kernel void fused_m128k128(device const half* input [[buffer(0)]],device const uint* packed [[buffer(1)]],
++ device const ushort* scales [[buffer(2)]],device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
++ constant VectorQ4Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],
++ device const uint* packedUp [[buffer(8)]],device const ushort* scalesUp [[buffer(9)]],device const ushort* biasesUp [[buffer(10)]],device float* outputUp [[buffer(11)]],device half* outputHalf [[buffer(13)]],device atomic_uint* writers [[buffer(14)]],
++ uint2 group [[threadgroup_position_in_grid]],uint tid [[thread_index_in_threadgroup]],uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
++ GARNET_AFFINE_PARAMETERS(VectorQ4Params);
++ constexpr uint stageK=128,weightStride=136,packet=32;
++ threadgroup half weights[64*weightStride];
++ constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<descriptor,execution_simdgroup> multiply;
++ auto right=multiply.get_right_input_cooperative_tensor<half,half,float>();
++ auto left0=multiply.get_left_input_cooperative_tensor<half,half,float>();
++ auto gate0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left0)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto up0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left0)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ for(ushort i=0;i<gate0.get_capacity();++i){gate0[i]=0;up0[i]=0;}
++ const uint quad=lane>>2,fragmentRow=(quad&4)|((lane>>1)&3),fragmentColumn=((quad&2)|(lane&1))*4;
++ const uint firstRow=group.y*128+simd*16,firstColumn=group.x*32;
++ const uint stream=tid/128,localTid=tid%128,localN=localTid/4,localK=(localTid%4)*packet,n=group.x*32+localN;
++ device const uint* codesInput=stream?packedUp:packed;
++ device const ushort* scaleInput=stream?scalesUp:scales;
++ device const ushort* biasInput=stream?biasesUp:biases;
++ for(uint base=0;base<p.inner;base+=stageK) {
++  const uint offset=n*(p.inner/8)+(base+localK)/8,coefficient=n*(p.inner/64)+(base+localK)/64;
++  const float scale=garnet_affine_coefficient(scaleInput[coefficient]),bias=garnet_affine_coefficient(biasInput[coefficient]);
++  const uint4 words=*reinterpret_cast<device const uint4*>(codesInput+offset);
++  #pragma clang loop unroll(full)
++  for(uint i=0;i<packet/4;++i) {
++   const uint4 codes=(uint4(words[i/2])>>(uint4(0,4,8,12)+(i%2)*16))&15u;
++   *reinterpret_cast<threadgroup half4*>(weights+(stream*32+localN)*weightStride+localK+4*i)=half4(fma(float4(codes),float4(scale),float4(bias)));
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++  for(uint local=0;local<stageK;local+=16) {
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+0+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left0[fragmentPart*4+j]=value[j];
++   }
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[(0+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   multiply.run(left0,right,gate0);
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[(32+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   multiply.run(left0,right,up0);
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    if(fused_shadow){*reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(gate0[ci],gate0[ci+1],gate0[ci+2],gate0[ci+3]);}
++    for(uint j=0;j<4;++j){float g=gate0[ci+j];float value=(g/(1.0f+exp(-g)))*up0[ci+j];outputHalf[row*p.columns+col+j]=half(value);if(fused_writers)atomic_fetch_add_explicit(writers+row*p.columns+col+j,1u,memory_order_relaxed);}
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    if(fused_shadow){*reinterpret_cast<device float4*>(outputUp+indices[row]*p.oStride+col)=float4(up0[ci],up0[ci+1],up0[ci+2],up0[ci+3]);}
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++}
++kernel void fused_m256k128(device const half* input [[buffer(0)]],device const uint* packed [[buffer(1)]],
++ device const ushort* scales [[buffer(2)]],device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
++ constant VectorQ4Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],
++ device const uint* packedUp [[buffer(8)]],device const ushort* scalesUp [[buffer(9)]],device const ushort* biasesUp [[buffer(10)]],device float* outputUp [[buffer(11)]],device half* outputHalf [[buffer(13)]],device atomic_uint* writers [[buffer(14)]],
++ uint2 group [[threadgroup_position_in_grid]],uint tid [[thread_index_in_threadgroup]],uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
++ GARNET_AFFINE_PARAMETERS(VectorQ4Params);
++ constexpr uint stageK=128,weightStride=136,packet=32;
++ threadgroup half weights[64*weightStride];
++ constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<descriptor,execution_simdgroup> multiply;
++ auto right=multiply.get_right_input_cooperative_tensor<half,half,float>();
++ auto left0=multiply.get_left_input_cooperative_tensor<half,half,float>();
++ auto gate0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left0)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto up0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left0)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ for(ushort i=0;i<gate0.get_capacity();++i){gate0[i]=0;up0[i]=0;}
++ auto left1=multiply.get_left_input_cooperative_tensor<half,half,float>();
++ auto gate1=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left1)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto up1=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left1)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ for(ushort i=0;i<gate1.get_capacity();++i){gate1[i]=0;up1[i]=0;}
++ const uint quad=lane>>2,fragmentRow=(quad&4)|((lane>>1)&3),fragmentColumn=((quad&2)|(lane&1))*4;
++ const uint firstRow=group.y*256+simd*32,firstColumn=group.x*32;
++ const uint stream=tid/128,localTid=tid%128,localN=localTid/4,localK=(localTid%4)*packet,n=group.x*32+localN;
++ device const uint* codesInput=stream?packedUp:packed;
++ device const ushort* scaleInput=stream?scalesUp:scales;
++ device const ushort* biasInput=stream?biasesUp:biases;
++ for(uint base=0;base<p.inner;base+=stageK) {
++  const uint offset=n*(p.inner/8)+(base+localK)/8,coefficient=n*(p.inner/64)+(base+localK)/64;
++  const float scale=garnet_affine_coefficient(scaleInput[coefficient]),bias=garnet_affine_coefficient(biasInput[coefficient]);
++  const uint4 words=*reinterpret_cast<device const uint4*>(codesInput+offset);
++  #pragma clang loop unroll(full)
++  for(uint i=0;i<packet/4;++i) {
++   const uint4 codes=(uint4(words[i/2])>>(uint4(0,4,8,12)+(i%2)*16))&15u;
++   *reinterpret_cast<threadgroup half4*>(weights+(stream*32+localN)*weightStride+localK+4*i)=half4(fma(float4(codes),float4(scale),float4(bias)));
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++  for(uint local=0;local<stageK;local+=16) {
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+0+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left0[fragmentPart*4+j]=value[j];
++   }
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+16+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left1[fragmentPart*4+j]=value[j];
++   }
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[(0+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   multiply.run(left0,right,gate0);
++   multiply.run(left1,right,gate1);
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[(32+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   multiply.run(left0,right,up0);
++   multiply.run(left1,right,up1);
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    if(fused_shadow){*reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(gate0[ci],gate0[ci+1],gate0[ci+2],gate0[ci+3]);}
++    for(uint j=0;j<4;++j){float g=gate0[ci+j];float value=(g/(1.0f+exp(-g)))*up0[ci+j];outputHalf[row*p.columns+col+j]=half(value);if(fused_writers)atomic_fetch_add_explicit(writers+row*p.columns+col+j,1u,memory_order_relaxed);}
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+16+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    if(fused_shadow){*reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(gate1[ci],gate1[ci+1],gate1[ci+2],gate1[ci+3]);}
++    for(uint j=0;j<4;++j){float g=gate1[ci+j];float value=(g/(1.0f+exp(-g)))*up1[ci+j];outputHalf[row*p.columns+col+j]=half(value);if(fused_writers)atomic_fetch_add_explicit(writers+row*p.columns+col+j,1u,memory_order_relaxed);}
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    if(fused_shadow){*reinterpret_cast<device float4*>(outputUp+indices[row]*p.oStride+col)=float4(up0[ci],up0[ci+1],up0[ci+2],up0[ci+3]);}
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+16+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    if(fused_shadow){*reinterpret_cast<device float4*>(outputUp+indices[row]*p.oStride+col)=float4(up1[ci],up1[ci+1],up1[ci+2],up1[ci+3]);}
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++}
++
++)METAL";}
+--- /dev/null
++++ b/src/backends/metal/fused_mlp_use_proof.h
+@@ -0,0 +1,26 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++#include <array>
++#include <vector>
++#include <algorithm>
++#include <cstddef>
++#include <cstdint>
++namespace Garnet {
++struct FusedMlpUseNode {std::vector<size_t> reads,writes;};
++// IDs are immutable logical alias roots, before scratch lifetime rebinding.
++inline bool ProveFusedMlpUses(const std::vector<FusedMlpUseNode>& nodes,size_t begin,
++ const std::array<size_t,3>& intermediates,const std::vector<size_t>& observable) {
++ if(begin>=nodes.size()||nodes.size()-begin<4)return false;
++ for(size_t part=0;part<3;++part){
++  size_t id=intermediates[part];for(size_t other=0;other<part;++other)if(id==intermediates[other])return false;
++  if(std::find(observable.begin(),observable.end(),id)!=observable.end())return false;
++  size_t writers=0,readers=0;
++  for(size_t i=0;i<nodes.size();++i){
++   for(auto write:nodes[i].writes)if(write==id){if(i!=begin+part)return false;++writers;}
++   for(auto read:nodes[i].reads)if(read==id){if(i!=begin+(part==2?3:2))return false;++readers;}
++  }
++  if(writers!=1||readers!=1)return false;
++ }
++ return true;
++}
++}
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -232,0 +233,8 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++    size_t LastFusedMistralMlpBlocks() const;
++    MetalMatrix FusedMistralMlpScratch() const;
++    bool TryEncodeFusedMistralMlp(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalAffineInt4Weight&,
++        const MetalAffineInt4Weight&,const MetalMatrix& gateLayout,const MetalMatrix& upLayout,
++        const MetalMatrix& activatedLayout,const MetalMatrix& output,const std::vector<size_t>* selectedRows=nullptr);
++#endif
++
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -31,0 +32,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++#include "fused_mistral_mlp_shader.h"
++#endif
+@@ -611,0 +615,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++        std::array<id<MTLComputePipelineState>,2> fused{};
++#endif
+@@ -617,0 +624,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++    MetalMatrix fusedMlpHalf;id<MTLLibrary> fusedMlpLibrary=nil;size_t fusedMlpBlocks=0;
++#endif
+@@ -2920,0 +2930,21 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++        if(a.columns==4096&&o.columns==14336) {
++            if(!impl_->fusedMlpLibrary) {
++                if(![impl_->device supportsFamily:MTLGPUFamilyApple10])throw std::runtime_error("Fused MLP requires Apple10");
++                auto options=[MTLCompileOptions new];options.languageVersion=MTLLanguageVersion4_0;options.mathMode=MTLMathModeFast;
++                NSString* text=[@"#define GARNET_AFFINE_PROFILE 1\n#define GARNET_AFFINE_INDEX32 1\n#define GARNET_AFFINE_FP16_COEFFICIENTS 1\n" stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4ProfilePrelude]];
++                for(const auto* code:{kPackedAffineShader,kFusedMistralMlpShader,kPackedAffineLayoutGuardShader})text=[text stringByAppendingString:[NSString stringWithUTF8String:code]];
++                auto library=[impl_->device newLibraryWithSource:text options:options error:&error];if(!library)throw std::runtime_error("Cannot compile fused MLP: "+std::string(error.localizedDescription.UTF8String));
++                auto function=[library newFunctionWithName:@"packed_affine_layout_guard"];auto probe=[impl_->device newComputePipelineStateWithFunction:function error:&error];
++                if(!probe||probe.threadExecutionWidth!=32)throw std::runtime_error("Cannot prepare fused MLP ABI probe");
++                auto status=[impl_->device newBufferWithLength:128 options:MTLResourceStorageModeShared];if(!status)throw std::runtime_error("Cannot allocate fused ABI status");std::fill_n((uint32_t*)status.contents,32,UINT32_MAX);
++                auto command=[impl_->queue commandBuffer];auto encoder=[command computeCommandEncoder];[encoder setComputePipelineState:probe];[encoder setBuffer:status offset:0 atIndex:0];[encoder dispatchThreadgroups:MTLSizeMake(1,1,1) threadsPerThreadgroup:MTLSizeMake(32,1,1)];[encoder endEncoding];[command commit];[command waitUntilCompleted];
++                if(command.status!=MTLCommandBufferStatusCompleted||!PackedAffineLayoutMatches((uint32_t*)status.contents,32))throw std::runtime_error("Fused MLP cooperative ABI mismatch");
++                auto memory=MemoryStats();if(memory.recommended<=14680064+256*1024*1024||memory.allocated>memory.recommended-14680064-256*1024*1024)throw std::runtime_error("Fused half arena exceeds native device budget");
++                auto scratch=Allocate(512,7168);Zero(scratch);impl_->fusedMlpHalf=std::move(scratch);impl_->fusedMlpLibrary=library;
++            }
++            bool disabled=false;[constants setConstantValue:&disabled type:MTLDataTypeBool atIndex:20];[constants setConstantValue:&disabled type:MTLDataTypeBool atIndex:21];
++            for(size_t i=0;i<2;++i){auto name=i?@"fused_m256k128":@"fused_m128k128";auto function=[impl_->fusedMlpLibrary newFunctionWithName:name constantValues:constants error:&error];if(!function)throw std::runtime_error("Cannot specialize fused MLP");auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<256||pipeline.staticThreadgroupMemoryLength!=17408)throw std::runtime_error("Fused MLP pipeline resource mismatch");plan.fused[i]=pipeline;}
++        }
++#endif
++
+@@ -2923,0 +2954,65 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++size_t MetalContext::LastFusedMistralMlpBlocks() const {return impl_->fusedMlpBlocks;}
++MetalMatrix MetalContext::FusedMistralMlpScratch() const {return impl_->fusedMlpHalf;}
++bool MetalContext::TryEncodeFusedMistralMlp(const MetalMatrix& input,const MetalAffineInt4Weight& gate,
++ const MetalAffineInt4Weight& up,const MetalAffineInt4Weight& down,const MetalMatrix& gateLayout,
++ const MetalMatrix& upLayout,const MetalMatrix& activatedLayout,const MetalMatrix& output,
++ const std::vector<size_t>* selectedRows) {
++ @autoreleasepool {
++  if(!impl_->packedEnabled)return false;
++  if(!impl_->command||!input.impl_||!gate.impl_||!up.impl_||!down.impl_||!gateLayout.impl_||!upLayout.impl_||!activatedLayout.impl_||!output.impl_)
++   throw std::invalid_argument("Fused MLP requires an open command and complete operands");
++  auto a=input.impl_->matrix,o=output.impl_->matrix,g=gateLayout.impl_->matrix,u=upLayout.impl_->matrix,s=activatedLayout.impl_->matrix;
++  const auto& gw=gate.impl_;const auto& uw=up.impl_;const auto& dw=down.impl_;
++  for(auto matrix:{a,o,g,u,s})if(matrix.device!=impl_->device||matrix.dataType!=MPSDataTypeFloat32)throw std::invalid_argument("Fused MLP device/type mismatch");
++  for(const auto& w:{gw,uw,dw})if(w->packed.device!=impl_->device||w->scales.device!=impl_->device||w->biases.device!=impl_->device)throw std::invalid_argument("Fused MLP weight device mismatch");
++  if(!a.rows||a.rows>512||a.columns!=4096||o.rows!=a.rows||o.columns!=4096||
++   g.rows!=a.rows||u.rows!=a.rows||s.rows!=a.rows||g.columns!=14336||u.columns!=14336||s.columns!=14336||
++   gw->rows!=14336||gw->columns!=4096||uw->rows!=14336||uw->columns!=4096||dw->rows!=4096||dw->columns!=14336)return false;
++  std::vector<uint32_t> indices;std::array<bool,512> seen{};
++  if(selectedRows){if(selectedRows->size()>a.rows)throw std::invalid_argument("Fused MLP selection exceeds rows");for(auto row:*selectedRows){if(row>=a.rows||seen[row])throw std::invalid_argument("Fused MLP selection must be unique/in bounds");seen[row]=true;indices.push_back(uint32_t(row));}}
++  else for(size_t row=0;row<a.rows;++row)indices.push_back(uint32_t(row));
++  if(indices.size()<128)return false;
++  auto gp=impl_->packedPlans.find({4096,14336,a.rowBytes/4,g.rowBytes/4});
++  auto dp=impl_->packedPlans.find({14336,4096,s.rowBytes/4,o.rowBytes/4});
++  if(gp==impl_->packedPlans.end()||dp==impl_->packedPlans.end()||!impl_->fusedMlpHalf.Valid())return false;
++  if(a.rows>gp->second.maximumRows||a.rows>dp->second.maximumRows)throw std::logic_error("Fused MLP exceeds prepared upper bound");
++  size_t gateTile=indices.size()>=256?256:128,downTile=indices.size()>=384?256:128;
++  auto gatePipeline=gp->second.fused[gateTile==256],downPipeline=dp->second.pipelines[downTile==256];
++  if(!gatePipeline||!downPipeline)return false;
++  if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))throw std::logic_error("Fused MLP input not ready in current command");
++  if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_->PendingKey()))throw std::logic_error("Fused MLP output belongs to another command");
++  output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
++  auto compact=impl_->packedInput.impl_->matrix,half=impl_->fusedMlpHalf.impl_->matrix;
++  for(const auto& scratch:{impl_->packedInput,impl_->fusedMlpHalf})if(scratch.impl_->pending&&!impl_->pendingOutputs.count(scratch.impl_->PendingKey()))throw std::logic_error("Fused MLP private scratch belongs to another command");
++  impl_->fusedMlpHalf.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(impl_->fusedMlpHalf.impl_->PendingKey()));
++  auto span=[](MPSMatrix* m){if(m.rowBytes<m.columns*4||m.offset%4||(m.rows-1)>(SIZE_MAX-m.columns*4)/m.rowBytes)throw std::invalid_argument("Invalid fused MLP span");size_t bytes=(m.rows-1)*m.rowBytes+m.columns*4;if(m.offset>m.data.length||bytes>m.data.length-m.offset)throw std::invalid_argument("Fused MLP span exceeds allocation");return bytes;};
++  size_t outBytes=0;for(auto m:{a,o,g,u,s}){auto bytes=span(m);if(m==o)outBytes=bytes;if(m.data==compact.data||m.data==half.data)throw std::invalid_argument("Fused MLP operand aliases private scratch");}
++  for(const auto& w:{gw,uw,dw})for(auto m:{a,o,g,u,s})if(m.data==w->packed||m.data==w->scales||m.data==w->biases)throw std::invalid_argument("Fused MLP matrix aliases checkpoint bytes");
++  if(a.rowBytes%4||g.rowBytes%16||s.rowBytes%4||o.rowBytes%16||o.offset%16||
++    !AffineProfileIndex32Fits(a.rows,4096,14336,a.rowBytes/4,g.rowBytes/4)||!AffineProfileIndex32Fits(a.rows,14336,4096,s.rowBytes/4,o.rowBytes/4))throw std::invalid_argument("Fused MLP index profile mismatch");
++  for(const auto& value:{output,impl_->fusedMlpHalf}){value.impl_->ready=false;value.impl_->pending=true;if(impl_->pendingOutputs.insert(value.impl_->PendingKey()).second)impl_->outputs.push_back(value.impl_);}
++  // All validation is complete. Initialize the full private arena so Abort
++  // recovery and inactive tails never expose uninitialized carrier bytes.
++  auto blit=[impl_->command blitCommandEncoder];if(!blit)throw std::runtime_error("Cannot initialize fused half arena");
++  [blit fillBuffer:half.data range:NSMakeRange(half.offset,512*14336*2) value:0];
++  [blit endEncoding];
++  auto encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot gather fused MLP input");
++  uint32_t shape[]={uint32_t(indices.size()),4096,uint32_t(a.rowBytes/4),0};
++  [encoder setComputePipelineState:impl_->packedGather];[encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:compact.data offset:0 atIndex:1];[encoder setBytes:indices.data() length:indices.size()*4 atIndex:2];[encoder setBytes:shape length:sizeof(shape) atIndex:3];[encoder dispatchThreads:MTLSizeMake(indices.size()*4096,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
++  // Input may share its original arena with the final down output.
++  // Gather first; clearing inactive output rows must not erase that input.
++  if(indices.size()<a.rows){auto clear=[impl_->command blitCommandEncoder];if(!clear)throw std::runtime_error("Cannot clear fused inactive rows");[clear fillBuffer:o.data range:NSMakeRange(o.offset,outBytes) value:0];[clear endEncoding];}
++  struct Params{uint64_t rows,inner,columns,aStride,oStride;};Params gateParams{indices.size(),4096,14336,a.rowBytes/4,g.rowBytes/4};
++  encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode fused gate/up SiLU");
++  [encoder setComputePipelineState:gatePipeline];[encoder setBuffer:compact.data offset:0 atIndex:0];[encoder setBuffer:gw->packed offset:0 atIndex:1];[encoder setBuffer:gw->scales offset:0 atIndex:2];[encoder setBuffer:gw->biases offset:0 atIndex:3];[encoder setBuffer:g.data offset:g.offset atIndex:4];[encoder setBytes:&gateParams length:sizeof(gateParams) atIndex:5];[encoder setBytes:indices.data() length:indices.size()*4 atIndex:6];[encoder setBuffer:uw->packed offset:0 atIndex:8];[encoder setBuffer:uw->scales offset:0 atIndex:9];[encoder setBuffer:uw->biases offset:0 atIndex:10];[encoder setBuffer:u.data offset:u.offset atIndex:11];[encoder setBuffer:half.data offset:half.offset atIndex:13];[encoder setBuffer:g.data offset:g.offset atIndex:14];[encoder dispatchThreadgroups:MTLSizeMake(448,(indices.size()+gateTile-1)/gateTile,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
++  Params downParams{indices.size(),14336,4096,s.rowBytes/4,o.rowBytes/4};
++  encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode fused MLP down projection");
++  [encoder setComputePipelineState:downPipeline];[encoder setBuffer:half.data offset:half.offset atIndex:0];[encoder setBuffer:dw->packed offset:0 atIndex:1];[encoder setBuffer:dw->scales offset:0 atIndex:2];[encoder setBuffer:dw->biases offset:0 atIndex:3];[encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&downParams length:sizeof(downParams) atIndex:5];[encoder setBytes:indices.data() length:indices.size()*4 atIndex:6];[encoder dispatchThreadgroups:MTLSizeMake(64,(indices.size()+downTile-1)/downTile,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
++  ++impl_->fusedMlpBlocks;impl_->packedDispatches+=3;impl_->affineProfileDispatches+=3;if(selectedRows)impl_->indexedAffineDispatches+=3;
++  impl_->affineProfileMaxThreads=std::max(gatePipeline.maxTotalThreadsPerThreadgroup,downPipeline.maxTotalThreadsPerThreadgroup);
++  return true;
++ }
++}
++#endif
++
+@@ -4442,0 +4538,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++    impl_->fusedMlpBlocks=0;
++#endif
+@@ -6219,0 +6318,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++    impl_->fusedMlpBlocks=0;
++#endif
+--- a/src/backends/metal/token_prefix_session.cpp
++++ b/src/backends/metal/token_prefix_session.cpp
+@@ -101,0 +102,3 @@
++#endif
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++        "|fused-mistral-mlp-fast-v1"
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -272,0 +273,3 @@
++#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++    info+="; fused_mistral_mlp_prefill_fast_v1";
++#endif

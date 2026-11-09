@@ -1,0 +1,472 @@
+diff --git a/cmake/GarnetMetal.cmake b/cmake/GarnetMetal.cmake
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -124,6 +124,15 @@
+ endif()
+ option(GARNET_METAL_CHUNK_ATTENTION_BUCKETS "Select prepared context buckets and sparse tails from completed native controls" OFF)
+ option(GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS "Prepare MPS request-span schedules and omit inactive request products" OFF)
++option(GARNET_METAL_COMMITTED_KV_MPS "Use two FP32 MPS products after compiler-proved KV commits" OFF)
++if(GARNET_METAL_COMMITTED_KV_MPS)
++    if(NOT GARNET_METAL_CHUNK_KV_COMMIT_HOIST OR NOT GARNET_METAL_CHUNK_ATTENTION_MPS OR
++       NOT GARNET_METAL_CHUNK_ATTENTION_BUCKETS OR NOT GARNET_METAL_CHUNK_ATTENTION_INDEX32 OR
++       NOT GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS OR GARNET_METAL_CHUNK_FLASH_ATTENTION)
++        message(FATAL_ERROR "Committed KV MPS requires hoist, MPS/index32/buckets/active rows and no flash")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_COMMITTED_KV_MPS=1)
++endif()
+ option(GARNET_METAL_CHUNK_KV_COMMIT_HOIST "Prove and hoist private KV commits before unchanged attention math" OFF)
+ if(GARNET_METAL_CHUNK_KV_COMMIT_HOIST)
+     if(NOT GARNET_METAL_CHUNK_ATTENTION_MPS OR NOT GARNET_METAL_CHUNK_KV_INPLACE OR NOT GARNET_METAL_CHUNK_KV_SCATTER OR
+@@ -853,6 +862,12 @@
+     add_test(NAME metal_chunk_attention_mps_plan COMMAND garnet_chunk_attention_mps_plan_test)
+     add_executable(garnet_chunk_attention_policy_test test2026/metal/chunk_attention_policy_test.cpp)
+     add_test(NAME native_chunk_attention_policy COMMAND garnet_chunk_attention_policy_test)
++    if(GARNET_METAL_COMMITTED_KV_MPS)
++        add_executable(garnet_committed_kv_attention_test test2026/metal/committed_kv_attention_test.cpp)
++        target_link_libraries(garnet_committed_kv_attention_test PRIVATE garnet_metal)
++        add_test(NAME metal_committed_kv_attention COMMAND garnet_committed_kv_attention_test)
++        set_tests_properties(metal_committed_kv_attention PROPERTIES TIMEOUT 180)
++    endif()
+     add_executable(garnet_kv_commit_hoist_policy_test test2026/metal/kv_commit_hoist_policy_test.cpp)
+     add_test(NAME native_kv_commit_hoist_policy COMMAND garnet_kv_commit_hoist_policy_test)
+     add_executable(garnet_kv_commit_hoist_controls_test test2026/metal/kv_commit_hoist_controls_test.cpp)
+diff --git a/src/backends/metal/chunk_mps_committed_shader.h b/src/backends/metal/chunk_mps_committed_shader.h
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/chunk_mps_committed_shader.h
+@@ -0,0 +1,38 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++namespace Garnet {
++inline constexpr const char* kChunkMPSCommittedShader=R"METAL(
++#if defined(GARNET_CHUNK_ATTENTION_INDEX32) && defined(GARNET_CHUNK_ATTENTION_BUCKETS)
++kernel void chunk_mps_committed_pack(device const float* q [[buffer(0)]],device const float* active [[buffer(1)]],
++ device float* qp [[buffer(2)]],constant ChunkAttentionParams& runtime [[buffer(3)]],constant ChunkMPSPitch& pitch [[buffer(4)]],uint id [[thread_position_in_grid]]) {
++ const auto p=chunk_mps_params(runtime);uint d=id%p.dim,r=id/p.dim,t=r%p.chunk,h=(r/p.chunk)%p.heads,b=r/(p.chunk*p.heads);
++ if(b<p.batch)qp[r*pitch.packed+d]=active[b*p.aStride+t]!=0?q[(b*p.chunk+t)*p.qStride+h*p.dim+d]:0;
++}
++kernel void chunk_mps_committed_softmax(device float* scores [[buffer(0)]],device const float* slots [[buffer(1)]],
++ device const float* active [[buffer(2)]],constant ChunkAttentionParams& runtime [[buffer(3)]],constant ChunkMPSPitch& pitch [[buffer(4)]],
++ threadgroup float* scratch [[threadgroup(0)]],uint query [[threadgroup_position_in_grid]],uint tid [[thread_index_in_threadgroup]],
++ uint lane [[thread_index_in_simdgroup]],uint simd [[simdgroup_index_in_threadgroup]]) {
++ const auto p=chunk_mps_params(runtime);const uint extent=chunk_mps_extent;uint t=query%p.chunk,b=query/(p.chunk*p.heads);
++ if(active[b*p.aStride+t]==0){for(uint s=tid;s<extent;s+=128)scores[query*pitch.cacheScore+s]=0;return;}
++ const uint visible=uint(min(ulong(extent),ulong(slots[b*p.sStride+t])+1));threadgroup float partial[4];
++ for(uint s=tid;s<visible;s+=128)scratch[s]=scores[query*pitch.cacheScore+s]*rsqrt(float(p.dim));
++ threadgroup_barrier(mem_flags::mem_threadgroup);
++ float maximum=-INFINITY;for(uint s=tid;s<visible;s+=128)maximum=max(maximum,scratch[s]);
++ maximum=simd_max(maximum);if(lane==0)partial[simd]=maximum;threadgroup_barrier(mem_flags::mem_threadgroup);
++ maximum=simd_max(lane<4?partial[lane]:-INFINITY);threadgroup_barrier(mem_flags::mem_threadgroup);
++ float denominator=0;for(uint s=tid;s<visible;s+=128){float probability=exp(scratch[s]-maximum);scratch[s]=probability;denominator+=probability;}
++ denominator=simd_sum(denominator);if(lane==0)partial[simd]=denominator;threadgroup_barrier(mem_flags::mem_threadgroup);
++ denominator=simd_sum(lane<4?partial[lane]:0.0f);
++ for(uint s=tid;s<extent;s+=128)scores[query*pitch.cacheScore+s]=s<visible?scratch[s]/denominator:0;
++}
++kernel void chunk_mps_committed_unpack(device const float* part [[buffer(0)]],device const float* gate [[buffer(1)]],
++ device const float* active [[buffer(2)]],device float* output [[buffer(3)]],constant ChunkAttentionParams& runtime [[buffer(4)]],constant ChunkMPSPitch& pitch [[buffer(5)]],uint id [[thread_position_in_grid]]) {
++ const auto p=chunk_mps_params(runtime);uint d=id%p.dim,r=id/p.dim,t=r%p.chunk,h=(r/p.chunk)%p.heads,b=r/(p.chunk*p.heads);
++ if(b>=p.batch)return;uint flat=b*p.chunk+t,index=flat*p.oStride+h*p.dim+d;
++ if(active[b*p.aStride+t]==0){output[index]=0;return;}
++ float sum=part[r*pitch.packed+d];output[index]=p.gated?sum/(1+exp(-gate[flat*p.gStride+h*p.dim+d])):sum;
++}
++
++#endif
++)METAL";
++}
+diff --git a/src/backends/metal/compiled_graph.cpp b/src/backends/metal/compiled_graph.cpp
+--- a/src/backends/metal/compiled_graph.cpp
++++ b/src/backends/metal/compiled_graph.cpp
+@@ -1821,6 +1821,10 @@
+                 slots_[args[3]].matrix,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.contiguousSlots);
+         }else if(op.kind==Kind::AttentionChunk) {
+             std::vector<MetalMatrix> args;for(auto id:op.arguments)args.push_back(slots_[id].matrix);
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++            if(hoisted&&i==kvHoistPlan_.attention)gpu.EncodeCommittedAttentionChunk(args,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],op.dimensions[5]!=0);
++            else
++#endif
+             gpu.EncodeAttentionChunk(args,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],op.dimensions[5]!=0);
+ #ifdef GARNET_METAL_VERIFY_ATTENTION
+         }else if(op.kind==Kind::VerificationAttention) {
+diff --git a/src/backends/metal/decoder_session.h b/src/backends/metal/decoder_session.h
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -439,6 +439,7 @@
+     size_t LastChunkAttentionIndex32Dispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionIndex32Dispatches():0;}
+     size_t LastChunkKVScatterDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkKVScatterDispatches():0;}
+     size_t LastChunkKVHoistedCommits() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkKVHoistedCommits():0;}
++    size_t LastCommittedKVAttentionDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastCommittedKVAttentionDispatches():0;}
+     size_t LastLayoutVectorDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastLayoutVectorDispatches():0;}
+     size_t LastChunkAttentionMPSDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSDispatches():0;}
+     size_t LastChunkFlashAttentionDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkFlashAttentionDispatches():0;}
+@@ -647,6 +648,7 @@
+         APISET().AddProp("chunk_attention_index32_dispatches",&MetalDecoderSession::LastChunkAttentionIndex32Dispatches);
+         APISET().AddProp("chunk_kv_scatter_dispatches",&MetalDecoderSession::LastChunkKVScatterDispatches);
+         APISET().AddProp("chunk_kv_hoisted_commits",&MetalDecoderSession::LastChunkKVHoistedCommits);
++        APISET().AddProp("chunk_committed_kv_attention_dispatches",&MetalDecoderSession::LastCommittedKVAttentionDispatches);
+         APISET().AddProp("layout_vector_dispatches",&MetalDecoderSession::LastLayoutVectorDispatches);
+         APISET().AddProp("chunk_attention_mps_dispatches",&MetalDecoderSession::LastChunkAttentionMPSDispatches);
+         APISET().AddProp("chunk_flash_attention_dispatches",&MetalDecoderSession::LastChunkFlashAttentionDispatches);
+diff --git a/src/backends/metal/metal_context.h b/src/backends/metal/metal_context.h
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -123,6 +123,11 @@
+ struct MetalProfileOwnerStats {size_t matrices=0,affineWeights=0,bf16Weights=0,pipelineSets=0;};
+ class MetalContext {
+     friend class MetalCompiledGraph;
++    friend struct MetalCommittedAttentionReference;
++    void EncodeAttentionChunkInternal(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t,size_t,size_t,size_t,size_t,bool,bool,bool,bool);
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++    void EncodeCommittedAttentionChunk(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t,size_t,size_t,size_t,size_t,bool);
++#endif
+ #ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+     void NoteChunkKVCommitHoist();
+ #endif
+@@ -453,6 +458,7 @@
+     size_t LastChunkAttentionIndex32Dispatches() const;
+     size_t LastChunkKVScatterDispatches() const;
+     size_t LastChunkKVHoistedCommits() const;
++    size_t LastCommittedKVAttentionDispatches() const;
+ #ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+     bool CanHoistKVControls(const MetalMatrix&,const MetalMatrix&,size_t batch,size_t chunk,size_t capacity) const;
+ #endif
+diff --git a/src/backends/metal/metal_context.mm b/src/backends/metal/metal_context.mm
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -60,6 +60,9 @@
+ #endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+ #include "chunk_attention_mps_shader.h"
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++#include "chunk_mps_committed_shader.h"
++#endif
+ #include "chunk_attention_policy.h"
+ #endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+@@ -517,6 +520,9 @@
+ #endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+     id<MTLComputePipelineState> chunkMPSPack,chunkMPSSoftmax,chunkMPSUnpack;
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++    id<MTLComputePipelineState> chunkCommittedPack,chunkCommittedUnpack;
++#endif
+ #endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+     struct ChunkMPSPlan {
+@@ -531,6 +537,9 @@
+             MPSMatrixDescriptor* cache;
+             MPSMatrixMultiplication *qk,*pv;
+             id<MTLComputePipelineState> softmax;
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++            id<MTLComputePipelineState> committedSoftmax=nil;
++#endif
+         };
+         std::map<size_t,Bucket> buckets;
+ #endif
+@@ -666,7 +675,7 @@
+ #endif
+     size_t chunkAttentionMPSDispatches=0,chunkFlashAttentionDispatches=0;
+     size_t chunkAttentionMPSMatrices=0,chunkAttentionMPSSkippedMatrices=0;
+-    size_t chunkKVScatterDispatches=0,chunkKVHoistedCommits=0;
++    size_t chunkKVScatterDispatches=0,chunkKVHoistedCommits=0,committedAttentionDispatches=0;
+     size_t layoutVectorDispatches=0;
+     size_t chunkAttentionBucketDispatches=0,chunkAttentionTailDispatches=0,chunkAttentionBucketCapacity=0,chunkAttentionUnknownControls=0;
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+@@ -1906,6 +1915,9 @@
+ #endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkAttentionMPSShader]];
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++        source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkMPSCommittedShader]];
++#endif
+ #endif
+ #ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
+         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkFlashAttentionShader]];
+@@ -1943,6 +1955,10 @@
+             return pipeline;
+         };
+         impl_->kernels->chunkMPSPack=mpsChunkPipeline(@"chunk_mps_pack");
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++        impl_->kernels->chunkCommittedPack=mpsChunkPipeline(@"chunk_mps_committed_pack");
++        impl_->kernels->chunkCommittedUnpack=mpsChunkPipeline(@"chunk_mps_committed_unpack");
++#endif
+ #ifndef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+         impl_->kernels->chunkMPSSoftmax=mpsChunkPipeline(@"chunk_mps_softmax");
+ #endif
+@@ -4376,7 +4392,7 @@
+     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
+     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
+     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
+-    impl_->chunkKVScatterDispatches=impl_->chunkKVHoistedCommits=0;
++    impl_->chunkKVScatterDispatches=impl_->chunkKVHoistedCommits=impl_->committedAttentionDispatches=0;
+     impl_->layoutVectorDispatches=0;
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
+@@ -5483,6 +5499,15 @@
+         bucket.softmax=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+         if(!bucket.scores||!bucket.cache||!bucket.qk||!bucket.pv||!bucket.softmax||bucket.softmax.threadExecutionWidth!=32||bucket.softmax.maxTotalThreadsPerThreadgroup<128)
+             throw std::runtime_error("Cannot prepare MPS attention context bucket");
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++        if(batch<=4&&heads==32&&kvHeads==8&&dim==128&&capacity<=4096&&chunk<=128) {
++            NSError* error=nil;auto function=[impl_->kernels->library newFunctionWithName:@"chunk_mps_committed_softmax" constantValues:constants error:&error];
++            if(!function)throw std::runtime_error("Cannot specialize committed MPS softmax");
++            bucket.committedSoftmax=[impl_->device newComputePipelineStateWithFunction:function error:&error];
++            if(!bucket.committedSoftmax||bucket.committedSoftmax.threadExecutionWidth!=32||bucket.committedSoftmax.maxTotalThreadsPerThreadgroup<128)
++                throw std::runtime_error("Cannot prepare committed MPS softmax");
++        }
++#endif
+         plan.buckets.emplace(bound,std::move(bucket));
+     }
+ #endif
+@@ -5531,6 +5556,22 @@
+ }
+ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
+     size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated,bool reference,bool fullRequestRows) {
++    EncodeAttentionChunkInternal(inputs,output,heads,kvHeads,dim,capacity,chunk,gated,reference,fullRequestRows,false);
++}
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++void MetalContext::EncodeCommittedAttentionChunk(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
++    size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated) {
++    if(inputs.size()!=8||!inputs[3].impl_||heads!=32||kvHeads!=8||dim!=128||capacity>4096||chunk<2||chunk>128||
++       !CanHoistKVControls(inputs[5],inputs[6],inputs[3].impl_->matrix.rows,chunk,capacity))
++        throw std::invalid_argument("Committed attention requires proved bounded contiguous controls");
++    EncodeAttentionChunkInternal(inputs,output,heads,kvHeads,dim,capacity,chunk,gated,false,false,true);
++}
++#endif
++void MetalContext::EncodeAttentionChunkInternal(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
++    size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated,bool reference,bool fullRequestRows,bool committedKV) {
++#ifndef GARNET_METAL_COMMITTED_KV_MPS
++    (void)committedKV;
++#endif
+ #ifndef GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS
+     (void)fullRequestRows;
+ #endif
+@@ -5633,6 +5674,9 @@
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+         const auto& bucket=plan.buckets.at(policy.capacity);extent=policy.capacity;
+         cacheDescriptor=bucket.cache;cacheScoreView=bucket.scores;qkCache=bucket.qk;pvCache=bucket.pv;softmaxPipeline=bucket.softmax;
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++        if(committedKV){if(!bucket.committedSoftmax)throw std::logic_error("Committed softmax not prepared");softmaxPipeline=bucket.committedSoftmax;}
++#endif
+ #endif
+         auto bind=[](id<MTLComputeCommandEncoder> encoder,const MetalMatrix& owner,size_t index) {
+             auto matrix=owner.impl_->matrix;[encoder setBuffer:matrix.data offset:matrix.offset atIndex:index];
+@@ -5640,10 +5684,17 @@
+         const size_t count=Elements(Elements(q.rows,heads),dim);
+         auto pack=impl_->ComputeEncoder(__func__);
+         if(!pack)throw std::runtime_error("Cannot encode MPS attention pack");
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++        if(committedKV){[pack setComputePipelineState:impl_->kernels->chunkCommittedPack];bind(pack,inputs[0],0);bind(pack,inputs[6],1);bind(pack,plan.query,2);
++            [pack setBytes:&p length:sizeof(p) atIndex:3];[pack setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:4];}
++        else
++#endif
++        {
+         [pack setComputePipelineState:impl_->kernels->chunkMPSPack];
+         bind(pack,inputs[0],0);bind(pack,inputs[1],1);bind(pack,inputs[2],2);bind(pack,inputs[6],3);
+         bind(pack,plan.query,4);bind(pack,plan.key,5);bind(pack,plan.value,6);
+         [pack setBytes:&p length:sizeof(p) atIndex:7];[pack setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:8];
++        }
+         [pack dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[pack endEncoding];
+         auto keyView=[[MPSMatrix alloc] initWithBuffer:kc.data offset:kc.offset descriptor:cacheDescriptor];
+         auto valueView=[[MPSMatrix alloc] initWithBuffer:vc.data offset:vc.offset descriptor:cacheDescriptor];
+@@ -5661,21 +5712,29 @@
+                 if(!key||!value)throw std::runtime_error("Cannot bind bounded request cache views");
+                 requestBindings.push_back({&products,key,value});
+                 [products.qkCache encodeToCommandBuffer:impl_->command leftMatrix:products.query rightMatrix:key resultMatrix:products.cacheScores];
+-                [products.qkLive encodeToCommandBuffer:impl_->command leftMatrix:products.query rightMatrix:products.key resultMatrix:products.liveScores];
++                if(!committedKV)[products.qkLive encodeToCommandBuffer:impl_->command leftMatrix:products.query rightMatrix:products.key resultMatrix:products.liveScores];
+             }
+         }else
+ #endif
+         {
+             [qkCache encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:keyView resultMatrix:cacheScoreView];
+-            [plan.qkLive encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:plan.keyView resultMatrix:plan.liveScoreView];
++            if(!committedKV)[plan.qkLive encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:plan.keyView resultMatrix:plan.liveScoreView];
+         }
+         auto softmax=impl_->ComputeEncoder(__func__);
+         if(!softmax)throw std::runtime_error("Cannot encode MPS attention selection/softmax");
+         [softmax setComputePipelineState:softmaxPipeline];
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++        if(committedKV){bind(softmax,plan.cacheScores,0);bind(softmax,inputs[5],1);bind(softmax,inputs[6],2);
++            [softmax setBytes:&p length:sizeof(p) atIndex:3];[softmax setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:4];}
++        else
++#endif
++        {
+         bind(softmax,plan.cacheScores,0);bind(softmax,plan.liveScores,1);bind(softmax,plan.liveProb,2);
+         bind(softmax,inputs[5],3);bind(softmax,inputs[6],4);
+         [softmax setBytes:&p length:sizeof(p) atIndex:5];[softmax setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:6];
+-        [softmax setThreadgroupMemoryLength:(extent*4+15)&~size_t(15) atIndex:0];[softmax setThreadgroupMemoryLength:(extent*2+15)&~size_t(15) atIndex:1];
++        [softmax setThreadgroupMemoryLength:(extent*2+15)&~size_t(15) atIndex:1];
++        }
++        [softmax setThreadgroupMemoryLength:(extent*4+15)&~size_t(15) atIndex:0];
+         [softmax dispatchThreadgroups:MTLSizeMake(q.rows*heads,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[softmax endEncoding];
+         // Both QK products have consumed packed queries. Reuse their storage
+         // for the old-cache contribution, keeping scratch fixed per profile.
+@@ -5686,30 +5745,37 @@
+             for(const auto& binding:requestBindings) {
+                 const auto& products=*binding.products;
+                 [products.pvCache encodeToCommandBuffer:impl_->command leftMatrix:products.cacheScores rightMatrix:binding.value resultMatrix:products.query];
+-                [products.pvLive encodeToCommandBuffer:impl_->command leftMatrix:products.liveProb rightMatrix:products.value resultMatrix:products.livePart];
++                if(!committedKV)[products.pvLive encodeToCommandBuffer:impl_->command leftMatrix:products.liveProb rightMatrix:products.value resultMatrix:products.livePart];
+                 scheduledRequests+=products.cache.matrices/kvHeads;
+             }
+         }else
+ #endif
+         {
+             [pvCache encodeToCommandBuffer:impl_->command leftMatrix:cacheScoreView rightMatrix:valueView resultMatrix:plan.queryView];
+-            [plan.pvLive encodeToCommandBuffer:impl_->command leftMatrix:plan.liveProbView rightMatrix:plan.valueView resultMatrix:plan.livePartView];
++            if(!committedKV)[plan.pvLive encodeToCommandBuffer:impl_->command leftMatrix:plan.liveProbView rightMatrix:plan.valueView resultMatrix:plan.livePartView];
+         }
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS
+-        impl_->chunkAttentionMPSMatrices+=scheduledRequests*kvHeads*4;
+-        impl_->chunkAttentionMPSSkippedMatrices+=(p.batch-scheduledRequests)*kvHeads*4;
++        impl_->chunkAttentionMPSMatrices+=scheduledRequests*kvHeads*(committedKV?2:4);
++        impl_->chunkAttentionMPSSkippedMatrices+=(p.batch-scheduledRequests)*kvHeads*(committedKV?2:4);
+ #else
+-        impl_->chunkAttentionMPSMatrices+=p.batch*kvHeads*4;
++        impl_->chunkAttentionMPSMatrices+=p.batch*kvHeads*(committedKV?2:4);
+ #endif
+         auto unpack=impl_->ComputeEncoder(__func__);
+         if(!unpack)throw std::runtime_error("Cannot encode MPS attention merge");
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++        if(committedKV){[unpack setComputePipelineState:impl_->kernels->chunkCommittedUnpack];bind(unpack,plan.query,0);bind(unpack,inputs[7],1);bind(unpack,inputs[6],2);bind(unpack,output,3);
++            [unpack setBytes:&p length:sizeof(p) atIndex:4];[unpack setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:5];}
++        else
++#endif
++        {
+         [unpack setComputePipelineState:impl_->kernels->chunkMPSUnpack];
+         bind(unpack,plan.query,0);bind(unpack,plan.livePart,1);bind(unpack,inputs[7],2);bind(unpack,inputs[6],3);bind(unpack,output,4);
+         [unpack setBytes:&p length:sizeof(p) atIndex:5];[unpack setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:6];
++        }
+         [unpack dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[unpack endEncoding];
+         output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
+         if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+-        ++impl_->chunkAttentionMPSDispatches;
++        ++impl_->chunkAttentionMPSDispatches;if(committedKV)++impl_->committedAttentionDispatches;
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+         ++impl_->chunkAttentionBucketDispatches;
+         impl_->chunkAttentionBucketCapacity=std::max(impl_->chunkAttentionBucketCapacity,extent);
+@@ -5811,6 +5877,7 @@
+ size_t MetalContext::LastChunkAttentionIndex32Dispatches() const {return impl_->chunkAttentionIndex32Dispatches;}
+ size_t MetalContext::LastChunkKVScatterDispatches() const {return impl_->chunkKVScatterDispatches;}
+ size_t MetalContext::LastChunkKVHoistedCommits() const {return impl_->chunkKVHoistedCommits;}
++size_t MetalContext::LastCommittedKVAttentionDispatches() const {return impl_->committedAttentionDispatches;}
+ #ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+ void MetalContext::NoteChunkKVCommitHoist(){impl_->chunkKVHoistedCommits+=2;}
+ bool MetalContext::CanHoistKVControls(const MetalMatrix& slots,const MetalMatrix& active,size_t batch,size_t chunk,size_t capacity) const {
+@@ -6010,7 +6077,7 @@
+     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
+     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
+     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
+-    impl_->chunkKVScatterDispatches=impl_->chunkKVHoistedCommits=0;
++    impl_->chunkKVScatterDispatches=impl_->chunkKVHoistedCommits=impl_->committedAttentionDispatches=0;
+     impl_->layoutVectorDispatches=0;
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
+diff --git a/src/backends/metal/token_prefix_session.cpp b/src/backends/metal/token_prefix_session.cpp
+--- a/src/backends/metal/token_prefix_session.cpp
++++ b/src/backends/metal/token_prefix_session.cpp
+@@ -89,8 +89,15 @@
+     }
+     if(fields[3]!="text_zero_based_3axis_v1"||fields[5]!="text")
+         throw std::invalid_argument("Initial hybrid token-prefix profile requires plain text positions");
+-#ifdef GARNET_METAL_PREFIX_PREFILL_ONLY
+-    const std::string producerDomain="|native-prefill-snapshots-v1";
++#if defined(GARNET_METAL_PREFIX_PREFILL_ONLY)||defined(GARNET_METAL_COMMITTED_KV_MPS)
++    const std::string producerDomain=
++#ifdef GARNET_METAL_PREFIX_PREFILL_ONLY
++        "|native-prefill-snapshots-v1"
++#endif
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++        "|committed-mps-fp32-v1"
++#endif
++        ;
+     if(fields[1].size()>4096-producerDomain.size())throw std::invalid_argument("Prefix execution profile leaves no room for native producer domain");
+     fields[1]+=producerDomain;
+ #endif
+diff --git a/src/entry/metal_main.cpp b/src/entry/metal_main.cpp
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -268,6 +268,9 @@
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+     info+="; chunk_attention_index32";
+ #endif
++#ifdef GARNET_METAL_COMMITTED_KV_MPS
++    info+="; committed_kv_mps_fp32_v1";
++#endif
+ #ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+     info+="; chunk_kv_commit_hoist";
+ #endif
+diff --git a/test2026/metal/committed_kv_attention_test.cpp b/test2026/metal/committed_kv_attention_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/committed_kv_attention_test.cpp
+@@ -0,0 +1,69 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "metal_context.h"
++#include <algorithm>
++#include <cmath>
++#include <cstring>
++#include <iostream>
++#include <stdexcept>
++using namespace Garnet;
++namespace Garnet {struct MetalCommittedAttentionReference {
++ static void Run(MetalContext& gpu,const std::vector<MetalMatrix>& args,const MetalMatrix& out,size_t capacity,size_t chunk,bool gated){gpu.EncodeCommittedAttentionChunk(args,out,32,8,128,capacity,chunk,gated);}
++};}
++namespace {
++void Need(bool b,const char* why){if(!b)throw std::runtime_error(why);}
++float Value(size_t i,uint32_t salt){uint32_t x=uint32_t(i)^salt;x^=x>>16;x*=0x7feb352dU;x^=x>>15;x*=0x846ca68bU;x^=x>>16;return float(int(x%20001)-10000)*.00003f;}
++struct Fixture {
++ MetalContext gpu;size_t batch,chunk,cap,first,rows;bool gated;std::vector<float> q,k,v,kc,vc,slots,active,gate;
++ std::vector<MetalMatrix> args;MetalMatrix original,candidate,copied,zero;
++ size_t oracle=0,words=0;double fraction=0;
++ Fixture(size_t b,size_t t,size_t c,size_t f,bool g,bool ragged):batch(b),chunk(t),cap(c),first(f),rows(b*t),gated(g){
++  auto data=[](size_t n,uint32_t salt){std::vector<float> a(n);for(size_t i=0;i<n;++i)a[i]=Value(i,salt);return a;};
++  q=data(rows*4096,17);k=data(rows*1024,31);v=data(rows*1024,71);kc=data(batch*8*cap*128,101);vc=data(kc.size(),151);gate=data(q.size(),191);
++  slots.resize(rows);active.assign(rows,1);for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t)slots[b*chunk+t]=float(first+t);
++  if(ragged){for(size_t t=chunk-3;t<chunk;++t)active[chunk+t]=0;for(size_t t=1;t<chunk;++t)active[2*chunk+t]=0;for(size_t t=0;t<chunk;++t)active[3*chunk+t]=0;}
++  args={gpu.Upload(q,rows,4096),gpu.Upload(k,rows,1024),gpu.Upload(v,rows,1024),gpu.Upload(kc,batch,8*cap*128),gpu.Upload(vc,batch,8*cap*128),gpu.Upload(slots,batch,chunk),gpu.Upload(active,batch,chunk),gpu.Upload(gate,rows,4096)};
++  original=gpu.Allocate(rows,4096);candidate=gpu.Allocate(rows,4096);copied=gpu.Allocate(batch,chunk);zero=gpu.Upload(std::vector<float>(rows,0),batch,chunk);
++  gpu.PrepareAttentionChunk(args,32,8,128,cap,chunk);
++ }
++ void Commit(){for(size_t part=0;part<2;++part)gpu.EncodeKVChunk(args[part+1],args[part+3],args[5],args[6],args[part+3],8,128,cap,chunk,true);}
++ void Oracle(const std::vector<float>& got){
++  for(size_t b=0;b<batch;++b){size_t count=0;while(count<chunk&&active[b*chunk+count])++count;if(!count)continue;
++   for(size_t t:std::vector<size_t>{0,count/2,count-1})for(size_t h:{size_t(0),size_t(7),size_t(31)}){
++    size_t visible=first+t+1,kh=h/4;std::vector<double> p(visible);double mx=-INFINITY;
++    for(size_t s=0;s<visible;++s){double dot=0;for(size_t d=0;d<128;++d){float key=s<first?kc[((b*8+kh)*cap+s)*128+d]:k[((b*chunk+s-first)*8+kh)*128+d];dot+=double(q[((b*chunk+t)*32+h)*128+d])*key;}p[s]=dot/std::sqrt(128.);mx=std::max(mx,p[s]);}
++    double sum=0;for(auto& x:p){x=std::exp(x-mx);sum+=x;}
++    for(size_t d:{size_t(0),size_t(63),size_t(127)}){double expected=0;for(size_t s=0;s<visible;++s){float val=s<first?vc[((b*8+kh)*cap+s)*128+d]:v[((b*chunk+s-first)*8+kh)*128+d];expected+=p[s]/sum*val;}
++     size_t at=((b*chunk+t)*32+h)*128+d;if(gated)expected/=1+std::exp(-double(gate[at]));double f=std::abs(double(got[at])-expected)/(1e-5+2e-4*std::abs(expected));Need(f<=1,"Native committed attention violates original FP64 bound");fraction=std::max(fraction,f);++oracle;}
++   }
++  }
++ }
++ void Run(){size_t plans=gpu.ChunkAttentionMPSPlanCount(),scratch=gpu.ChunkAttentionMPSScratchBytes(),activeOwners=0,total=0;
++  for(size_t b=0;b<batch;++b){if(active[b*chunk])++activeOwners;for(size_t t=0;t<chunk;++t)total+=size_t(active[b*chunk+t]!=0);}
++  std::vector<float> expectedK=kc,expectedV=vc;
++  for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t)if(active[b*chunk+t])for(size_t h=0;h<8;++h)for(size_t d=0;d<128;++d){size_t out=((b*8+h)*cap+first+t)*128+d,in=((b*chunk+t)*8+h)*128+d;expectedK[out]=k[in];expectedV[out]=v[in];}
++  gpu.Begin();gpu.EncodeAttentionChunk(args,original,32,8,128,cap,chunk,gated);Commit();gpu.SubmitAndWait();Need(gpu.LastCommittedKVAttentionDispatches()==0,"Generic attention changed policy");
++  const auto old=gpu.Download(original);for(size_t part=0;part<2;++part){auto a=gpu.Download(args[part+3]);const auto& expected=part?expectedV:expectedK;Need(a.size()==expected.size()&&!std::memcmp(a.data(),expected.data(),a.size()*4),"Original committed KV differs");}
++  gpu.Update(args[3],kc);gpu.Update(args[4],vc);
++  gpu.Begin();Commit();MetalCommittedAttentionReference::Run(gpu,args,candidate,cap,chunk,gated);gpu.Flush();gpu.SubmitAndWait();
++  Need(gpu.LastCommittedKVAttentionDispatches()==size_t(total>8),"Committed route/scalar fallback differs");
++  Need(gpu.LastChunkAttentionMPSDispatches()==size_t(total>8),"MPS route coverage differs");
++  Need(gpu.LastChunkAttentionMPSMatrices()==(total>8?activeOwners*8*2:0),"Committed path did not use two products");
++  Need(gpu.ChunkAttentionMPSPlanCount()==plans&&gpu.ChunkAttentionMPSScratchBytes()==scratch,"Execution changed prepared plans/storage");
++  auto got=gpu.Download(candidate);Need(got.size()==old.size(),"Output size changed");for(size_t i=0;i<got.size();++i){Need(std::isfinite(got[i]),"Nonfinite committed output");Need(std::abs(double(got[i])-old[i])<=1e-5+2e-4*std::abs(double(old[i])),"Complete output exceeds fixed control bound");if(!active[i/4096])Need(got[i]==0,"Inactive committed output stale");}words=got.size();Oracle(got);Oracle(old);
++  for(size_t part=0;part<2;++part){auto a=gpu.Download(args[part+3]);const auto& expected=part?expectedV:expectedK;Need(a.size()==expected.size()&&!std::memcmp(a.data(),expected.data(),a.size()*4),"Committed path changed full KV parent");}
++  for(size_t index:{size_t(0),size_t(1),size_t(2),size_t(5),size_t(6),size_t(7)}){auto a=gpu.Download(args[index]);const auto& expected=index==0?q:index==1?k:index==2?v:index==5?slots:index==6?active:gate;Need(!std::memcmp(a.data(),expected.data(),a.size()*4),"Readonly input changed");}
++ }
++ void RejectControls(){
++  auto invoke=[&](){gpu.Begin();bool rejected=false;try{MetalCommittedAttentionReference::Run(gpu,args,candidate,cap,chunk,gated);}catch(const std::invalid_argument&){rejected=true;}gpu.Abort();Need(rejected,"Unsafe committed control admitted");};
++  auto changed=slots;changed[1]=changed[0];gpu.Update(args[5],changed);invoke();gpu.Update(args[5],slots);
++  auto flags=active;flags[1]=0;gpu.Update(args[6],flags);invoke();gpu.Update(args[6],active);
++  gpu.Begin();gpu.EncodeAdd(args[5],zero,copied);auto inputs=args;inputs[5]=copied;bool pending=false;try{MetalCommittedAttentionReference::Run(gpu,inputs,candidate,cap,chunk,gated);}catch(const std::invalid_argument&){pending=true;}gpu.Abort();Need(pending,"Pending controls admitted");Need(gpu.LastCommittedKVAttentionDispatches()==0,"Abort retained committed dispatch counter");
++ }
++};
++}
++int main(){try{size_t words=0,oracle=0,cells=0;double fraction=0;
++ const size_t shapes[][4]={{1,8,128,0},{4,17,256,128},{1,128,4096,1920},{4,128,4096,1920},{4,128,4096,3840},{4,128,4096,0}};
++ for(const auto& shape:shapes){{Fixture f(shape[0],shape[1],shape[2],shape[3],cells==1||cells==4,cells==1||cells==4);f.Run();if(cells==1)f.RejectControls();words+=f.words;oracle+=f.oracle;fraction=std::max(fraction,f.fraction);}++cells;}
++ auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Committed reference retained native owners");
++ std::cout<<"Native committed KV: "<<cells<<" cells, "<<words<<" complete output words, "<<oracle<<" original-bound FP64 values, maximum fraction "<<fraction<<"; full KV/readonly data, two-products, scalar, controls, partial submit, abort, unchanged storage PASS\n";return 0;
++}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

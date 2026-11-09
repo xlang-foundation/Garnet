@@ -1,0 +1,15 @@
+"""Adapt the independent trained-MLP auditor for four exact-current projection combinations."""
+from pathlib import Path
+R=Path(__file__).resolve().parent;T=R.parent/'mistral-fused-mlp-trained1';s=(T/'audit_replay1.py').read_text()
+s=s.replace("require([v['variant'] for v in layer['variants']]==[0,1,2],'wrong fused variant coverage')","require([(v['method'],v['variant']) for v in layer['variants']]==[(m,v) for m in range(4) for v in range(3)],'wrong fused method/variant coverage')")
+s=s.replace("ROOT/'replay1-status.json'","ROOT/'pilot1-status.json'").replace("ROOT/'replay1-postflight.json'","ROOT/'pilot1-postflight.json'").replace("ROOT/'replay1-command.json'","ROOT/'pilot1-preflight.json'")
+s=s.replace("ROOT/'replay-output1", "ROOT/'pilot1-output")
+s=s.replace("    d=read(ROOT/'pilot1-output/result1.json');", "    trained=Path(read(ROOT/'plan1.json')['trained_root'])\n    d=read(ROOT/'pilot1-output/result1.json');")
+s=s.replace("capture=ROOT/'captures1'/prefix", "capture=trained/'captures1'/prefix").replace("asset=ROOT/'assets1'/prefix", "asset=trained/'assets1'/prefix")
+s=s.replace('files[str(p.relative_to(ROOT))]', 'files[str(p)]')
+s=s.replace("label=prefix+'-fused-'+str(v['variant'])", "label=prefix+'-method-'+str(v['method'])+'-fused-'+str(v['variant'])")
+s=s.replace("prefix+'-fused-shadow-'", "prefix+'-method-'+str(v['method'])+'-fused-shadow-'")
+s=s.replace("['variants'][1]", "['variants'][7]").replace("['variants'][0].update(gate_mismatches", "['variants'][6].update(gate_mismatches").replace("['variants'][2].update(writers_exact", "['variants'][8].update(writers_exact")
+s=s.replace("source_replay_binding_sha256=sha(ROOT/'replay-bindings1.json')", "source_plan_sha256=sha(ROOT/'plan1.json')").replace("sha(ROOT/'capture-audit1.json')", "sha(trained/'capture-audit1.json')")
+s=s.replace("out=ROOT/'replay-audit1.json'", "out=ROOT/'pilot-audit1.json'")
+(R/'audit_pilot1.py').write_text(s);compile(s,'audit_pilot1.py','exec')

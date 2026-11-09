@@ -8,11 +8,16 @@
 
 int main(int argc,char** argv) {
     try {
-        if(argc!=4)throw std::runtime_error("usage: mistral_affine_rows CHECKPOINT REQUEST_JSON NEW_OUTPUT_FOLDER");
+        if(argc!=4&&argc!=5)throw std::runtime_error("usage: mistral_affine_rows CHECKPOINT REQUEST_JSON NEW_OUTPUT_FOLDER [mistral|qwen3|qwen2]");
         Garnet::SafeTensorsIndex index;std::string error;
         if(!index.Open(argv[1],error))throw std::runtime_error(error);
         Garnet::MlxQwen35Checkpoint adapter;adapter.Open(index);
-        if(!adapter.DenseMistral())throw std::runtime_error("Mistral affine checkpoint required");
+        const std::string family=argc==5?argv[4]:"mistral";
+        if((family!="mistral"&&family!="qwen3"&&family!="qwen2")||
+           (family=="mistral"&&!adapter.DenseMistral())||
+           (family=="qwen2"&&!adapter.DenseQwen2())||
+           (family=="qwen3"&&!adapter.DenseQwen3()))
+            throw std::runtime_error("Requested dense affine checkpoint family differs");
         std::ifstream requestFile(argv[2]);nlohmann::json requests;requestFile>>requests;
         std::filesystem::path folder(argv[3]);
         if(!std::filesystem::create_directory(folder))throw std::runtime_error("new output directory required");

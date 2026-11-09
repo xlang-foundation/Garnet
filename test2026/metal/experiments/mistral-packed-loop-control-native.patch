@@ -1,0 +1,803 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -1153,3 +1153,8 @@
+     target_link_libraries(garnet_value_profile_test PRIVATE garnet_metal)
+     add_test(NAME metal_value_profile_reference COMMAND garnet_value_profile_test)
+ endif()
++
++# Research-only native loop controls; no serving API.
++add_executable(garnet_packed_loop_control_benchmark test2026/metal/packed_loop_control_benchmark.cpp)
++target_include_directories(garnet_packed_loop_control_benchmark PRIVATE third_party)
++target_link_libraries(garnet_packed_loop_control_benchmark PRIVATE garnet_metal)
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -199,6 +199,9 @@
+ #ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+     bool PreparePackedAffineProfile(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&,size_t maximumRows);
+     void SetPackedAffineEnabled(bool enabled);
++    // Research-only, drained native context. No XLang/serving API.
++    void SetDiagnosticPackedLoopMode(size_t mode);
++    size_t LastDiagnosticPackedLoopDispatches() const;
+     size_t LastPackedAffineDispatches() const;
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+     void SetPairedPackedPrefillEnabled(bool enabled);
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -22,6 +22,7 @@
+ #endif
+ #ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+ #include "packed_affine_shader.h"
++#include "packed_loop_control_shader.h"
+ #endif
+ #ifdef GARNET_METAL_SILU_PROFILE32
+ #include "silu_profile_shader.h"
+@@ -579,6 +580,7 @@
+ #endif
+ #ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+     struct PackedPlan {std::array<id<MTLComputePipelineState>,2> pipelines{};
++        std::array<std::array<id<MTLComputePipelineState>,2>,3> diagnosticLoops{};
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+         std::array<id<MTLComputePipelineState>,2> paired{};
+ #endif
+@@ -588,6 +590,7 @@
+     id<MTLLibrary> packedLibrary=nil;
+     id<MTLComputePipelineState> packedGather=nil;
+     bool packedEnabled=true;
++    size_t diagnosticPackedLoopMode=0,diagnosticPackedLoopDispatches=0;
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+     bool pairedPackedEnabled=false;
+     size_t pairedPackedDispatches=0;
+@@ -2668,6 +2671,12 @@
+ }
+ }
+ size_t MetalContext::LastPackedAffineDispatches() const {return impl_->packedDispatches;}
++void MetalContext::SetDiagnosticPackedLoopMode(size_t mode) {
++    if(mode>3)throw std::invalid_argument("Unknown diagnostic packed loop mode");
++    if(impl_->command||impl_->submitted.count)throw std::logic_error("Diagnostic loop policy requires drained batches");
++    impl_->diagnosticPackedLoopMode=mode;
++}
++size_t MetalContext::LastDiagnosticPackedLoopDispatches() const {return impl_->diagnosticPackedLoopDispatches;}
+ size_t MetalContext::PackedAffinePlanCount() const {return impl_->packedPlans.size();}
+ MetalMatrix MetalContext::PackedAffineScratch() const {return impl_->packedInput;}
+ void MetalContext::SetPackedAffineEnabled(bool enabled) {
+@@ -2697,6 +2706,7 @@
+             auto opts=[MTLCompileOptions new];opts.languageVersion=MTLLanguageVersion4_0;opts.mathMode=MTLMathModeSafe;
+             NSString* source=[@"#define GARNET_AFFINE_PROFILE 1\n#define GARNET_AFFINE_INDEX32 1\n#define GARNET_AFFINE_FP16_COEFFICIENTS 1\n" stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4ProfilePrelude]];
+             source=[source stringByAppendingString:[NSString stringWithUTF8String:kPackedAffineShader]];
++            source=[source stringByAppendingString:[NSString stringWithUTF8String:kPackedLoopControlShader]];
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+             source=[source stringByAppendingString:[NSString stringWithUTF8String:kPairedPrefillShader]];
+ #endif
+@@ -2740,6 +2750,15 @@
+                pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
+                 throw std::runtime_error("Packed prefill pipeline exceeds device limits");
+             plan.pipelines[i]=pipeline;
++            for(size_t mode=1;mode<=3;++mode) {
++                NSString* name=[NSString stringWithFormat:@"loop%zu_m%zuk128",mode,i?size_t(256):size_t(128)];
++                auto function=[impl_->packedLibrary newFunctionWithName:name constantValues:constants error:&error];
++                if(!function)throw std::runtime_error("Cannot specialize diagnostic loop");
++                auto candidate=[impl_->device newComputePipelineStateWithFunction:function error:&error];
++                if(!candidate||candidate.threadExecutionWidth!=32||candidate.maxTotalThreadsPerThreadgroup<256||candidate.staticThreadgroupMemoryLength!=pipeline.staticThreadgroupMemoryLength)
++                    throw std::runtime_error("Diagnostic loop pipeline differs from native geometry");
++                plan.diagnosticLoops[mode-1][i]=candidate;
++            }
+         }
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+         if(a.columns==4096&&o.columns==14336) {
+@@ -2791,6 +2810,7 @@
+     // shorter/narrow projections keep the128-row tile. No input padding.
+     const size_t tile=(indices.size()>=256&&(o.columns==14336||(a.columns==14336&&indices.size()>=384)))?256:128;
+     auto pipeline=found->second.pipelines[tile==256?1:0];
++    if(impl_->diagnosticPackedLoopMode)pipeline=found->second.diagnosticLoops[impl_->diagnosticPackedLoopMode-1][tile==256?1:0];
+     struct Params {uint64_t rows,inner,columns,aStride,oStride;};
+     const Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+     encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode packed prefill projection");
+@@ -2798,6 +2818,7 @@
+     [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];[encoder setBuffer:o.data offset:o.offset atIndex:4];
+     [encoder setBytes:&params length:sizeof(params) atIndex:5];[encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:6];
+     [encoder dispatchThreadgroups:MTLSizeMake(o.columns/64,(indices.size()+tile-1)/tile,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
++    if(impl_->diagnosticPackedLoopMode)++impl_->diagnosticPackedLoopDispatches;
+     ++impl_->packedDispatches;++impl_->affineProfileDispatches;if(reportIndexed)++impl_->indexedAffineDispatches;
+     impl_->affineProfileMaxThreads=pipeline.maxTotalThreadsPerThreadgroup;
+     output.impl_->ready=false;output.impl_->pending=true;
+@@ -4272,7 +4293,7 @@
+     impl_->streamedDispatches=0;
+ #endif
+ #ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+-    impl_->packedDispatches=0;
++    impl_->packedDispatches=0;impl_->diagnosticPackedLoopDispatches=0;
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+     impl_->pairedPackedDispatches=0;
+ #endif
+@@ -5890,7 +5911,7 @@
+     impl_->streamedDispatches=0;
+ #endif
+ #ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+-    impl_->packedDispatches=0;
++    impl_->packedDispatches=0;impl_->diagnosticPackedLoopDispatches=0;
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+     impl_->pairedPackedDispatches=0;
+ #endif
+--- /dev/null
++++ b/test2026/metal/packed_loop_control_benchmark.cpp
+@@ -0,0 +1,88 @@
++// SPDX-License-Identifier: Apache-2.0
++// Bounded streaming operator qualification. Full saved outputs require the
++// independent offline FP64 audit; this executable also samples FP64 directly.
++#include "../../src/backends/metal/metal_context.h"
++#include "../../src/model/affine_int4_codec.h"
++#include "nlohmann/json.hpp"
++#include <algorithm>
++#include <cmath>
++#include <cstring>
++#include <filesystem>
++#include <fstream>
++#include <iostream>
++#include <limits>
++#include <numeric>
++#include <set>
++using namespace Garnet;using JSON=nlohmann::json;
++void Need(bool b,const char* s){if(!b)throw std::runtime_error(s);}
++template<class F> void Reject(F f){bool rejected=false;try{f();}catch(const std::exception&){rejected=true;}Need(rejected,"Expected guard rejection");}
++template<class T> void Save(const std::filesystem::path& p,const std::vector<T>& data){std::ofstream f(p,std::ios::binary);f.write(reinterpret_cast<const char*>(data.data()),data.size()*sizeof(T));Need(bool(f),"Cannot save payload");}
++struct Fixture {
++    MetalContext gpu;size_t m,n,k;AffineInt4Layout layout;
++    std::vector<float> input,poison;std::vector<uint32_t> packed;std::vector<uint16_t> scales,biases;
++    MetalAffineInt4Weight weight;MetalMatrix a,out;bool eligible;std::filesystem::path root;
++    Fixture(size_t rows,size_t outputs,size_t inner,std::filesystem::path directory):m(rows),n(outputs),k(inner),layout(AffineInt4Layout::Create(n,k,AffineInt4CoefficientType::FP16)),root(directory) {
++        input.resize(m*k);packed.resize(layout.weightBytes/4);scales.resize(layout.coefficientBytes/2);biases.resize(scales.size());
++        uint32_t seed=37;for(auto& x:input){seed=1664525u*seed+1013904223u;x=float(int((seed>>8)%65521)-32760)*0x1p-18f;}
++        for(size_t i=0;i<packed.size();++i){seed=1664525u*seed+1013904223u;packed[i]=seed;}
++        for(size_t i=0;i<scales.size();++i){scales[i]=Float32ToFloat16RNE(float(int(i%13)-6)*.00171f);biases[i]=Float32ToFloat16RNE(float(int(i%17)-8)*.00313f);}
++        weight=gpu.UploadAffineInt4(packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,n,k,true);
++        poison.assign(m*n,std::numeric_limits<float>::quiet_NaN());a=gpu.Upload(input,m,k);out=gpu.Upload(poison,m,n);
++        Need(gpu.PrepareAffineInt4Profile(a,weight,out,m),"Cannot prepare affine controls");
++        eligible=gpu.PreparePackedAffineProfile(a,weight,out,m);
++        Need(eligible==(m>=128&&((k==4096&&(n==4096||n==14336))||(k==14336&&n==4096))),"Wrong packed preparation selection");
++        const auto plans=gpu.PackedAffinePlanCount();const auto owners=MetalContext::ProfileOwnerStats();
++        Need(gpu.PreparePackedAffineProfile(a,weight,out,m)==eligible&&gpu.PackedAffinePlanCount()==plans&&MetalContext::ProfileOwnerStats().matrices==owners.matrices,"Repeated preparation allocates");
++        size_t bytes=0;std::set<uintptr_t> unique;for(const auto& scratch:std::array<MetalMatrix,1>{gpu.PackedAffineScratch()}){auto info=MetalContext::MatrixBufferInfo(scratch);if(info.identity){bytes+=info.lengthBytes;unique.insert(info.identity);}}
++        Need(bytes==(eligible?14680064u:0u)&&unique.size()==(eligible?1u:0u),"Scratch is not one bounded set");
++        if(!root.empty()){Need(std::filesystem::create_directory(root),"Fresh case directory required");Save(root/"input.f32",input);Save(root/"weight.u32",packed);Save(root/"scales.f16",scales);Save(root/"biases.f16",biases);}
++    }
++
++    JSON Cell(size_t count,bool reversed,bool dense,bool benchmark) {
++        std::vector<size_t> ids(count);std::vector<bool> active(m);for(size_t i=0;i<count;++i){ids[i]=dense?i:(i*127+5)%m;active[ids[i]]=true;}if(reversed)std::reverse(ids.begin(),ids.end());
++        gpu.SetPackedAffineEnabled(false);gpu.SetDiagnosticPackedLoopMode(0);gpu.Update(out,poison);gpu.Begin();
++        if(dense)gpu.EncodeAffineInt4MatMul(a,weight,out);else gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);
++        gpu.SubmitAndWait();Need(gpu.LastPackedAffineDispatches()==0&&gpu.LastDiagnosticPackedLoopDispatches()==0,"Nonpacked control selected packed");auto reference=gpu.Download(out);gpu.SetPackedAffineEnabled(true);
++        std::array<std::vector<float>,4> first;std::array<std::vector<double>,4> times;JSON order=JSON::array();std::array<size_t,4> maximumThreads{};const size_t plans=gpu.PackedAffinePlanCount(),pipelines=gpu.AffineProfilePipelineCount();auto owners=MetalContext::ProfileOwnerStats();size_t checks=0,words=0;double maximum=0;
++        const int reps=benchmark?9:1,warmups=benchmark?3:0;
++        for(int rep=-warmups;rep<reps;++rep)for(size_t step=0;step<4;++step){size_t v=(step+size_t(rep+warmups))%4;
++            gpu.SetDiagnosticPackedLoopMode(v);gpu.Update(out,poison);gpu.Begin();
++            if(dense)gpu.EncodeAffineInt4MatMul(a,weight,out);else gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);
++            gpu.SubmitAndWait();bool selected=eligible&&count>=128;Need(gpu.LastPackedAffineDispatches()==size_t(selected),"Wrong original packed route");Need(gpu.LastDiagnosticPackedLoopDispatches()==size_t(v&&selected),"Wrong diagnostic loop route");
++            Need(gpu.LastAffineProfileMisses()==0&&gpu.LastAffineProfileDispatches()==size_t(count>0),"Native profile accounting differs");Need(gpu.LastIndexedAffineDispatches()==size_t(!dense&&count>0),"Indexed accounting differs");
++            Need(gpu.PackedAffinePlanCount()==plans&&gpu.AffineProfilePipelineCount()==pipelines,"Request-time plan creation");auto values=gpu.Download(out);
++            for(size_t i=0;i<values.size();++i){Need(std::isfinite(values[i]),"Missing/nonfinite output after poison");if(!active[i/n])Need(values[i]==0,"Inactive output changed");}
++            Need(std::memcmp(reference.data(),values.data(),values.size()*4)==0,"Loop candidate differs from original nonpacked native control");
++            if(first[v].empty())first[v]=values;else Need(std::memcmp(first[v].data(),values.data(),values.size()*4)==0,"Nondeterministic projection");
++            maximumThreads[v]=gpu.LastAffineProfileMaxThreads();if(rep>=0)times[v].push_back(gpu.LastGPUMs());words+=values.size();order.push_back(JSON{{"rep",rep},{"mode",v},{"packed",gpu.LastPackedAffineDispatches()},{"diagnostic",gpu.LastDiagnosticPackedLoopDispatches()}});
++        }
++        AffineInt4View view(layout,packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes);std::vector<float> decoded(k);JSON oracle=JSON::array();
++        for(size_t col:std::set<size_t>{0,1,15,16,31,32,63,64,n/2,n-1}){view.DecodeRow(col,decoded.data(),k);if(count)for(size_t row:std::set<size_t>{0,count/2,count-1}) {
++            double sum=0,absolute=0;for(size_t j=0;j<k;++j){double product=double(Float16ToFloat32(Float32ToFloat16RNE(input[ids[row]*k+j])))*Float16ToFloat32(Float32ToFloat16RNE(decoded[j]));sum+=product;absolute+=std::abs(product);}
++            for(size_t v=0;v<4;++v){double fraction=std::abs(double(first[v][ids[row]*n+col])-sum)/(2e-6+4e-6*absolute);Need(fraction<=1,"Original FP64 bound exceeded");maximum=std::max(maximum,fraction);++checks;}
++            oracle.push_back(JSON{{"row",ids[row]},{"column",col},{"sum",sum},{"sum_abs",absolute}});
++        }}
++        auto after=MetalContext::ProfileOwnerStats();Need(owners.matrices==after.matrices&&owners.affineWeights==after.affineWeights&&owners.pipelineSets==after.pipelineSets,"Runtime owner allocation");std::string label=std::to_string(count)+(reversed?"-reverse":"-perm")+(dense?"-dense":"-indexed");
++        for(size_t v=0;v<4;++v)Save(root/(label+"-mode"+std::to_string(v)+".f32"),first[v]);
++        return JSON{{"rows",m},{"outputs",n},{"inner",k},{"active",ids},{"label",label},{"eligible",eligible},{"packed",eligible&&count>=128},{"dense",dense},{"fp64_samples",checks},{"max_fp64_fraction",maximum},{"gpu_ms",times},{"maximum_threads",maximumThreads},{"execution_order",order},{"warmups",warmups},{"repetitions",reps},{"checked_runtime_words",words},{"plans",plans},{"oracle",oracle}};
++    }
++    void Guards(){
++        gpu.SetDiagnosticPackedLoopMode(0);Reject([&]{gpu.SetDiagnosticPackedLoopMode(4);});
++        std::vector<size_t> ids(m);std::iota(ids.begin(),ids.end(),0);auto bad=ids;bad[1]=bad[0];gpu.SetPackedAffineEnabled(true);gpu.Update(out,std::vector<float>(m*n,17.f));auto before=gpu.Download(out);
++        gpu.Begin();Reject([&]{gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,bad);});Reject([&]{gpu.SetDiagnosticPackedLoopMode(1);});gpu.Abort();Need(gpu.Download(out)==before,"Invalid call wrote output");
++        gpu.SetDiagnosticPackedLoopMode(3);gpu.Begin();gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);gpu.Abort();Need(gpu.LastDiagnosticPackedLoopDispatches()==0,"Abort retained diagnostic count");Reject([&]{gpu.Download(out);});
++        gpu.Begin();gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);gpu.SubmitAndWait();Need(gpu.LastDiagnosticPackedLoopDispatches()==size_t(eligible),"Recovery route differs");
++        gpu.Begin();gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);gpu.Flush();Reject([&]{gpu.SetDiagnosticPackedLoopMode(0);});gpu.SubmitAndWait();gpu.SetDiagnosticPackedLoopMode(0);
++    }
++};
++int main(int argc,char** argv){try{
++    Need(argc==2,"Fresh output directory required");std::filesystem::path root=argv[1];Need(std::filesystem::create_directory(root),"Fresh benchmark directory required");
++    JSON report={{"scope","Actual native strict packed-affine loop-control screen. Same-context/library, existing geometry/layout/precision;3 independent compiler-control modes. Not model/serving/quality qualification."},{"cases",JSON::array()}};size_t index=0;
++    for(auto shape:std::vector<std::array<size_t,2>>{{14336,4096},{4096,14336},{4096,4096},{1024,4096}}){
++        Fixture f(512,shape[0],shape[1],root/("case-"+std::to_string(index)));
++        for(size_t count:std::vector<size_t>{0,4,127,128,129,255,256,257,383,384,511,512}){auto c=f.Cell(count,false,false,f.eligible&&count==512);c["fixture"]=index;report["cases"].push_back(c);}
++        auto a=f.Cell(512,true,false,false);a["fixture"]=index;report["cases"].push_back(a);a=f.Cell(512,false,true,f.eligible);a["fixture"]=index;report["cases"].push_back(a);f.Guards();std::cout<<"loop_shape "<<index++<<" PASS\n"<<std::flush;
++    }
++    for(size_t rows:{128,256})for(auto shape:std::vector<std::array<size_t,2>>{{14336,4096},{4096,14336},{4096,4096}}){Fixture f(rows,shape[0],shape[1],root/("case-"+std::to_string(index)));auto a=f.Cell(rows,false,true,true);a["fixture"]=index;report["cases"].push_back(a);f.Guards();std::cout<<"loop_shape "<<index++<<" PASS\n"<<std::flush;}
++    auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Retained native owners after close");Need(report["cases"].size()==62,"Missing profile cells");report["passed"]=true;std::ofstream f(root/"results.json");f<<report.dump(2)<<'\n';Need(bool(f),"Cannot save report");return 0;
++}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+--- /dev/null
++++ b/src/backends/metal/packed_loop_control_shader.h
+@@ -0,0 +1,589 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++namespace Garnet {
++// Research-only exact inner-loop controls:1 no-unroll,2 volatile barrier,3 both.
++inline constexpr const char* kPackedLoopControlShader=R"METAL(
++kernel void loop1_m128k128(device const half* input [[buffer(0)]],device const uint* packed [[buffer(1)]],
++ device const ushort* scales [[buffer(2)]],device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
++ constant VectorQ4Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],uint2 group [[threadgroup_position_in_grid]],
++ uint tid [[thread_index_in_threadgroup]],uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
++ GARNET_AFFINE_PARAMETERS(VectorQ4Params);
++ constexpr uint stageK=128,weightStride=stageK+8,packet=64*stageK/256;
++ threadgroup half weights[64*weightStride];
++ constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<descriptor,execution_simdgroup> multiply;
++ auto left=multiply.get_left_input_cooperative_tensor<half,half,float>();
++ auto right=multiply.get_right_input_cooperative_tensor<half,half,float>();
++ auto c0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c1=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ for(ushort i=0;i<c0.get_capacity();++i){c0[i]=0;c1[i]=0;}
++ const uint quad=lane>>2,fragmentRow=(quad&4)|((lane>>1)&3),fragmentColumn=((quad&2)|(lane&1))*4;
++ const uint firstRow=group.y*128+(simd/2)*32,firstColumn=group.x*64+(simd%2)*32;
++ const uint localN=tid/(stageK/packet),localK=(tid%(stageK/packet))*packet,n=group.x*64+localN;
++ for(uint base=0;base<p.inner;base+=stageK) {
++  const uint offset=n*(p.inner/8)+(base+localK)/8,coefficient=n*(p.inner/64)+(base+localK)/64;
++  const float scale=garnet_affine_coefficient(scales[coefficient]),bias=garnet_affine_coefficient(biases[coefficient]);
++  const uint4 words=*reinterpret_cast<device const uint4*>(packed+offset);
++  #pragma clang loop unroll(full)
++  for(uint i=0;i<packet/4;++i) {
++   const uint4 codes=(uint4(words[i/2])>>(uint4(0,4,8,12)+(i%2)*16))&15u;
++   *reinterpret_cast<threadgroup half4*>(weights+localN*weightStride+localK+4*i)=half4(fma(float4(codes),float4(scale),float4(bias)));
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++  #pragma clang loop unroll(disable)
++  for(uint local=0;local<stageK;local+=16) {
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[((simd%2)*32+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+0+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c0);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+16+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c1);
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c0[ci],c0[ci+1],c0[ci+2],c0[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+16+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c1[ci],c1[ci+1],c1[ci+2],c1[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++}
++kernel void loop1_m256k128(device const half* input [[buffer(0)]],device const uint* packed [[buffer(1)]],
++ device const ushort* scales [[buffer(2)]],device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
++ constant VectorQ4Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],uint2 group [[threadgroup_position_in_grid]],
++ uint tid [[thread_index_in_threadgroup]],uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
++ GARNET_AFFINE_PARAMETERS(VectorQ4Params);
++ constexpr uint stageK=128,weightStride=stageK+8,packet=64*stageK/256;
++ threadgroup half weights[64*weightStride];
++ constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<descriptor,execution_simdgroup> multiply;
++ auto left=multiply.get_left_input_cooperative_tensor<half,half,float>();
++ auto right=multiply.get_right_input_cooperative_tensor<half,half,float>();
++ auto c0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c1=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c2=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c3=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ for(ushort i=0;i<c0.get_capacity();++i){c0[i]=0;c1[i]=0;c2[i]=0;c3[i]=0;}
++ const uint quad=lane>>2,fragmentRow=(quad&4)|((lane>>1)&3),fragmentColumn=((quad&2)|(lane&1))*4;
++ const uint firstRow=group.y*256+(simd/2)*64,firstColumn=group.x*64+(simd%2)*32;
++ const uint localN=tid/(stageK/packet),localK=(tid%(stageK/packet))*packet,n=group.x*64+localN;
++ for(uint base=0;base<p.inner;base+=stageK) {
++  const uint offset=n*(p.inner/8)+(base+localK)/8,coefficient=n*(p.inner/64)+(base+localK)/64;
++  const float scale=garnet_affine_coefficient(scales[coefficient]),bias=garnet_affine_coefficient(biases[coefficient]);
++  const uint4 words=*reinterpret_cast<device const uint4*>(packed+offset);
++  #pragma clang loop unroll(full)
++  for(uint i=0;i<packet/4;++i) {
++   const uint4 codes=(uint4(words[i/2])>>(uint4(0,4,8,12)+(i%2)*16))&15u;
++   *reinterpret_cast<threadgroup half4*>(weights+localN*weightStride+localK+4*i)=half4(fma(float4(codes),float4(scale),float4(bias)));
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++  #pragma clang loop unroll(disable)
++  for(uint local=0;local<stageK;local+=16) {
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[((simd%2)*32+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+0+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c0);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+16+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c1);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+32+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c2);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+48+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c3);
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c0[ci],c0[ci+1],c0[ci+2],c0[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+16+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c1[ci],c1[ci+1],c1[ci+2],c1[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+32+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c2[ci],c2[ci+1],c2[ci+2],c2[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+48+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c3[ci],c3[ci+1],c3[ci+2],c3[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++}
++kernel void loop2_m128k128(device const half* input [[buffer(0)]],device const uint* packed [[buffer(1)]],
++ device const ushort* scales [[buffer(2)]],device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
++ constant VectorQ4Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],uint2 group [[threadgroup_position_in_grid]],
++ uint tid [[thread_index_in_threadgroup]],uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
++ GARNET_AFFINE_PARAMETERS(VectorQ4Params);
++ constexpr uint stageK=128,weightStride=stageK+8,packet=64*stageK/256;
++ threadgroup half weights[64*weightStride];
++ constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<descriptor,execution_simdgroup> multiply;
++ auto left=multiply.get_left_input_cooperative_tensor<half,half,float>();
++ auto right=multiply.get_right_input_cooperative_tensor<half,half,float>();
++ auto c0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c1=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ for(ushort i=0;i<c0.get_capacity();++i){c0[i]=0;c1[i]=0;}
++ const uint quad=lane>>2,fragmentRow=(quad&4)|((lane>>1)&3),fragmentColumn=((quad&2)|(lane&1))*4;
++ const uint firstRow=group.y*128+(simd/2)*32,firstColumn=group.x*64+(simd%2)*32;
++ const uint localN=tid/(stageK/packet),localK=(tid%(stageK/packet))*packet,n=group.x*64+localN;
++ for(uint base=0;base<p.inner;base+=stageK) {
++  const uint offset=n*(p.inner/8)+(base+localK)/8,coefficient=n*(p.inner/64)+(base+localK)/64;
++  const float scale=garnet_affine_coefficient(scales[coefficient]),bias=garnet_affine_coefficient(biases[coefficient]);
++  const uint4 words=*reinterpret_cast<device const uint4*>(packed+offset);
++  #pragma clang loop unroll(full)
++  for(uint i=0;i<packet/4;++i) {
++   const uint4 codes=(uint4(words[i/2])>>(uint4(0,4,8,12)+(i%2)*16))&15u;
++   *reinterpret_cast<threadgroup half4*>(weights+localN*weightStride+localK+4*i)=half4(fma(float4(codes),float4(scale),float4(bias)));
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++  for(uint local=0;local<stageK;local+=16) {
++   volatile int compiler_barrier;
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[((simd%2)*32+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+0+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c0);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+16+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c1);
++   (void)compiler_barrier;
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c0[ci],c0[ci+1],c0[ci+2],c0[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+16+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c1[ci],c1[ci+1],c1[ci+2],c1[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++}
++kernel void loop2_m256k128(device const half* input [[buffer(0)]],device const uint* packed [[buffer(1)]],
++ device const ushort* scales [[buffer(2)]],device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
++ constant VectorQ4Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],uint2 group [[threadgroup_position_in_grid]],
++ uint tid [[thread_index_in_threadgroup]],uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
++ GARNET_AFFINE_PARAMETERS(VectorQ4Params);
++ constexpr uint stageK=128,weightStride=stageK+8,packet=64*stageK/256;
++ threadgroup half weights[64*weightStride];
++ constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<descriptor,execution_simdgroup> multiply;
++ auto left=multiply.get_left_input_cooperative_tensor<half,half,float>();
++ auto right=multiply.get_right_input_cooperative_tensor<half,half,float>();
++ auto c0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c1=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c2=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c3=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ for(ushort i=0;i<c0.get_capacity();++i){c0[i]=0;c1[i]=0;c2[i]=0;c3[i]=0;}
++ const uint quad=lane>>2,fragmentRow=(quad&4)|((lane>>1)&3),fragmentColumn=((quad&2)|(lane&1))*4;
++ const uint firstRow=group.y*256+(simd/2)*64,firstColumn=group.x*64+(simd%2)*32;
++ const uint localN=tid/(stageK/packet),localK=(tid%(stageK/packet))*packet,n=group.x*64+localN;
++ for(uint base=0;base<p.inner;base+=stageK) {
++  const uint offset=n*(p.inner/8)+(base+localK)/8,coefficient=n*(p.inner/64)+(base+localK)/64;
++  const float scale=garnet_affine_coefficient(scales[coefficient]),bias=garnet_affine_coefficient(biases[coefficient]);
++  const uint4 words=*reinterpret_cast<device const uint4*>(packed+offset);
++  #pragma clang loop unroll(full)
++  for(uint i=0;i<packet/4;++i) {
++   const uint4 codes=(uint4(words[i/2])>>(uint4(0,4,8,12)+(i%2)*16))&15u;
++   *reinterpret_cast<threadgroup half4*>(weights+localN*weightStride+localK+4*i)=half4(fma(float4(codes),float4(scale),float4(bias)));
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++  for(uint local=0;local<stageK;local+=16) {
++   volatile int compiler_barrier;
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[((simd%2)*32+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+0+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c0);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+16+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c1);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+32+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c2);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+48+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c3);
++   (void)compiler_barrier;
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c0[ci],c0[ci+1],c0[ci+2],c0[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+16+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c1[ci],c1[ci+1],c1[ci+2],c1[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+32+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c2[ci],c2[ci+1],c2[ci+2],c2[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+48+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c3[ci],c3[ci+1],c3[ci+2],c3[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++}
++kernel void loop3_m128k128(device const half* input [[buffer(0)]],device const uint* packed [[buffer(1)]],
++ device const ushort* scales [[buffer(2)]],device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
++ constant VectorQ4Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],uint2 group [[threadgroup_position_in_grid]],
++ uint tid [[thread_index_in_threadgroup]],uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
++ GARNET_AFFINE_PARAMETERS(VectorQ4Params);
++ constexpr uint stageK=128,weightStride=stageK+8,packet=64*stageK/256;
++ threadgroup half weights[64*weightStride];
++ constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<descriptor,execution_simdgroup> multiply;
++ auto left=multiply.get_left_input_cooperative_tensor<half,half,float>();
++ auto right=multiply.get_right_input_cooperative_tensor<half,half,float>();
++ auto c0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c1=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ for(ushort i=0;i<c0.get_capacity();++i){c0[i]=0;c1[i]=0;}
++ const uint quad=lane>>2,fragmentRow=(quad&4)|((lane>>1)&3),fragmentColumn=((quad&2)|(lane&1))*4;
++ const uint firstRow=group.y*128+(simd/2)*32,firstColumn=group.x*64+(simd%2)*32;
++ const uint localN=tid/(stageK/packet),localK=(tid%(stageK/packet))*packet,n=group.x*64+localN;
++ for(uint base=0;base<p.inner;base+=stageK) {
++  const uint offset=n*(p.inner/8)+(base+localK)/8,coefficient=n*(p.inner/64)+(base+localK)/64;
++  const float scale=garnet_affine_coefficient(scales[coefficient]),bias=garnet_affine_coefficient(biases[coefficient]);
++  const uint4 words=*reinterpret_cast<device const uint4*>(packed+offset);
++  #pragma clang loop unroll(full)
++  for(uint i=0;i<packet/4;++i) {
++   const uint4 codes=(uint4(words[i/2])>>(uint4(0,4,8,12)+(i%2)*16))&15u;
++   *reinterpret_cast<threadgroup half4*>(weights+localN*weightStride+localK+4*i)=half4(fma(float4(codes),float4(scale),float4(bias)));
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++  #pragma clang loop unroll(disable)
++  for(uint local=0;local<stageK;local+=16) {
++   volatile int compiler_barrier;
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[((simd%2)*32+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+0+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c0);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+16+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c1);
++   (void)compiler_barrier;
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c0[ci],c0[ci+1],c0[ci+2],c0[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+16+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c1[ci],c1[ci+1],c1[ci+2],c1[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++}
++kernel void loop3_m256k128(device const half* input [[buffer(0)]],device const uint* packed [[buffer(1)]],
++ device const ushort* scales [[buffer(2)]],device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
++ constant VectorQ4Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],uint2 group [[threadgroup_position_in_grid]],
++ uint tid [[thread_index_in_threadgroup]],uint simd [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]) {
++ GARNET_AFFINE_PARAMETERS(VectorQ4Params);
++ constexpr uint stageK=128,weightStride=stageK+8,packet=64*stageK/256;
++ threadgroup half weights[64*weightStride];
++ constexpr auto descriptor=matmul2d_descriptor(16,32,16,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<descriptor,execution_simdgroup> multiply;
++ auto left=multiply.get_left_input_cooperative_tensor<half,half,float>();
++ auto right=multiply.get_right_input_cooperative_tensor<half,half,float>();
++ auto c0=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c1=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c2=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ auto c3=multiply.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(left)>,metal::remove_addrspace_t<decltype(right)>,float>();
++ for(ushort i=0;i<c0.get_capacity();++i){c0[i]=0;c1[i]=0;c2[i]=0;c3[i]=0;}
++ const uint quad=lane>>2,fragmentRow=(quad&4)|((lane>>1)&3),fragmentColumn=((quad&2)|(lane&1))*4;
++ const uint firstRow=group.y*256+(simd/2)*64,firstColumn=group.x*64+(simd%2)*32;
++ const uint localN=tid/(stageK/packet),localK=(tid%(stageK/packet))*packet,n=group.x*64+localN;
++ for(uint base=0;base<p.inner;base+=stageK) {
++  const uint offset=n*(p.inner/8)+(base+localK)/8,coefficient=n*(p.inner/64)+(base+localK)/64;
++  const float scale=garnet_affine_coefficient(scales[coefficient]),bias=garnet_affine_coefficient(biases[coefficient]);
++  const uint4 words=*reinterpret_cast<device const uint4*>(packed+offset);
++  #pragma clang loop unroll(full)
++  for(uint i=0;i<packet/4;++i) {
++   const uint4 codes=(uint4(words[i/2])>>(uint4(0,4,8,12)+(i%2)*16))&15u;
++   *reinterpret_cast<threadgroup half4*>(weights+localN*weightStride+localK+4*i)=half4(fma(float4(codes),float4(scale),float4(bias)));
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++  #pragma clang loop unroll(disable)
++  for(uint local=0;local<stageK;local+=16) {
++   volatile int compiler_barrier;
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part) {
++    #pragma clang loop unroll(full)
++    for(uint i=0;i<8;++i)right[part*8+i]=weights[((simd%2)*32+part*16+fragmentRow+(i/4)*8)*weightStride+local+fragmentColumn+i%4];
++   }
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+0+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c0);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+16+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c1);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+32+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c2);
++   #pragma clang loop unroll(full)
++   for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++    const uint row=firstRow+48+fragmentRow+fragmentPart*8,k=base+local+fragmentColumn;
++    const half4 value=row<p.rows?*reinterpret_cast<device const half4*>(input+row*p.inner+k):half4(0);
++    #pragma clang loop unroll(full)
++    for(uint j=0;j<4;++j)left[fragmentPart*4+j]=value[j];
++   }
++   multiply.run(left,right,c3);
++   (void)compiler_barrier;
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+0+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c0[ci],c0[ci+1],c0[ci+2],c0[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+16+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c1[ci],c1[ci+1],c1[ci+2],c1[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+32+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c2[ci],c2[ci+1],c2[ci+2],c2[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(uint part=0;part<2;++part) {
++  #pragma clang loop unroll(full)
++  for(uint fragmentPart=0;fragmentPart<2;++fragmentPart) {
++   const uint row=firstRow+48+fragmentRow+fragmentPart*8,col=firstColumn+part*16+fragmentColumn,ci=part*8+fragmentPart*4;
++   if(row<p.rows) {
++    *reinterpret_cast<device float4*>(output+indices[row]*p.oStride+col)=float4(c3[ci],c3[ci+1],c3[ci+2],c3[ci+3]);
++    for(uint j=0;j<4;++j){}
++   }
++  }
++ }
++}
++)METAL";
++}

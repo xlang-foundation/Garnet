@@ -1,0 +1,161 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -739,6 +739,13 @@
+ option(GARNET_METAL_VERIFY_ATTENTION "Bounded up-to-four-token FP32 attention with ordinary decode rounding" OFF)
+ if(GARNET_METAL_VERIFY_ATTENTION)
+     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_VERIFY_ATTENTION=1)
++endif()
++option(GARNET_METAL_DENSE_VERIFY_SCHEDULER "Opt-in native leased dense verification and exact scheduler span commit" OFF)
++if(GARNET_METAL_DENSE_VERIFY_SCHEDULER)
++    if(NOT GARNET_METAL_VERIFY_ATTENTION OR NOT GARNET_METAL_CONTINUOUS_ROWS OR NOT GARNET_METAL_TOKEN_PREFIX_CACHE)
++        message(FATAL_ERROR "Dense verification scheduler requires verification, continuous rows and native token-prefix tracking")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_DENSE_VERIFY_SCHEDULER=1)
+ endif()
+ option(GARNET_METAL_MISTRAL_VERIFY_LAYOUT "Prepared B1/T4/C4096 H32/KV8/D128 ungated verification attention layout" OFF)
+ if(GARNET_METAL_MISTRAL_VERIFY_LAYOUT)
+--- a/src/backends/metal/continuous_scheduler.cpp
++++ b/src/backends/metal/continuous_scheduler.cpp
+@@ -8,6 +8,7 @@
+ #include <algorithm>
+ #include <limits>
+ #include <climits>
++#include <cmath>
+ namespace Garnet {
+ #ifdef GARNET_METAL_DENSE_PREFILL_MAX_TOKENS
+ static constexpr size_t kSchedulerPrefillChunkLimit=GARNET_METAL_DENSE_PREFILL_MAX_TOKENS;
+@@ -402,6 +403,72 @@
+         return int64_t(stage);
+     }catch(...){failed_=true;throw;}
+ }
++
++#ifdef GARNET_METAL_DENSE_VERIFY_SCHEDULER
++std::string MetalContinuousScheduler::VerifyDecode(X::Value hidden,X::Value positions,X::Value slots,X::Value active,X::Value tokens,X::Value stops) {
++    std::lock_guard<std::mutex> lock(mutex_);Ready();
++    auto session=sessionOwner_.NativeData<MetalDecoderSession>();
++    const auto geometry=session->VerificationGeometry();const size_t chunk=geometry[1];
++    if(geometry[0]!=rows_||!chunk||chunk>4||rows_*chunk>4)
++        throw std::invalid_argument("Scheduled verification exceeds prepared physical token rows");
++    // Own immutable control snapshots before validating the native schedule.
++    auto control=[&](X::Value source,const std::vector<int64_t>& shape,std::vector<float>& values){
++        if(source.runtime()!=Host()->runtime)throw std::invalid_argument("Scheduled control runtime differs");
++        X::Tensor tensor(source);auto lease=tensor.Acquire();const auto info=tensor.Info();size_t count=1;for(auto dim:shape)count*=size_t(dim);
++        if(info.symbolic||info.device_type||info.dtype!=X3_TENSOR_FLOAT32||info.rank!=shape.size()||!std::equal(shape.begin(),shape.end(),info.shape)||!info.data||info.byte_size<count*4||!IsContiguousTensor(tensor))
++            throw std::invalid_argument("Scheduled verification control shape/storage differs");
++        const auto data=static_cast<const float*>(info.data);values.assign(data,data+count);
++        return X::Tensor::Create(Host(),X3_TENSOR_FLOAT32,shape,values.data(),count*4);
++    };
++    std::vector<float> positionValues,slotValues,flags;
++    positions=control(positions,{int64_t(rows_),int64_t(chunk),3},positionValues);
++    slots=control(slots,{int64_t(rows_),int64_t(chunk)},slotValues);
++    active=control(active,{int64_t(rows_),int64_t(chunk)},flags);
++    if(tokens.runtime()!=Host()->runtime||!tokens.IsList()||tokens.Size()!=rows_*chunk)
++        throw std::invalid_argument("Scheduled verification token count/runtime differs");
++    auto immutableTokens=X::Value::List(Host());std::vector<int64_t> tokenValues;
++    for(uint64_t i=0;i<tokens.Size();++i){auto value=tokens.Get(i);if(!value.IsInt64()||value.ToInt64()<0||value.ToInt64()>INT_MAX)throw std::invalid_argument("Scheduled verification tokens must be bounded integers");tokenValues.push_back(value.ToInt64());immutableTokens.Append(X::Value(value.ToInt64()));}
++    struct Item{uint64_t id;size_t row;uint64_t epoch;int known,budget,slot,depth;std::vector<int> emitted;bool eos=false;};
++    std::vector<Item> items;std::vector<int> budgets(rows_,0);std::vector<uint64_t> leases(rows_,0);
++    for(const auto& entry:inflight_)if(entry.second==RequestStage::Decode){
++        int known=0,budget=0;if(!scheduler_->DecodeProgress(entry.first,known,budget))throw std::logic_error("Scheduled verification decode progress invalid");
++        const auto placement=allocator_->Placement(entry.first);const auto expected=trackedExpected_.find(entry.first);const int slot=allocator_->LogicalLength(entry.first);
++        if(!allocator_->Tracked(entry.first)||expected==trackedExpected_.end()||expected->second!=slot+1||slot<0||placement.requestRow<0||size_t(placement.requestRow)>=rows_||!placement.rowEpoch||leases[size_t(placement.requestRow)])
++            throw std::logic_error("Scheduled verification requires native tracked row placement");
++        const auto row=size_t(placement.requestRow);bool ended=false;int depth=0;
++        for(size_t t=0;t<chunk;++t){const auto i=row*chunk+t;const float flag=flags[i];if(flag!=0.0f&&flag!=1.0f)throw std::invalid_argument("Scheduled verification masks must be binary");if(!flag){ended=true;continue;}
++            if(ended||slotValues[i]!=float(slot+int(t))||slot+int(t)>=int(capacity_))throw std::invalid_argument("Scheduled verification mask/slot differs from native request");
++            for(size_t axis=0;axis<3;++axis)if(positionValues[i*3+axis]!=float(slot+int(t)))throw std::invalid_argument("Scheduled text verification position differs from zero-based native slot");++depth;
++        }
++        if(depth<1||depth>budget||tokenValues[row*chunk]!=known)throw std::invalid_argument("Scheduled verification known token or depth exceeds native output budget");
++        budgets[row]=budget;leases[row]=placement.rowEpoch;items.push_back({entry.first,row,placement.rowEpoch,known,budget,slot,depth,{}});
++    }
++    if(items.empty())throw std::invalid_argument("Schedule a native dense decode batch first");
++    for(size_t row=0;row<rows_;++row)if(!leases[row])for(size_t t=0;t<chunk;++t)if(flags[row*chunk+t]!=0.0f)throw std::invalid_argument("Unscheduled verification row is active");
++    auto remaining=X::Value::List(Host()),epochs=X::Value::List(Host());for(size_t row=0;row<rows_;++row){remaining.Append(X::Value(int64_t(budgets[row])));epochs.Append(X::Value(int64_t(leases[row])));}
++    try {
++        auto result=session->VerifyGreedy(hidden,positions,slots,active,immutableTokens,stops,remaining,epochs);
++        const auto statistics=nlohmann::json::parse(session->VerificationStatsJson());
++        // Prove every accepted target span and token-ledger length before any
++        // scheduler state is published or a terminal request lease released.
++        for(auto& item:items){auto row=result.Get(uint64_t(item.row)),ids=row.Get(uint64_t(0));const auto count=row.Get(uint64_t(1)).ToInt64();auto eos=row.Get(uint64_t(2));
++            if(!ids.IsList()||count<1||count>item.depth||count>item.budget||uint64_t(count)!=ids.Size()||eos.raw().tag!=X3_TAG_BOOL)throw std::logic_error("Scheduled target result exceeds accepted budget");
++            for(uint64_t i=0;i<ids.Size();++i){auto value=ids.Get(i);if(!value.IsInt64()||value.ToInt64()<0||value.ToInt64()>INT_MAX)throw std::logic_error("Scheduled target result token invalid");item.emitted.push_back(int(value.ToInt64()));}item.eos=eos.ToInt64()!=0;
++            if(!allocator_->ProgressValid(item.id,item.slot+int(count)))throw std::logic_error("Scheduled verification accepted token ledger differs");
++        }
++        nlohmann::json completed=nlohmann::json::array();
++        for(const auto& item:items){
++            if(item.eos||item.emitted.size()==size_t(item.budget))allocator_->Capture(item.id,item.slot+int(item.emitted.size()));
++            if(!scheduler_->CompleteDecodeTokens(item.id,item.emitted,item.eos,*allocator_))throw std::logic_error("Scheduled dense target span commit failed");
++            const auto stage=scheduler_->Stage(item.id);inflight_.erase(item.id);trackedExpected_.erase(item.id);
++            completed.push_back({{"id",item.id},{"row",item.row},{"epoch",item.epoch},{"known",item.known},{"slot_before",item.slot},{"remaining_before",item.budget},{"submitted",item.depth},{"emitted",item.emitted},{"consumed",item.emitted.size()},{"eos",item.eos},{"finished",stage==RequestStage::Finished}});
++            if(stage==RequestStage::Finished)scheduler_->ForgetFinished(item.id);
++        }
++        return nlohmann::json{{"requests",completed},{"verification",statistics},{"scope","Native leased dense target verification and exact scheduler span commit; no serving speed admission"}}.dump();
++    }catch(...){failed_=true;throw;}
++}
++#endif
++
+ #ifdef GARNET_METAL_MTP_BRIDGE
+ std::string MetalContinuousScheduler::GenerateMTP(X::Value stops) {
+     std::lock_guard<std::mutex> lock(mutex_);Ready();
+--- a/src/backends/metal/continuous_scheduler.h
++++ b/src/backends/metal/continuous_scheduler.h
+@@ -52,6 +52,9 @@
+     std::string NextJson();
+     int64_t CompletePrefill(int64_t request,int64_t token,bool finished);
+     int64_t CompleteDecode(int64_t request,int64_t token,bool finished);
++#ifdef GARNET_METAL_DENSE_VERIFY_SCHEDULER
++    std::string VerifyDecode(X::Value hidden,X::Value positions,X::Value slots,X::Value active,X::Value tokens,X::Value stops);
++#endif
+ #ifdef GARNET_METAL_MTP_BRIDGE
+     std::string GenerateMTP(X::Value stops);
+ #endif
+@@ -74,6 +77,9 @@
+         APISET().AddFunc<0>("next_json",&MetalContinuousScheduler::NextJson);
+         APISET().AddFunc<3>("complete_prefill",&MetalContinuousScheduler::CompletePrefill);
+         APISET().AddFunc<3>("complete_decode",&MetalContinuousScheduler::CompleteDecode);
++#ifdef GARNET_METAL_DENSE_VERIFY_SCHEDULER
++        APISET().AddFunc<6>("verify_decode_json",&MetalContinuousScheduler::VerifyDecode);
++#endif
+ #ifdef GARNET_METAL_MTP_BRIDGE
+         APISET().AddFunc<1>("mtp_generate_json",&MetalContinuousScheduler::GenerateMTP);
+ #endif
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -340,6 +340,9 @@
+     X::Value VerifyGreedy(X::Value hidden,X::Value positions,X::Value slots,X::Value active,
+         X::Value tokens,X::Value stops,X::Value remaining,X::Value epochs);
+     std::string VerificationStatsJson();
++#ifdef GARNET_METAL_DENSE_VERIFY_SCHEDULER
++    std::array<size_t,2> VerificationGeometry();
++#endif
+ #endif
+ #if defined(GARNET_METAL_QWEN38_WIDE_PREFILL)||defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)
+     bool PreparePrefill(X::Value graph,int64_t layer);
+--- a/src/backends/metal/verification_session.cpp
++++ b/src/backends/metal/verification_session.cpp
+@@ -286,6 +286,13 @@
+     for(size_t row=0;row<p.batch;++row){auto item=X::Value::List(Host()),emitted=X::Value::List(Host());for(auto token:run.emitted[row])emitted.Append(X::Value(token));
+         item.Append(emitted);item.Append(X::Value(run.consumed[row]));item.Append(X::Value(run.eos[row]));result.Append(item);}return result;
+ }
++#ifdef GARNET_METAL_DENSE_VERIFY_SCHEDULER
++std::array<size_t,2> MetalDecoderSession::VerificationGeometry() {
++    std::lock_guard<std::mutex> lock(mutex_);
++    if(!verification_||!gpu_||poisoned_)throw std::logic_error("Prepare native verification before scheduled decoding");
++    return {verification_->batch,verification_->chunk};
++}
++#endif
+ std::string MetalDecoderSession::VerificationStatsJson(){std::lock_guard<std::mutex> lock(mutex_);return verificationStats_;}
+ }
+ #endif
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -490,6 +490,9 @@
+ #ifdef GARNET_APPLE_COREML
+         info+="; coreml_stateful_optional";
+ #endif
++#ifdef GARNET_METAL_DENSE_VERIFY_SCHEDULER
++    info+="; native_scheduled_dense_verify_v1";
++#endif
+ #ifdef GARNET_METAL_MISTRAL_VERIFY_SPLIT_SCORES
+     info+="; native_mistral_verification_split_scores128_default_v1";
+ #endif

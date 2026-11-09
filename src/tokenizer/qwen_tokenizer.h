@@ -4,6 +4,7 @@
 #pragma once
 
 #include "tokenizer.h"
+#include "tokenizer_regex.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -49,10 +50,12 @@ namespace Garnet::Tokenization
         std::unordered_map<std::string, unsigned char> m_tokenCharToByte;
         size_t m_maxAddedTokenLength = 0;
         bool m_normalizeNfc = false;
+        bool m_configuredPreTokenizer = false;
+        std::vector<TokenizerRegex> m_preTokenizerSplits;
 
         void InitByteLevelMaps();
         std::vector<std::string> SplitSpecialAware(const std::string& text) const;
-        std::vector<std::string> PreTokenizeAscii(const std::string& text) const;
+        std::vector<std::string> PreTokenize(const std::string& text) const;
         std::vector<std::string> ByteLevelChars(const std::string& text) const;
         std::vector<std::string> ApplyBpe(const std::vector<std::string>& word) const;
         std::vector<int64_t> EncodePlainSegment(const std::string& text) const;

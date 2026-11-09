@@ -1,0 +1,21 @@
+{
+  "base_worker": "out/research/mistral7b-local-coder/mistral-bounded-draft-long1/worker2.py",
+  "base_sha256": "635358882f13397a8290780c960a92ee347477c0ecc1e5294128132a6d4073b6",
+  "worker_sha256": "591004531c86e9780b8e9769b41906ba103634fe6daf07bd6e7d1df7268b3a27",
+  "changes": [
+    {
+      "before": "assert not fused_enabled",
+      "after": "assert not fused_enabled\nsplit_enabled='native_mistral_verification_split_scores128_default_v1' in garnet.backend_info()"
+    },
+    {
+      "before": "experiment=experiment),stream,indent=2)",
+      "after": "experiment=experiment,split_scores_enabled=split_enabled),stream,indent=2)"
+    },
+    {
+      "before": "assert metrics['target_attention_layout_dispatches']==32",
+      "after": "assert metrics['target_attention_layout_dispatches']==32\n      assert metrics['target_attention_split_score_dispatches']==(32 if split_enabled else 0)"
+    }
+  ],
+  "timed_algorithm_unchanged": true,
+  "goal_complete": false
+}

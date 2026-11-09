@@ -1,0 +1,51 @@
+{
+  "name": "mistral7b-text-b4-c4096-prefill512-verify4-prefix3g-research-v1",
+  "model_path": "/Users/shawn/CantorAI/out/models/Mistral-7B-Instruct-v0.3-MLX-4bit",
+  "model_sha256": "d7182d886f93a9efa73d6d556ee33ffe839a4e09e15965eeef46f295ab5b503d",
+  "tokenizer_sha256": "e553af6fff7d7ad76e830608b218c5c0b0822998d5a1a96099a74cd3c1cb1a49",
+  "runtime_source": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/source1",
+  "native_library": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/build-on1/libgarnet.dylib",
+  "native_library_sha256": "1a628947a7770705673634e2c432af02299e85964332a9ac2e7aa2c8ff8177ab",
+  "max_requests": 4,
+  "context_capacity": 4096,
+  "prefill_physical_token_budget": 512,
+  "prefill_request_chunk_up_to": 512,
+  "verification_tokens_per_request_up_to": 4,
+  "kv_dtype": "float32",
+  "decode_projections": "strict FP32 affine",
+  "prefill": "existing FP16 prepared producer domain",
+  "positions": "text_zero_based_3axis_v1",
+  "retention": {
+    "max_entries": 64,
+    "host_bytes": 3221225472,
+    "block_tokens": 64,
+    "capture_policy": "prefill_only_v1",
+    "identity": "scheduled-B4-C4096-prefill-up512-verify4-fp32-v1"
+  },
+  "qualified_cases": {
+    "prompt_lengths": [
+      2048,
+      2049,
+      2051,
+      2052
+    ],
+    "outputs_per_request": [
+      4,
+      64
+    ],
+    "exact_return_A": 2048,
+    "exact_return_B": 2051,
+    "append": 2048,
+    "suffix_edit": 1792,
+    "earlier_edit": 384,
+    "twin_appended_full_hits": 2052
+  },
+  "maximum_observed_accounted_cache_bytes": 2641558848,
+  "native_memory_guard": "max(device allocated, task footprint) +2*host budget +256MiB <= recommended working set; task-local snapshots, not system free RAM",
+  "source_changed": false,
+  "coding_quality_qualified": false,
+  "learned_helper_batching_qualified": false,
+  "performance_measured": false,
+  "production_admission": false,
+  "goal_complete": false
+}

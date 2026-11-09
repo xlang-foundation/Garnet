@@ -32,7 +32,7 @@ def make_package(root, side, operation):
     return source
 
 
-def load(source, cache, backend):
+def load(source, cache, backend, expected_misses=1):
     model = garnet.load_model(
         source, runtime_mode="compiled_xmodel", entry_function="forward",
         input_shapes=[[2], [2]], input_dtypes=["float32", "float32"],
@@ -40,7 +40,9 @@ def load(source, cache, backend):
         compile={"builder_workspace_mb": 64, "builder_optimization_level": 0})
     status = model.runtime_status()
     require(status["ready"], str(status))
-    require(status["forbidden_path_counters"]["graph_cache_misses"] == 1, str(status))
+    require(status["forbidden_path_counters"]["graph_cache_misses"] == expected_misses, str(status))
+    if expected_misses == 0:
+        require(status["forbidden_path_counters"]["root_x_executions"] == 0, str(status))
     return model
 
 
@@ -83,6 +85,34 @@ def main():
     check(right, [6, 3])
     edited.release_runtime()
     right.release_runtime()
+    # A multi-dot relative import must follow the sibling package, fingerprint
+    # its imported child, and preserve warm loading until that child changes.
+    package = os.path.join(root, "sibling_package")
+    common = os.path.join(package, "common")
+    models = os.path.join(package, "models")
+    os.makedirs(common)
+    os.makedirs(models)
+    for folder in (package, common, models):
+        write(os.path.join(folder, "__init__.py"), "")
+    helper_source = os.path.join(common, "ops.py")
+    write(helper_source, "def combine(a, b):\n    return a + b\n")
+    sibling_source = os.path.join(models, "model.py")
+    write(sibling_source, "import garnet\nfrom ..common import ops as O\nT=garnet.tensor()\n"
+          "@T.fusion(name='sibling_isolation')\ndef forward(a,b):\n    return O.combine(a,b)\n")
+    sibling_cache = os.path.join(root, "sibling_cache")
+    sibling = load(sibling_source, sibling_cache, backend)
+    check(sibling, [10, 9])
+    sibling.release_runtime()
+    warm = load(sibling_source, sibling_cache, backend, expected_misses=0)
+    check(warm, [10, 9])
+    warm.release_runtime()
+    previous_mtime = os.stat(helper_source).st_mtime
+    write(helper_source, "def combine(a, b):\n    return a * b\n")
+    newer_mtime = max(os.stat(helper_source).st_mtime, previous_mtime + 2)
+    os.utime(helper_source, (newer_mtime, newer_mtime))
+    changed = load(sibling_source, sibling_cache, backend)
+    check(changed, [16, 18])
+    changed.release_runtime()
     remaining_namespaces = set(name for name in sys.modules if name.startswith("_garnet_model_"))
     require(remaining_namespaces == initial_namespaces, str(remaining_namespaces))
     print("garnet-native-source-isolation-passed", backend, flush=True)

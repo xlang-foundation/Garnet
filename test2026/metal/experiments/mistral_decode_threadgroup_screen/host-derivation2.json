@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "base_sha256": "c3dbe5a15f555a6aceab2755d2d6555a39b4e29c72d9f639747ae52734a021f3",
+  "changes": [
+    {
+      "old": "aStride=k+3,oStride=n+5",
+      "new": "aStride=k,oStride=n"
+    },
+    {
+      "old": "   auto encode=[&](int groups){",
+      "new": "   double pressureStart=0,pressureEnd=0;\n   auto encode=[&](int groups){"
+    },
+    {
+      "old": "[e endEncoding];finish(cb);}\n    auto cb=",
+      "new": "[e endEncoding];finish(cb);pressureStart=cb.GPUStartTime;pressureEnd=cb.GPUEndTime;Need(pressureEnd>pressureStart,\"Invalid pressure clock\");}\n    auto cb="
+    },
+    {
+      "old": "{\"wall_including_pressure_ms\",wall}",
+      "new": "{\"wall_including_pressure_ms\",wall},{\"pressure_gpu_start_seconds\",pressureStart},{\"pressure_gpu_end_seconds\",pressureEnd}"
+    },
+    {
+      "old": "{\"case_combinations\",caseIndex}",
+      "new": "{\"contiguous_layout\",true},{\"case_combinations\",caseIndex}"
+    },
+    {
+      "old": "std::string goldSha=Sha(gold.data(),y.length);",
+      "new": "std::string goldSha=Sha(gold.data(),y.length);std::string allControl=\"case\"+std::to_string(caseIndex)+\"-legacy.u32\";Save(dest/allControl,gold.data(),y.length);"
+    },
+    {
+      "old": "{\"guards_exact\",true},{\"read_only_exact\",true}",
+      "new": "{\"guards_exact\",true},{\"read_only_exact\",true},{\"raw_control\",allControl}"
+    }
+  ],
+  "new_layout": "Contiguous input/output, matching serving strides; original row-padded study preserved.",
+  "inference_rerun": false
+}

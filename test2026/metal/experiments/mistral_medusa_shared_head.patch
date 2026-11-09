@@ -1,0 +1,97 @@
+--- a/src/backends/metal/compiled_graph.cpp
++++ b/src/backends/metal/compiled_graph.cpp
+@@ -1006,7 +1006,7 @@
+                 const auto head=node.attributes.Get("head_index").ToInt64();
+                 const auto features=node.attributes.Get("emit_features").ToInt64();
+                 if(head<0||head>=4||slots_[a].shape.size()!=2||!slots_[a].rows||slots_[a].rows>2||
+-                   slots_[a].columns!=4096||mlxCheckpoint_.Enabled()||(features!=0&&features!=1))
++                   slots_[a].columns!=4096||mlxCheckpoint_.Enabled()||(features<0||features>2))
+                     throw std::invalid_argument("Medusa head requires raw BF16 weights and a bounded1/2x4096 input");
+                 const auto prefix=std::to_string(head);
+                 auto check=[&](const std::string& name,const std::vector<long long>& shape) {
+@@ -1015,12 +1015,12 @@
+                         throw std::invalid_argument("Medusa BF16 weight shape/type mismatch: "+name);
+                 };
+                 check(prefix+".0.linear.weight",{4096,4096});check(prefix+".0.linear.bias",{4096});
+-                check(prefix+".1.weight",{32768,4096});
++                if(features!=2)check(prefix+".1.weight",{32768,4096});
+                 // Reserve a conservative bound for optional retained BF16
+                 // layouts as well as raw weights and the small FP32 workspace.
+                 const auto memory=MetalContext::MemoryStats();
+                 constexpr uint64_t margin=256ull*1024*1024;
+-                constexpr uint64_t extra=3ull*(4096*4096+32768*4096)*2+8ull*1024*1024;
++                const uint64_t extra=3ull*(4096*4096+(features==2?0ull:32768ull*4096))*2+8ull*1024*1024;
+                 if(memory.recommended<=margin+extra||memory.allocated>memory.recommended-margin-extra)
+                     throw std::runtime_error("Medusa head exceeds the native working-set guard");
+                 auto linear=matmul(a,BF16Weight(prefix+".0.linear.weight"));
+@@ -1029,8 +1029,8 @@
+                 const auto ones=slots_.size();std::vector<float> values(slots_[a].rows*4096,1.f);
+                 slots_.push_back({gpu_->Upload(values,slots_[a].rows,4096),slots_[a].rows,4096,{int64_t(slots_[a].rows),4096}});
+                 ops_.push_back({Kind::Silu,biased,ones,activated});ops_.push_back({Kind::Add,a,activated,residual});
+-                out=matmul(residual,BF16Weight(prefix+".1.weight"));
+-                if(features) {
++                out=features==2?residual:matmul(residual,BF16Weight(prefix+".1.weight"));
++                if(features==1) {
+                     auto packed=Allocate(slots_[a].rows,4096+32768);
+                     Op capture{Kind::Concat,residual,out,packed};capture.arguments={residual,out,out};
+                     ops_.push_back(std::move(capture));out=packed;
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -368,7 +368,7 @@
+ #endif
+ #endif
+ #endif
+-        info+="; medusa_residual_head_bf16";
++        info+="; medusa_residual_head_bf16; medusa_residual_features_bf16";
+ #ifdef GARNET_METAL_BODY_SHAPE
+         info+="; body_shape";
+ #endif
+--- /dev/null
++++ b/xModel/mistral/text_7b/medusa_shared_draft.py
+@@ -0,0 +1,46 @@
++# SPDX-License-Identifier: Apache-2.0
++"""Research only: existing residual adapters with the target quantized head.
++
++The raw adapter's training base is unverified. Target verification remains
++mandatory. No compatibility, acceptance, performance or quality is assumed.
++"""
++import json,os
++import garnet,tensor
++from xModel.qwen.metal_dense.layers import T,norm,reshape
++
++class SharedMedusaDraft:
++ def __init__(self,target,folder):
++  self.io=target.io;self.normalizer=None;self.features=[];self.project=None
++  if target.batch!=1 or 'medusa_residual_features_bf16' not in garnet.backend_info():raise ValueError('Prepared B1 residual-feature extension required')
++  with open(folder+'/config.json') as f:config=json.load(f)
++  if config.get('medusa_num_heads')!=4 or config.get('medusa_num_layers')!=1:raise ValueError('Explicit four-head one-layer artifact required')
++  if target.config['hidden_size']!=4096 or target.config['vocab_size']!=32768:raise ValueError('Mistral4096/32768 required')
++  try:
++   symbol=tensor.input('shared_medusa_norm',shape=[1,4096],dtype=tensor.float32)
++   @T.fusion(name='shared_medusa_norm',boundary='required')
++   def normalized(hidden):return norm(hidden,'model.norm',target.config)
++   self.normalizer=garnet.compiled_graph();self.normalizer.build_shared(normalized(symbol),[symbol],target.checkpoint,target.head)
++   for index in range(3):
++    symbol=tensor.input('shared_medusa_feature_'+str(index),shape=[1,4096],dtype=tensor.float32)
++    @T.fusion(name='shared_medusa_feature_'+str(index),boundary='required')
++    def residual(hidden):return hidden*T.unary_op('medusa_residual_head',head_index=index,emit_features=2)
++    graph=garnet.compiled_graph();self.features.append(graph);graph.build(residual(symbol),[symbol],folder+'/model.safetensors')
++   symbol=tensor.input('shared_medusa_vocabulary',shape=[1,4,4096],dtype=tensor.float32)
++   @T.fusion(name='shared_medusa_vocabulary',boundary='required')
++   def vocabulary(hidden):return reshape(hidden,[4,4096])*T.unary_op('qwen_text_head',weight_name='lm_head.weight',bf16_weight=1)
++   self.project=garnet.compiled_graph();self.project.build_shared(vocabulary(symbol),[symbol],target.checkpoint,target.head)
++  except:self.close();raise
++ def logits(self,hidden):
++  normalized=self.normalizer.run([hidden]);features=[graph.run([normalized]) for graph in self.features]
++  return normalized,features,self.project.run([self.io.stack_tokens([normalized]+features)])
++ def propose(self,hidden,known):
++  _,_,logits=self.logits(hidden);tokens=self.io.argmax(logits)
++  if tokens[0]!=known:raise ValueError('Target row anchor changed')
++  return tokens[1:]
++ def close(self):
++  if self.project is not None:self.project.close()
++  self.project=None
++  for graph in self.features:graph.close()
++  self.features=[]
++  if self.normalizer is not None:self.normalizer.close()
++  self.normalizer=None

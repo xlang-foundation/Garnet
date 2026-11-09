@@ -1,0 +1,33 @@
+--- qualified-transport-worker.py
++++ worker-state1.py
+@@ -259,6 +259,7 @@
+     incoming=queue.Queue(maxsize=16);shutdown=threading.Event();input_failure=[]
+     decoder=None;policy=None;jobs={};keys=set()
+     diagnostic_completed=[0]
++    diagnostic_forward=[0]
+     def read():
+         # Research launch transport: deterministic owned fixture, no stdin EOF race.
+         with open(profile['diagnostic_fixture']) as stream:diagnostic_fixture=json.load(stream)
+@@ -565,6 +566,22 @@
+                 expected=coverage if valid<batch else 0
+                 emit(dict(event='native_indexed_decode',stage=stage,affine_dispatches=count,active_rows=valid,physical_rows=batch))
+                 if count!=expected:raise ValueError('Active FP32 '+stage+' projection coverage '+str(count)+' differs from expected '+str(expected))
++            # Research-only state/route witness, after all ordinary route counters.
++            diagnostic_forward[0]+=1
++            specialized=decoder.session.chunk_attention_contiguous_softmax_dispatches
++            mps=decoder.session.chunk_attention_mps_dispatches
++            wanted=mps if profile['diagnostic_variant']=='on' else 0
++            if specialized!=wanted:raise ValueError('Native contiguous softmax route differs from admitted controls')
++            emit(dict(event='diagnostic_native_softmax',invocation=diagnostic_forward[0],dispatches=specialized,mps_dispatches=mps,
++                ids=ids,slots=slots.tolist(),active=active.tolist(),epochs=epochs))
++            if diagnostic_forward[0] in [1,16,18,25]:
++                hashes=[]
++                for layer in range(32):
++                    pair=decoder.session.snapshot(layer)
++                    hashes.append([decoder.io.verification_f32_sha256(value) for value in pair])
++                hidden=decoder.session.diagnostic_final_hidden()
++                emit(dict(event='diagnostic_full_state',invocation=diagnostic_forward[0],layers=hashes,
++                    hidden=decoder.io.verification_f32_sha256(hidden),scope='Complete32-layer physical FP32 KV plus4-row final-hidden bank'))
+             return result
+         def predict_rows(epochs):
+             started=time.monotonic() if trace_stages else 0

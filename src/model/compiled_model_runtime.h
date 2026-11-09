@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <mutex>
 #include <memory>
+#include <future>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -60,6 +61,13 @@ namespace Garnet
         std::string m_enginePath;
         std::vector<EnginePartitionSpec> m_enginePartitions;
         std::vector<std::shared_ptr<void>> m_trtExecutions;
+        struct PreparedEngines {
+            std::vector<std::shared_ptr<void>> owners;
+            std::string error;
+            double milliseconds=0;
+        };
+        std::future<PreparedEngines> m_pendingPreparation;
+        bool CompletePreparation(std::string& error);
         SafeTensorsIndex m_weightIndex;
         std::string m_weightIndexError;
         std::unordered_map<std::string, X::Value> m_loadedWeights;
@@ -104,5 +112,6 @@ namespace Garnet
         X::Value Forward(X::Value request);
         X::Value DebugProbe(const std::string& probe, X::Value argument);
         void ReleaseDeviceMemory();
+        void TrimExecutionContexts(bool keepContexts=false,bool keepDeviceCache=false);
     };
 }

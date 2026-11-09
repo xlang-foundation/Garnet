@@ -56,7 +56,10 @@ class DenseMetalDecoder(MetalDecoder):
             if resident:self.enable_resident()
         except:self.close();raise
 
-    def _profile_batches(self):return (1,2)
+    def _profile_batches(self):
+        # The native dense profile bounds physical prefill rows and cache spans.
+        # Four request rows require that compiled extension; operators stay shared.
+        return (1,2,4) if self.dense_prefill_limit else (1,2)
 
     def _prefill_profiles(self):
         if self.dense_prefill_limit:

@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "scope": "Audit exact C4/T1 current-ordinary parity and independent native row lifecycle.",
+  "summary": {
+    "native_decode_calls": 44,
+    "active_decode_occupancies": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "mixed_ticks": 25,
+    "full_four_row_state_digest_pairs": 2340,
+    "rejected_call_state_digest_pairs": 260,
+    "exact_output_ids": 104
+  },
+  "all_output_ids_and_full_kv_hidden_exact_current_ordinary": true,
+  "independent_budgets_refill_cancel_and_survivors_qualified": true,
+  "native_api_rejections": 3,
+  "negative_controls_rejected": [
+    "wrong_survivor_kv",
+    "wrong_survivor_hidden",
+    "wrong_output",
+    "fake_native_budget",
+    "fake_epoch",
+    "false_finish",
+    "missing_row_reuse",
+    "mutated_rejected_call",
+    "live_owner"
+  ],
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-c4-ownership2/audit1.py": "1861bba2b753f734d42d2bc45128c2eb2244e940e76c359c142cdb6e3180c5c2",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-c4-ownership2/ordinary-result1.json": "f70c6c22bb0abd4530a8fa6c8739af512bb802ae19c8df7854d0ae5a922a891f",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-c4-ownership2/verify-result1.json": "3288ea688df5890522a8c866de61a0648cfdda75c87f275f463be95c34c1b401",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-c4-ownership2/preflight1.json": "86b37e1b536310e8351e055167e4407e91f6ace453d449a3d5812bcf3769e8f2"
+  },
+  "c4t1_qualified": true,
+  "c4t4_qualified": false,
+  "compact_prefill_qualified": false,
+  "performance_measured": false,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

@@ -1,0 +1,28 @@
+--- hoist/worker-state1.py
++++ capture/worker-state1.py
+@@ -71,6 +71,7 @@
+     if split_scores and not split_capable:raise ValueError('Compiled split-score extension required')
+     active_chunk=profile.get('linear_chunk_active_only',False)
+     backend=garnet.backend_info()
++    if 'attention_fixture_capture_test_only' not in backend:raise ValueError('Actual trained fixture requires its test-only capture build')
+     if type(active_chunk) is not bool or active_chunk!=('linear_chunk_active_only' in backend):
+         raise ValueError('Frozen profile requires its explicit native active-only chunk policy')
+     if active_chunk and (not chunked or any(tag not in backend for tag in ('linear_chunk_conv','linear_chunk_delta'))):
+@@ -438,9 +439,17 @@
+                 ended=time.monotonic();embedding_span[:]=[started,ended];embedding_ms[0]=(ended-started)*1000
+             return result
+         def execute(graphs,hidden,positions,slots,active,prediction,epochs,ids):
++            capture_now=diagnostic_forward[0]==15
++            if capture_now:
++                capture_before=json.loads(garnet.memory_stats_json())
++                decoder.session.diagnostic_attention_capture_arm(profile['diagnostic_capture_directory'])
++                emit(dict(event='diagnostic_capture_armed',invocation=16,directory=profile['diagnostic_capture_directory'],before_memory=capture_before,armed_memory=json.loads(garnet.memory_stats_json())))
+             started=time.monotonic() if trace_stages else 0
+             if tracked_rows:result=decoder.session.run_tokens(graphs,hidden,positions,slots,active,prediction,epochs,ids)
+             else:result=decoder.session.run_leased(graphs,hidden,positions,slots,active,prediction,epochs)
++            if capture_now:
++                metadata=json.loads(decoder.session.diagnostic_attention_capture_finish())
++                emit(dict(event='diagnostic_trained_attention_fixture',invocation=16,directory=profile['diagnostic_capture_directory'],metadata=metadata,after_memory=json.loads(garnet.memory_stats_json())))
+             ended=time.monotonic() if trace_stages else 0
+             elapsed=(ended-started)*1000 if trace_stages else 0
+             attention_valid=sum(1 for flag in active.tolist() if flag!=0) if attention_buckets else None

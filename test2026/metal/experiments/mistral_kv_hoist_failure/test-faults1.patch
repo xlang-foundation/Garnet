@@ -1,0 +1,188 @@
+diff --git a/cmake/GarnetMetal.cmake b/cmake/GarnetMetal.cmake
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -124,6 +124,13 @@
+ endif()
+ option(GARNET_METAL_CHUNK_ATTENTION_BUCKETS "Select prepared context buckets and sparse tails from completed native controls" OFF)
+ option(GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS "Prepare MPS request-span schedules and omit inactive request products" OFF)
++option(GARNET_METAL_KV_HOIST_TEST_FAULTS "Test-only single-shot faults after hoisted private KV commits" OFF)
++if(GARNET_METAL_KV_HOIST_TEST_FAULTS)
++    if(NOT GARNET_METAL_CHUNK_KV_COMMIT_HOIST)
++        message(FATAL_ERROR "KV hoist test faults require the hoist experiment")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_KV_HOIST_TEST_FAULTS=1)
++endif()
+ option(GARNET_METAL_CHUNK_KV_COMMIT_HOIST "Prove and hoist private KV commits before unchanged attention math" OFF)
+ if(GARNET_METAL_CHUNK_KV_COMMIT_HOIST)
+     if(NOT GARNET_METAL_CHUNK_ATTENTION_MPS OR NOT GARNET_METAL_CHUNK_KV_INPLACE OR NOT GARNET_METAL_CHUNK_KV_SCATTER OR
+diff --git a/src/backends/metal/compiled_graph.cpp b/src/backends/metal/compiled_graph.cpp
+--- a/src/backends/metal/compiled_graph.cpp
++++ b/src/backends/metal/compiled_graph.cpp
+@@ -1645,7 +1645,11 @@
+                 for(auto at:kvHoistPlan_.commits){const auto& commit=ops_[at];const auto& a=commit.arguments;
+                     gpu.EncodeKVChunk(slots_[a[0]].matrix,slots_[a[1]].matrix,slots_[a[2]].matrix,slots_[a[3]].matrix,slots_[commit.out].matrix,
+                         commit.dimensions[0],commit.dimensions[1],commit.dimensions[2],commit.dimensions[3],commit.contiguousSlots);}
+-                gpu.NoteChunkKVCommitHoist();hoisted=true;
++                gpu.NoteChunkKVCommitHoist();
++#ifdef GARNET_METAL_KV_HOIST_TEST_FAULTS
++                gpu.MaybeFailAfterKVHoist();
++#endif
++                hoisted=true;
+             }
+         }
+ #endif
+diff --git a/src/backends/metal/decoder_session.cpp b/src/backends/metal/decoder_session.cpp
+--- a/src/backends/metal/decoder_session.cpp
++++ b/src/backends/metal/decoder_session.cpp
+@@ -160,6 +160,9 @@
+ }
+ void MetalDecoderSession::Close() {std::lock_guard<std::mutex> lock(mutex_);Clear();}
+ void MetalDecoderSession::ResetUnlocked() {
++#ifdef GARNET_METAL_KV_HOIST_TEST_FAULTS
++    if(gpu_)gpu_->DisarmKVHoistTestFault();
++#endif
+ #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+     reconcileHiddenPending_=false;
+     rowTokens_.assign(states_.empty()?0:states_[0].rows,{});rowTokensValid_.assign(rowTokens_.size(),1);
+diff --git a/src/backends/metal/decoder_session.h b/src/backends/metal/decoder_session.h
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -439,6 +439,15 @@
+     size_t LastChunkAttentionIndex32Dispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionIndex32Dispatches():0;}
+     size_t LastChunkKVScatterDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkKVScatterDispatches():0;}
+     size_t LastChunkKVHoistedCommits() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkKVHoistedCommits():0;}
++#ifdef GARNET_METAL_KV_HOIST_TEST_FAULTS
++    bool ArmKVHoistTestFault(int64_t mode){
++        std::lock_guard<std::mutex> lock(mutex_);
++        if(!gpu_||poisoned_)throw std::logic_error("KV hoist test faults require a ready session");
++        if(mode<0||mode>2)throw std::invalid_argument("KV hoist test mode out of range");
++        gpu_->ArmKVHoistTestFault(unsigned(mode));return true;
++    }
++    std::string KVHoistTestFaultWitnessJson(){std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->KVHoistTestFaultWitnessJson():"{}";}
++#endif
+     size_t LastLayoutVectorDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastLayoutVectorDispatches():0;}
+     size_t LastChunkAttentionMPSDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSDispatches():0;}
+     size_t LastChunkFlashAttentionDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkFlashAttentionDispatches():0;}
+@@ -647,6 +656,10 @@
+         APISET().AddProp("chunk_attention_index32_dispatches",&MetalDecoderSession::LastChunkAttentionIndex32Dispatches);
+         APISET().AddProp("chunk_kv_scatter_dispatches",&MetalDecoderSession::LastChunkKVScatterDispatches);
+         APISET().AddProp("chunk_kv_hoisted_commits",&MetalDecoderSession::LastChunkKVHoistedCommits);
++#ifdef GARNET_METAL_KV_HOIST_TEST_FAULTS
++        APISET().AddFunc<1>("diagnostic_arm_kv_hoist_fault",&MetalDecoderSession::ArmKVHoistTestFault);
++        APISET().AddFunc<0>("diagnostic_kv_hoist_fault_witness_json",&MetalDecoderSession::KVHoistTestFaultWitnessJson);
++#endif
+         APISET().AddProp("layout_vector_dispatches",&MetalDecoderSession::LastLayoutVectorDispatches);
+         APISET().AddProp("chunk_attention_mps_dispatches",&MetalDecoderSession::LastChunkAttentionMPSDispatches);
+         APISET().AddProp("chunk_flash_attention_dispatches",&MetalDecoderSession::LastChunkFlashAttentionDispatches);
+diff --git a/src/backends/metal/metal_context.h b/src/backends/metal/metal_context.h
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -125,6 +125,9 @@
+     friend class MetalCompiledGraph;
+ #ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+     void NoteChunkKVCommitHoist();
++#ifdef GARNET_METAL_KV_HOIST_TEST_FAULTS
++    void MaybeFailAfterKVHoist();
++#endif
+ #endif
+     struct Impl;
+     std::unique_ptr<Impl> impl_;
+@@ -453,6 +456,11 @@
+     size_t LastChunkAttentionIndex32Dispatches() const;
+     size_t LastChunkKVScatterDispatches() const;
+     size_t LastChunkKVHoistedCommits() const;
++#ifdef GARNET_METAL_KV_HOIST_TEST_FAULTS
++    void ArmKVHoistTestFault(unsigned mode);
++    void DisarmKVHoistTestFault();
++    std::string KVHoistTestFaultWitnessJson() const;
++#endif
+ #ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+     bool CanHoistKVControls(const MetalMatrix&,const MetalMatrix&,size_t batch,size_t chunk,size_t capacity) const;
+ #endif
+diff --git a/src/backends/metal/metal_context.mm b/src/backends/metal/metal_context.mm
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -148,6 +148,7 @@
+ #include <mach/mach.h>
+ #include <algorithm>
+ #include <cmath>
++#include <sstream>
+ #include <cstdint>
+ #include <limits>
+ #include <stdexcept>
+@@ -667,6 +668,12 @@
+     size_t chunkAttentionMPSDispatches=0,chunkFlashAttentionDispatches=0;
+     size_t chunkAttentionMPSMatrices=0,chunkAttentionMPSSkippedMatrices=0;
+     size_t chunkKVScatterDispatches=0,chunkKVHoistedCommits=0;
++#ifdef GARNET_METAL_KV_HOIST_TEST_FAULTS
++    unsigned kvHoistFaultArmed=0,kvHoistFaultLast=0;
++    size_t kvHoistFaultEncoded=0,kvHoistFaultSubmitted=0,kvHoistFaultDrained=0,kvHoistFaultCompleted=0;
++    bool kvHoistFaultAborted=false;
++    double kvHoistFaultGpuMs=0;
++#endif
+     size_t layoutVectorDispatches=0;
+     size_t chunkAttentionBucketDispatches=0,chunkAttentionTailDispatches=0,chunkAttentionBucketCapacity=0,chunkAttentionUnknownControls=0;
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+@@ -5813,6 +5820,31 @@
+ size_t MetalContext::LastChunkKVHoistedCommits() const {return impl_->chunkKVHoistedCommits;}
+ #ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+ void MetalContext::NoteChunkKVCommitHoist(){impl_->chunkKVHoistedCommits+=2;}
++#ifdef GARNET_METAL_KV_HOIST_TEST_FAULTS
++void MetalContext::ArmKVHoistTestFault(unsigned mode){
++    if(mode>2)throw std::invalid_argument("KV hoist test fault mode must be0,1,2");
++    if(impl_->command||impl_->submitted.count)throw std::logic_error("Arm KV hoist faults between drained command batches");
++    impl_->kvHoistFaultArmed=mode;impl_->kvHoistFaultLast=0;
++    impl_->kvHoistFaultEncoded=impl_->kvHoistFaultSubmitted=impl_->kvHoistFaultDrained=impl_->kvHoistFaultCompleted=0;
++    impl_->kvHoistFaultAborted=false;impl_->kvHoistFaultGpuMs=0;
++}
++void MetalContext::DisarmKVHoistTestFault(){impl_->kvHoistFaultArmed=0;}
++void MetalContext::MaybeFailAfterKVHoist(){
++    const auto mode=impl_->kvHoistFaultArmed;if(!mode)return;
++    impl_->kvHoistFaultArmed=0;impl_->kvHoistFaultLast=mode;impl_->kvHoistFaultEncoded=impl_->chunkKVHoistedCommits;
++    if(mode==2)Flush();
++    impl_->kvHoistFaultSubmitted=impl_->submitted.count;
++    throw std::runtime_error(mode==1?"Injected KV hoist fault before submission":"Injected KV hoist fault after partial submission");
++}
++std::string MetalContext::KVHoistTestFaultWitnessJson() const{
++    std::ostringstream out;out<<"{\"armed\":"<<impl_->kvHoistFaultArmed<<",\"mode\":"<<impl_->kvHoistFaultLast
++        <<",\"encoded_commits\":"<<impl_->kvHoistFaultEncoded<<",\"submitted_commands\":"<<impl_->kvHoistFaultSubmitted
++        <<",\"drained_commands\":"<<impl_->kvHoistFaultDrained<<",\"completed_commands\":"<<impl_->kvHoistFaultCompleted
++        <<",\"native_abort_called\":"<<(impl_->kvHoistFaultAborted?"true":"false")<<",\"observed_gpu_ms\":"<<impl_->kvHoistFaultGpuMs
++        <<",\"pending_outputs\":"<<impl_->pendingOutputs.size()<<",\"live_command\":"<<(impl_->command?"true":"false")
++        <<",\"live_submissions\":"<<impl_->submitted.count<<"}";return out.str();
++}
++#endif
+ bool MetalContext::CanHoistKVControls(const MetalMatrix& slots,const MetalMatrix& active,size_t batch,size_t chunk,size_t capacity) const {
+     if(!slots.impl_||!active.impl_||!slots.impl_->ready||!active.impl_->ready||slots.impl_->pending||active.impl_->pending)return false;
+     const auto s=slots.impl_->matrix,a=active.impl_->matrix;
+@@ -6005,7 +6037,16 @@
+ #endif
+     // Flushed work may already be executing. Drain it before exposing buffers
+     // for reset/reuse; the uncommitted continuation is discarded.
+-    for(id<MTLCommandBuffer> prior in impl_->submitted)[prior waitUntilCompleted];
++    for(id<MTLCommandBuffer> prior in impl_->submitted){[prior waitUntilCompleted];
++#ifdef GARNET_METAL_KV_HOIST_TEST_FAULTS
++        if(impl_->kvHoistFaultLast&&!impl_->kvHoistFaultAborted){++impl_->kvHoistFaultDrained;
++            if(prior.status==MTLCommandBufferStatusCompleted)++impl_->kvHoistFaultCompleted;
++            if(prior.GPUEndTime>prior.GPUStartTime)impl_->kvHoistFaultGpuMs+=(prior.GPUEndTime-prior.GPUStartTime)*1000;}
++#endif
++    }
++#ifdef GARNET_METAL_KV_HOIST_TEST_FAULTS
++    if(impl_->kvHoistFaultLast)impl_->kvHoistFaultAborted=true;
++#endif
+     impl_->submitted=nil;impl_->partialSubmissions=0;
+     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
+     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
+diff --git a/src/entry/metal_main.cpp b/src/entry/metal_main.cpp
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -268,6 +268,9 @@
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+     info+="; chunk_attention_index32";
+ #endif
++#ifdef GARNET_METAL_KV_HOIST_TEST_FAULTS
++    info+="; kv_hoist_test_faults";
++#endif
+ #ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+     info+="; chunk_kv_commit_hoist";
+ #endif

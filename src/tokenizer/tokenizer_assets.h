@@ -26,9 +26,11 @@ inline std::string Family(const nlohmann::json& config, const nlohmann::json& to
     if (type.rfind("deepseek", 0) == 0) return "deepseek";
     if (type == "mistral" || type == "mixtral") return "mistral";
     if (type == "llama") return "llama";
+    if (type == "t5" || type == "mt5" || type == "umt5") return "t5";
     const auto cls = tokenizerConfig.value("tokenizer_class", std::string());
     if (cls.rfind("Qwen", 0) == 0) return "qwen";
     if (cls.rfind("Gemma", 0) == 0) return "gemma";
+    if (cls.rfind("T5", 0) == 0 || cls.rfind("MT5", 0) == 0 || cls.rfind("UMT5", 0) == 0) return "t5";
     return {};
 }
 inline int64_t SpecialId(const Tokenizer& tokenizer, const nlohmann::json& config,

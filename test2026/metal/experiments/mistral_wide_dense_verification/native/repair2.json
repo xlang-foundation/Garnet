@@ -1,0 +1,13 @@
+{
+  "reason": [
+    "Old KV-span test correctly rejected B2/T4, which the initial wide guard accidentally allowed. Restrict extension to B4/T4 and retain old invalid-envelope tests; add new B4/T4 full-cache and asymmetric/partial-flush reference cases.",
+    "New affine unit created FP16 coefficient bytes but omitted explicit FP16 type flag on native upload. Correct fixture types."
+  ],
+  "preserve": [
+    "source1",
+    "build-on1",
+    "suite-on1.stdout"
+  ],
+  "arithmetic_changed": false,
+  "default_off": true
+}

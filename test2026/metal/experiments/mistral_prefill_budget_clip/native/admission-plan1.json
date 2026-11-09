@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "base_policy_provenance_sha256": "b3e840df717e63b7e8de3ec321bf914f22b0ebc8f3c3a19ce33bd9903e3268df",
+  "source_worker_sha256": "b5c032ba444e13c2f00ec1adc50b8c26d694bf6b4e864122cb677320a6cf5c9b",
+  "worker_sha256": "f8049d839e5593ab17dd90c859d3bbc2159817c52ca220121f9da49bcdd67d7b",
+  "worker_changes": [
+    "Configure native set_prefill_budget_clip(True) before readiness; verify native status and incompatible configuration rejection. No plan edits."
+  ],
+  "fixture": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-serving1/fixture1.json",
+  "serving_manifest": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-serving1/serving-manifest1.json",
+  "case": "p2048-c4-o128",
+  "rounds": [
+    "cold",
+    "warm1",
+    "warm2"
+  ],
+  "requests": 12,
+  "expected_output_tokens": 1536,
+  "profile_sha256": "ab03ca08acead17d8c187aa0ced582ec0fb0c7f521f6daadc5dc868709bb710f",
+  "engine_sha256": "14bd385d1a88f239004ca3a7cd543edf342d380a7c8e837c86259859c0a9fe68",
+  "no_comparator_execution": true,
+  "serving_qualified": false,
+  "goal_complete": false,
+  "native_model_state_gate_sha256": "af090009831555636b204ceeee1af04bafdeba6556ec3739ae44c41405dcb4a1"
+}

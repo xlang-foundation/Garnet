@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "scope": "Read-only native trained MLP observation and full standalone replay through down GEMM; runtime fusion and serving admission remain open.",
+  "study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-trained1",
+  "predecessor_checkpoint": "60f4ac61199f8cf933085ca2c61a563194e586f7",
+  "capture_audit_sha256": "b3ea82d7168721614db5bef3c1e9459feb0b9f001fe364c44d3f2fd2647953a7",
+  "replay_audit_sha256": "ea1f05a476acf6e313828e8498660e7a449ba1b096c9ab2412c981d9d33a7f2c",
+  "source_binding_sha256": "7b91ac0157486b3a98722b14ff29539650b3fc21cd4c2c002590f4a21f29687b",
+  "replay_binding_sha256": "5a63a93fe13a3153d4f3ba98844209ebec524955acac20c5e0407c37d4cdaff3",
+  "packaged_preparation_sha256": "513d717aa05bfb7973bb04200d4b6a67f583b7517c4e4c53fdf2bccce43027df",
+  "all_source_and_worker_bytes_reproduced": true,
+  "packaged_auditors_reproduce_full_reports": true,
+  "native_copy_unit": {
+    "passed": true,
+    "complete_parent_word_comparisons": 18948096,
+    "invalid_operations_rejected": 18,
+    "all_native_owners_zero": true
+  },
+  "captured_layers": [
+    0,
+    15,
+    31
+  ],
+  "actual_rows": 512,
+  "all32_tokens_and260_full_state_digest_pairs_exact_frozen_half": true,
+  "full_mlp_word_comparisons": {
+    "native_fp32": 72351744,
+    "shadow_fp32": 44040192,
+    "half": 66060288,
+    "down": 18874368,
+    "writer": 22020096
+  },
+  "independent_fp64_samples": 243,
+  "maximum_fp64_fraction": 0.017229169599456282,
+  "native_main_compile_options": "nil/default, native_bfloat_body=OFF",
+  "prior_explicit31_numerical_agreement_on_observed_data": true,
+  "prior_explicit31_performance_equivalence_established": false,
+  "compiled_runtime_fusion_integrated": false,
+  "new_serving_speed_measured": false,
+  "strict_coding": "0/8",
+  "quality_qualified": false,
+  "goal_complete": false
+}

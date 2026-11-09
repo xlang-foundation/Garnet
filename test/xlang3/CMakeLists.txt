@@ -31,12 +31,29 @@ target_compile_definitions(garnet_tensor_capture PUBLIC XLANG3_USE_SHARED)
 target_link_libraries(garnet_tensor_capture PUBLIC ${GARNET_TEST_RUNTIME} CUDA::cudart)
 add_executable(garnet_tensor_tests tensor_tests.cpp)
 target_link_libraries(garnet_tensor_tests PRIVATE garnet_tensor_capture)
-add_test(NAME garnet_tensor_capture
-    COMMAND garnet_tensor_tests "${CMAKE_CURRENT_SOURCE_DIR}/tensor_graph.py")
+if(WIN32)
+    if(TARGET "${GARNET_TEST_RUNTIME}")
+        set(garnet_test_runtime_directory "$<TARGET_FILE_DIR:${GARNET_TEST_RUNTIME}>")
+    else()
+        get_filename_component(garnet_test_runtime_directory "${GARNET_TEST_RUNTIME}" DIRECTORY)
+    endif()
+    set(garnet_tensor_test_path "${garnet_test_runtime_directory};${CUDAToolkit_BIN_DIR};$ENV{PATH}")
+    add_test(NAME garnet_tensor_capture COMMAND "${CMAKE_COMMAND}" -E env
+        "PATH=${garnet_tensor_test_path}" "$<TARGET_FILE:garnet_tensor_tests>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tensor_graph.py")
+else()
+    add_test(NAME garnet_tensor_capture
+        COMMAND garnet_tensor_tests "${CMAKE_CURRENT_SOURCE_DIR}/tensor_graph.py")
+endif()
 set_tests_properties(garnet_tensor_capture PROPERTIES TIMEOUT 60)
 add_executable(garnet_tensor_readiness_tests tensor_readiness_tests.cpp)
 target_link_libraries(garnet_tensor_readiness_tests PRIVATE garnet_tensor_capture)
-add_test(NAME garnet_tensor_readiness COMMAND garnet_tensor_readiness_tests)
+if(WIN32)
+    add_test(NAME garnet_tensor_readiness COMMAND "${CMAKE_COMMAND}" -E env
+        "PATH=${garnet_tensor_test_path}" "$<TARGET_FILE:garnet_tensor_readiness_tests>")
+else()
+    add_test(NAME garnet_tensor_readiness COMMAND garnet_tensor_readiness_tests)
+endif()
 set_tests_properties(garnet_tensor_readiness PROPERTIES TIMEOUT 60)
 
 if(EXISTS "${GARNET_TENSORRT_ROOT}/include/NvInfer.h")

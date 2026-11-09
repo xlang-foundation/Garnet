@@ -74,6 +74,10 @@ public:
         if(affineEmbeddingReady_) {
             if(mlxCheckpoint_.DenseMistral())return mlxCheckpoint_.CoefficientType()==AffineInt4CoefficientType::FP16?
                 "mlx_mistral_affine_int4_g64_fp16":"mlx_mistral_affine_int4_g64_bf16";
+            if(mlxCheckpoint_.DenseQwen3())return mlxCheckpoint_.CoefficientType()==AffineInt4CoefficientType::FP16?
+                "mlx_qwen3_affine_int4_g64_fp16":"mlx_qwen3_affine_int4_g64_bf16";
+            if(mlxCheckpoint_.DenseQwen2())return mlxCheckpoint_.CoefficientType()==AffineInt4CoefficientType::FP16?
+                "mlx_qwen2_affine_int4_g64_fp16":"mlx_qwen2_affine_int4_g64_bf16";
             return "mlx_qwen35_affine_int4_g64_bf16";
         }
 #endif

@@ -1,0 +1,63 @@
+{
+  "scope": "Prepared native Mistral B4/T4 lifetime, real C4 cancel/refill/survivor, B2 interleave.",
+  "guards": [
+    "off",
+    "on-claim",
+    "on-run",
+    "on-adapter-late",
+    "on-compact",
+    "on-capacity",
+    "on-batch"
+  ],
+  "primary_arms": [
+    "ordinary",
+    "verify",
+    "reverse"
+  ],
+  "probe_arms": [
+    "ordinary",
+    "verify"
+  ],
+  "submitted_extra_tokens": "zero IDs; require rejection after first known input and exact full-state rollback",
+  "native_rejections": [
+    "mixed_unscheduled_row",
+    "wrong_known_mixed",
+    "wrong_slots_shape",
+    "wrong_native_epoch",
+    "negative_native_budget",
+    "submitted_over_budget",
+    "stale_tick_replay"
+  ],
+  "active_requests_required": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "primary_shared_witnesses": [
+    "initial_prefilled",
+    "finish_A",
+    "claim_E",
+    "mid_E",
+    "cancel_C",
+    "claim_F",
+    "finish_E",
+    "finish_B",
+    "before_late_G",
+    "all_done"
+  ],
+  "probe_shared_witnesses": [
+    "first_B2_prefill",
+    "after_B2_verification",
+    "all_done"
+  ],
+  "actual_profile_identity": "scheduled-B4-C4096-prefill-up512-verify4-fp32-v1",
+  "prefix_retention_qualified": false,
+  "learned_helper_qualified": false,
+  "serving_speed_claim": false,
+  "goal_complete": false,
+  "primary_fixture": "input2.json",
+  "primary_cancelled_C_output_ids": 12,
+  "required_submitted_physical_positions": 16,
+  "repair": "Initial A4 fixture reached physical counts1..14, though active request counts1..4 and all full state matches passed. A8 keeps A active for full16. Keep raw A4 collection and strict failed audit; reuse unchanged passing guards/B2 probe."
+}

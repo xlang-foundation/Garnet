@@ -1,0 +1,706 @@
+diff --git a/cmake/GarnetMetal.cmake b/cmake/GarnetMetal.cmake
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -140,6 +140,22 @@
+         message(FATAL_ERROR "KV commit hoist requires prepared private in-place KV and MPS attention")
+     endif()
+     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_CHUNK_KV_COMMIT_HOIST=1)
++endif()
++option(GARNET_METAL_CHUNK_HALF_ATTENTION "M5 bounded half-QKV prefill with GPU packing; distinct numerical policy" OFF)
++if(GARNET_METAL_CHUNK_HALF_ATTENTION)
++    if(NOT GARNET_METAL_CHUNK_KV_COMMIT_HOIST OR NOT GARNET_METAL_CHUNK_ATTENTION_MPS OR
++       NOT GARNET_METAL_CHUNK_ATTENTION_BUCKETS OR NOT GARNET_METAL_CHUNK_ATTENTION_INDEX32 OR
++       NOT GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS OR NOT GARNET_METAL_MISTRAL_PACKED_PREFILL OR NOT GARNET_METAL_DIAGNOSTIC_LAYER_BULK OR
++       GARNET_METAL_COMMITTED_KV_MPS OR GARNET_METAL_CHUNK_FLASH_ATTENTION)
++        message(FATAL_ERROR "Half attention requires the Mistral hoist/MPS/index32/bucket/active-row profile and separate numerical selection")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_CHUNK_HALF_ATTENTION=1)
++    add_executable(garnet_half_chunk_attention_test test2026/metal/half_chunk_attention_test.cpp)
++    target_link_libraries(garnet_half_chunk_attention_test PRIVATE garnet_metal)
++    add_test(NAME metal_half_chunk_reference COMMAND garnet_half_chunk_attention_test --reference "${CMAKE_CURRENT_BINARY_DIR}/half_attention_reference")
++    set_tests_properties(metal_half_chunk_reference PROPERTIES FIXTURES_SETUP half_chunk_reference RUN_SERIAL TRUE TIMEOUT 240)
++    add_test(NAME metal_half_chunk_attention COMMAND garnet_half_chunk_attention_test --selftest "${CMAKE_CURRENT_BINARY_DIR}/half_attention_reference")
++    set_tests_properties(metal_half_chunk_attention PROPERTIES FIXTURES_REQUIRED half_chunk_reference RUN_SERIAL TRUE TIMEOUT 240)
+ endif()
+ if(GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS)
+     if(NOT GARNET_METAL_CHUNK_ATTENTION_BUCKETS)
+diff --git a/src/backends/metal/chunk_half_attention_shader.h b/src/backends/metal/chunk_half_attention_shader.h
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/chunk_half_attention_shader.h
+@@ -0,0 +1,190 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++namespace Garnet {
++inline constexpr const char* kNativeHalfChunkShader=R"METAL(
++
++#include <metal_stdlib>
++#include <metal_tensor>
++#include <MetalPerformancePrimitives/MetalPerformancePrimitives.h>
++using namespace metal;
++using namespace mpp::tensor_ops;
++struct HalfChunkParams {ulong batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,oStride,gated;};
++struct BoundedHalfChunkParams {uint batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,oStride,gated;};
++inline BoundedHalfChunkParams half_chunk_params(constant HalfChunkParams& r){return {uint(r.batch),uint(r.chunk),uint(r.heads),uint(r.kvHeads),uint(r.dim),uint(r.capacity),uint(r.qStride),uint(r.kStride),uint(r.vStride),uint(r.kcStride),uint(r.vcStride),uint(r.sStride),uint(r.aStride),uint(r.gStride),uint(r.oStride),uint(r.gated)};}
++struct HalfChunkControls {uint first[4],count[4];};
++template<typename T> METAL_FUNC void strict_coop_count(thread const T& value,device atomic_uint* out,device atomic_uint* invalid,uint width,uint height){
++ for(ushort i=0;i<value.get_capacity();++i)if(value.is_valid_element(i)){auto xy=value.get_multidimensional_index(i);if(xy[0]<0||xy[1]<0||uint(xy[0])>=width||uint(xy[1])>=height)atomic_fetch_add_explicit(invalid,1,memory_order_relaxed);else atomic_fetch_add_explicit(out+uint(xy[1])*width+uint(xy[0]),1,memory_order_relaxed);}
++}
++// SPDX-License-Identifier: Apache-2.0
++// Half-rounded QKV, FP32 accumulation/softmax/output; one/two half P components.
++
++// Actual half cooperative maps are qualified in this same Metal4 library.
++kernel void half_policy_layout(device uint* out [[buffer(0)]],uint lane [[thread_index_in_simdgroup]]) {
++ constexpr auto qkd=matmul2d_descriptor(16,32,16,false,true,true,matmul2d_descriptor::mode::multiply_accumulate);
++ constexpr auto pvd=matmul2d_descriptor(16,32,16,false,false,true,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<qkd,execution_simdgroup> qk;matmul2d<pvd,execution_simdgroup> pv;
++ auto a=qk.get_left_input_cooperative_tensor<half,half,float>();auto b=qk.get_right_input_cooperative_tensor<half,half,float>();
++ auto c=qk.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(a)>,metal::remove_addrspace_t<decltype(b)>,float>();
++ auto x=pv.get_left_input_cooperative_tensor<half,half,float>();auto y=pv.get_right_input_cooperative_tensor<half,half,float>();
++ auto z=pv.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(x)>,metal::remove_addrspace_t<decltype(y)>,float>();
++ const uint quad=lane>>2,row=(quad&4)|((lane>>1)&3),col=((quad&2)|(lane&1))*4;uint flags=0;
++ if(c.get_capacity()!=16||x.get_capacity()!=8||z.get_capacity()!=16)flags|=1;
++ for(ushort i=0;i<c.get_capacity();++i){auto xy=c.get_multidimensional_index(i);if(!c.is_valid_element(i)||xy[0]!=col+(i/8)*16+i%4||xy[1]!=row+((i/4)%2)*8)flags|=2;}
++ for(ushort i=0;i<x.get_capacity();++i){auto xy=x.get_multidimensional_index(i);if(!x.is_valid_element(i)||xy[0]!=col+i%4||xy[1]!=row+(i/4)*8)flags|=4;}
++ for(ushort i=0;i<z.get_capacity();++i){auto xy=z.get_multidimensional_index(i);if(!z.is_valid_element(i)||xy[0]!=col+(i/8)*16+i%4||xy[1]!=row+((i/4)%2)*8)flags|=8;}
++
++ for(ushort i=0;i<a.get_capacity();++i){auto xy=a.get_multidimensional_index(i);if(!a.is_valid_element(i)||xy[0]!=col+i%4||xy[1]!=row+(i/4)*8)flags|=16;}
++ for(ushort i=0;i<b.get_capacity();++i){auto xy=b.get_multidimensional_index(i);if(!b.is_valid_element(i)||xy[0]!=col+i%4||xy[1]!=row+(i/4)*8)flags|=32;}
++ for(ushort i=0;i<y.get_capacity();++i){auto xy=y.get_multidimensional_index(i);if(!y.is_valid_element(i)||xy[0]!=col+(i/8)*16+i%4||xy[1]!=row+((i/4)%2)*8)flags|=64;}
++ out[lane]=flags;
++}
++template<bool HIGH_LOW> void half_policy_attention_impl(device const half* q,device const half* kc,
++ device const half* vc,device const float* gate,device float* output,
++ constant HalfChunkParams& runtime,constant HalfChunkControls& controls,
++ uint3 group,uint sg,uint lane) {
++ const auto p=half_chunk_params(runtime);const uint b=group.z,h=group.x,kh=h/4,baseQ=group.y*64+sg*16;
++ if(baseQ>=p.chunk)return;
++ const uint quad=lane>>2,row=(quad&4)|((lane>>1)&3),col=((quad&2)|(lane&1))*4;
++ constexpr auto qkd=matmul2d_descriptor(16,32,16,false,true,true,matmul2d_descriptor::mode::multiply_accumulate);
++ constexpr auto pvd=matmul2d_descriptor(16,32,16,false,false,true,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<qkd,execution_simdgroup> qk;matmul2d<pvd,execution_simdgroup> pv;
++ auto qa=qk.get_left_input_cooperative_tensor<half,half,float>();auto kb=qk.get_right_input_cooperative_tensor<half,half,float>();
++ auto score=qk.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(qa)>,metal::remove_addrspace_t<decltype(kb)>,float>();
++ auto pa=pv.get_left_input_cooperative_tensor<half,half,float>();auto vb=pv.get_right_input_cooperative_tensor<half,half,float>();
++ auto acc0=pv.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(pa)>,metal::remove_addrspace_t<decltype(vb)>,float>();
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i)acc0[i]=0;
++ auto acc1=pv.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(pa)>,metal::remove_addrspace_t<decltype(vb)>,float>();
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i)acc1[i]=0;
++ auto acc2=pv.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(pa)>,metal::remove_addrspace_t<decltype(vb)>,float>();
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i)acc2[i]=0;
++ auto acc3=pv.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(pa)>,metal::remove_addrspace_t<decltype(vb)>,float>();
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i)acc3[i]=0;
++ auto paLow=pv.get_left_input_cooperative_tensor<half,half,float>();
++ auto corr0=pv.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(pa)>,metal::remove_addrspace_t<decltype(vb)>,float>();
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i)corr0[i]=0;
++ auto corr1=pv.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(pa)>,metal::remove_addrspace_t<decltype(vb)>,float>();
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i)corr1[i]=0;
++ auto corr2=pv.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(pa)>,metal::remove_addrspace_t<decltype(vb)>,float>();
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i)corr2[i]=0;
++ auto corr3=pv.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(pa)>,metal::remove_addrspace_t<decltype(vb)>,float>();
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i)corr3[i]=0;
++ float maximum[2]={-INFINITY,-INFINITY},denominator[2]={0,0};
++ const uint count=controls.count[b],first=controls.first[b],end=first+min(count,baseQ+16);
++ for(uint start=0;baseQ<count&&start<end;start+=32) {
++  #pragma clang loop unroll(full)
++  for(ushort i=0;i<16;++i){score[i]=0;}
++  #pragma clang loop unroll_count(4)
++  for(uint d=0;d<128;d+=16) {
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<2;++part){uint t=baseQ+row+part*8;half4 value=t<count?*reinterpret_cast<device const half4*>(q+(b*p.chunk+t)*p.qStride+h*128+d+col):half4(0);for(uint j=0;j<4;++j)qa[part*4+j]=value[j];}
++   #pragma clang loop unroll(full)
++   for(uint part=0;part<4;++part){uint token=start+row+part*8;half4 value=token<end?*reinterpret_cast<device const half4*>(kc+b*p.kcStride+(kh*p.capacity+token)*128+d+col):half4(0);for(uint j=0;j<4;++j)kb[part*4+j]=value[j];}
++   qk.run(qa,kb,score);
++  }
++  #pragma clang loop unroll(full)
++  for(ushort i=0;i<16;++i){uint t=baseQ+row+((i/4)%2)*8,s=start+col+(i/8)*16+i%4;score[i]=(t<count&&s<=first+t&&s<end)?score[i]*rsqrt(128.0f):-INFINITY;}
++  float factor[2];
++  #pragma clang loop unroll(full)
++  for(uint part=0;part<2;++part){
++   float mx=-INFINITY;
++   #pragma clang loop unroll(full)
++   for(uint j=0;j<4;++j)mx=max(mx,max(score[part*4+j],score[8+part*4+j]));
++   mx=max(mx,simd_shuffle_xor(mx,ushort(1)));mx=max(mx,simd_shuffle_xor(mx,ushort(8)));mx=max(mx,maximum[part]);
++   bool valid=baseQ+row+part*8<count;factor[part]=valid?exp(maximum[part]-mx):0;maximum[part]=mx;float sum=0;
++   #pragma clang loop unroll(full)
++   for(uint j=0;j<4;++j){float a=valid?exp(score[part*4+j]-mx):0,b=valid?exp(score[8+part*4+j]-mx):0;score[part*4+j]=a;score[8+part*4+j]=b;sum+=a+b;}
++   sum+=simd_shuffle_xor(sum,ushort(1));sum+=simd_shuffle_xor(sum,ushort(8));denominator[part]=denominator[part]*factor[part]+sum;
++  }
++  #pragma clang loop unroll(full)
++  for(ushort i=0;i<16;++i){acc0[i]*=factor[(i/4)%2];if(HIGH_LOW)corr0[i]*=factor[(i/4)%2];}
++  #pragma clang loop unroll(full)
++  for(ushort i=0;i<16;++i){acc1[i]*=factor[(i/4)%2];if(HIGH_LOW)corr1[i]*=factor[(i/4)%2];}
++  #pragma clang loop unroll(full)
++  for(ushort i=0;i<16;++i){acc2[i]*=factor[(i/4)%2];if(HIGH_LOW)corr2[i]*=factor[(i/4)%2];}
++  #pragma clang loop unroll(full)
++  for(ushort i=0;i<16;++i){acc3[i]*=factor[(i/4)%2];if(HIGH_LOW)corr3[i]*=factor[(i/4)%2];}
++  #pragma clang loop unroll(full)
++  for(uint part=0;part<2;++part){
++   #pragma clang loop unroll(full)
++   for(ushort i=0;i<8;++i){float value=score[part*8+i]*32768.0f;pa[i]=half(value);if(HIGH_LOW)paLow[i]=half(value-float(pa[i]));}
++   #pragma clang loop unroll(full)
++   for(uint frag=0;frag<4;++frag){uint token=start+part*16+row+(frag%2)*8,feature=0*32+col+(frag/2)*16;half4 value=token<end?*reinterpret_cast<device const half4*>(vc+b*p.vcStride+(kh*p.capacity+token)*128+feature):half4(0);for(uint j=0;j<4;++j)vb[frag*4+j]=value[j];}
++   pv.run(pa,vb,acc0);if(HIGH_LOW)pv.run(paLow,vb,corr0);
++   #pragma clang loop unroll(full)
++   for(uint frag=0;frag<4;++frag){uint token=start+part*16+row+(frag%2)*8,feature=1*32+col+(frag/2)*16;half4 value=token<end?*reinterpret_cast<device const half4*>(vc+b*p.vcStride+(kh*p.capacity+token)*128+feature):half4(0);for(uint j=0;j<4;++j)vb[frag*4+j]=value[j];}
++   pv.run(pa,vb,acc1);if(HIGH_LOW)pv.run(paLow,vb,corr1);
++   #pragma clang loop unroll(full)
++   for(uint frag=0;frag<4;++frag){uint token=start+part*16+row+(frag%2)*8,feature=2*32+col+(frag/2)*16;half4 value=token<end?*reinterpret_cast<device const half4*>(vc+b*p.vcStride+(kh*p.capacity+token)*128+feature):half4(0);for(uint j=0;j<4;++j)vb[frag*4+j]=value[j];}
++   pv.run(pa,vb,acc2);if(HIGH_LOW)pv.run(paLow,vb,corr2);
++   #pragma clang loop unroll(full)
++   for(uint frag=0;frag<4;++frag){uint token=start+part*16+row+(frag%2)*8,feature=3*32+col+(frag/2)*16;half4 value=token<end?*reinterpret_cast<device const half4*>(vc+b*p.vcStride+(kh*p.capacity+token)*128+feature):half4(0);for(uint j=0;j<4;++j)vb[frag*4+j]=value[j];}
++   pv.run(pa,vb,acc3);if(HIGH_LOW)pv.run(paLow,vb,corr3);
++  }
++ }
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i){uint t=baseQ+row+((i/4)%2)*8,d=0*32+col+(i/8)*16+i%4;
++  if(t<p.chunk){float value=0;if(t<count){value=(acc0[i]+(HIGH_LOW?corr0[i]:0.0f))/(denominator[(i/4)%2]*32768.0f);if(p.gated)value/=1+exp(-gate[(b*p.chunk+t)*p.gStride+h*128+d]);}output[(b*p.chunk+t)*p.oStride+h*128+d]=value;}
++ }
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i){uint t=baseQ+row+((i/4)%2)*8,d=1*32+col+(i/8)*16+i%4;
++  if(t<p.chunk){float value=0;if(t<count){value=(acc1[i]+(HIGH_LOW?corr1[i]:0.0f))/(denominator[(i/4)%2]*32768.0f);if(p.gated)value/=1+exp(-gate[(b*p.chunk+t)*p.gStride+h*128+d]);}output[(b*p.chunk+t)*p.oStride+h*128+d]=value;}
++ }
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i){uint t=baseQ+row+((i/4)%2)*8,d=2*32+col+(i/8)*16+i%4;
++  if(t<p.chunk){float value=0;if(t<count){value=(acc2[i]+(HIGH_LOW?corr2[i]:0.0f))/(denominator[(i/4)%2]*32768.0f);if(p.gated)value/=1+exp(-gate[(b*p.chunk+t)*p.gStride+h*128+d]);}output[(b*p.chunk+t)*p.oStride+h*128+d]=value;}
++ }
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<16;++i){uint t=baseQ+row+((i/4)%2)*8,d=3*32+col+(i/8)*16+i%4;
++  if(t<p.chunk){float value=0;if(t<count){value=(acc3[i]+(HIGH_LOW?corr3[i]:0.0f))/(denominator[(i/4)%2]*32768.0f);if(p.gated)value/=1+exp(-gate[(b*p.chunk+t)*p.gStride+h*128+d]);}output[(b*p.chunk+t)*p.oStride+h*128+d]=value;}
++ }
++}
++kernel void half_policy_p16(device const half* q [[buffer(0)]],device const half* kc [[buffer(1)]],device const half* vc [[buffer(2)]],device const float* gate [[buffer(3)]],device float* output [[buffer(4)]],constant HalfChunkParams& runtime [[buffer(5)]],constant HalfChunkControls& controls [[buffer(6)]],uint3 group [[threadgroup_position_in_grid]],uint sg [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]){half_policy_attention_impl<false>(q,kc,vc,gate,output,runtime,controls,group,sg,lane);}
++kernel void half_policy_p22(device const half* q [[buffer(0)]],device const half* kc [[buffer(1)]],device const half* vc [[buffer(2)]],device const float* gate [[buffer(3)]],device float* output [[buffer(4)]],constant HalfChunkParams& runtime [[buffer(5)]],constant HalfChunkControls& controls [[buffer(6)]],uint3 group [[threadgroup_position_in_grid]],uint sg [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]){half_policy_attention_impl<true>(q,kc,vc,gate,output,runtime,controls,group,sg,lane);}
++kernel void half_policy_capacities(device uint* out [[buffer(0)]],uint lane [[thread_index_in_simdgroup]]) {
++ constexpr auto qkd=matmul2d_descriptor(16,32,16,false,true,true,matmul2d_descriptor::mode::multiply_accumulate);
++ constexpr auto pvd=matmul2d_descriptor(16,32,16,false,false,true,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<qkd,execution_simdgroup> qk;matmul2d<pvd,execution_simdgroup> pv;
++ auto a=qk.get_left_input_cooperative_tensor<half,half,float>();auto b=qk.get_right_input_cooperative_tensor<half,half,float>();
++ auto c=qk.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(a)>,metal::remove_addrspace_t<decltype(b)>,float>();
++ auto x=pv.get_left_input_cooperative_tensor<half,half,float>();auto y=pv.get_right_input_cooperative_tensor<half,half,float>();
++ auto z=pv.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(x)>,metal::remove_addrspace_t<decltype(y)>,float>();
++ out[lane*6+0]=a.get_capacity();out[lane*6+1]=b.get_capacity();out[lane*6+2]=c.get_capacity();out[lane*6+3]=x.get_capacity();out[lane*6+4]=y.get_capacity();out[lane*6+5]=z.get_capacity();
++}
++kernel void half_policy_coordinates(device atomic_uint* out [[buffer(0)]]){
++ constexpr auto qkd=matmul2d_descriptor(16,32,16,false,true,true,matmul2d_descriptor::mode::multiply_accumulate);
++ constexpr auto pvd=matmul2d_descriptor(16,32,16,false,false,true,matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<qkd,execution_simdgroup> qk;matmul2d<pvd,execution_simdgroup> pv;
++ auto a=qk.get_left_input_cooperative_tensor<half,half,float>();auto b=qk.get_right_input_cooperative_tensor<half,half,float>();
++ auto c=qk.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(a)>,metal::remove_addrspace_t<decltype(b)>,float>();
++ auto x=pv.get_left_input_cooperative_tensor<half,half,float>();auto y=pv.get_right_input_cooperative_tensor<half,half,float>();
++ auto z=pv.get_destination_cooperative_tensor<metal::remove_addrspace_t<decltype(x)>,metal::remove_addrspace_t<decltype(y)>,float>();
++ strict_coop_count(a,out,out+2560,16,16);strict_coop_count(b,out+256,out+2560,16,32);strict_coop_count(c,out+768,out+2560,32,16);
++ strict_coop_count(x,out+1280,out+2560,16,16);strict_coop_count(y,out+1536,out+2560,32,16);strict_coop_count(z,out+2048,out+2560,32,16);
++}
++
++
++kernel void half_policy_pack_q(device const float* q [[buffer(0)]],device half* packed [[buffer(1)]],constant HalfChunkParams& runtime [[buffer(2)]],constant HalfChunkControls& controls [[buffer(3)]],device atomic_uint* status [[buffer(4)]],device const float* gate [[buffer(5)]],uint n [[thread_position_in_grid]]) {
++ const auto p=half_chunk_params(runtime);uint row=n/4096,d=n%4096;if(row>=p.batch*p.chunk)return;
++ uint b=row/p.chunk,t=row%p.chunk;bool active=t<controls.count[b];float x=active?q[row*p.qStride+d]:0;
++ bool valid=isfinite(x)&&abs(x)<=2048;if(!valid)atomic_fetch_or_explicit(status,1,memory_order_relaxed);
++ if(active&&p.gated&&!isfinite(gate[row*p.gStride+d]))atomic_fetch_or_explicit(status,8,memory_order_relaxed);
++ packed[row*4096+d]=valid?half(x):half(0);
++}
++kernel void half_policy_pack_kv(device const float* k [[buffer(0)]],device const float* v [[buffer(1)]],device half* hk [[buffer(2)]],device half* hv [[buffer(3)]],constant HalfChunkParams& runtime [[buffer(4)]],constant HalfChunkControls& controls [[buffer(5)]],constant uint& extent [[buffer(6)]],device atomic_uint* status [[buffer(7)]],uint n [[thread_position_in_grid]]) {
++ const auto p=half_chunk_params(runtime);uint d=n%128,row=n/128,t=row%extent,head=(row/extent)%8,b=row/(extent*8);if(b>=p.batch)return;
++ uint at=b*p.kcStride+(head*p.capacity+t)*128+d;bool active=controls.count[b]&&t<controls.first[b]+controls.count[b];
++ float a=active?k[at]:0,c=active?v[at]:0;bool ka=isfinite(a)&&abs(a)<=2048,va=isfinite(c)&&abs(c)<=2048;
++ if(!ka)atomic_fetch_or_explicit(status,2,memory_order_relaxed);if(!va)atomic_fetch_or_explicit(status,4,memory_order_relaxed);
++ hk[at]=ka?half(a):half(0);hv[at]=va?half(c):half(0);
++}
++
++)METAL";
++}
+diff --git a/src/backends/metal/compiled_graph.cpp b/src/backends/metal/compiled_graph.cpp
+--- a/src/backends/metal/compiled_graph.cpp
++++ b/src/backends/metal/compiled_graph.cpp
+@@ -1821,6 +1821,10 @@
+                 slots_[args[3]].matrix,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.contiguousSlots);
+         }else if(op.kind==Kind::AttentionChunk) {
+             std::vector<MetalMatrix> args;for(auto id:op.arguments)args.push_back(slots_[id].matrix);
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++            if(hoisted&&i==kvHoistPlan_.attention)gpu.EncodeHalfAttentionChunk(args,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],op.dimensions[5]!=0);
++            else
++#endif
+ #ifdef GARNET_METAL_COMMITTED_KV_MPS
+             if(hoisted&&i==kvHoistPlan_.attention)gpu.EncodeCommittedAttentionChunk(args,out,op.dimensions[0],op.dimensions[1],op.dimensions[2],op.dimensions[3],op.dimensions[4],op.dimensions[5]!=0);
+             else
+diff --git a/src/backends/metal/decoder_session.h b/src/backends/metal/decoder_session.h
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -439,6 +439,8 @@
+     size_t LastChunkAttentionIndex32Dispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionIndex32Dispatches():0;}
+     size_t LastChunkKVScatterDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkKVScatterDispatches():0;}
+     size_t LastChunkKVHoistedCommits() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkKVHoistedCommits():0;}
++    size_t LastHalfAttentionDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastHalfAttentionDispatches():0;}
++    size_t HalfAttentionScratchBytes() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->HalfAttentionScratchBytes():0;}
+     size_t LastCommittedKVAttentionDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastCommittedKVAttentionDispatches():0;}
+     size_t LastLayoutVectorDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastLayoutVectorDispatches():0;}
+     size_t LastChunkAttentionMPSDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSDispatches():0;}
+@@ -649,6 +651,8 @@
+         APISET().AddProp("chunk_kv_scatter_dispatches",&MetalDecoderSession::LastChunkKVScatterDispatches);
+         APISET().AddProp("chunk_kv_hoisted_commits",&MetalDecoderSession::LastChunkKVHoistedCommits);
+         APISET().AddProp("chunk_committed_kv_attention_dispatches",&MetalDecoderSession::LastCommittedKVAttentionDispatches);
++        APISET().AddProp("chunk_half_attention_dispatches",&MetalDecoderSession::LastHalfAttentionDispatches);
++        APISET().AddProp("chunk_half_attention_scratch_bytes",&MetalDecoderSession::HalfAttentionScratchBytes);
+         APISET().AddProp("layout_vector_dispatches",&MetalDecoderSession::LastLayoutVectorDispatches);
+         APISET().AddProp("chunk_attention_mps_dispatches",&MetalDecoderSession::LastChunkAttentionMPSDispatches);
+         APISET().AddProp("chunk_flash_attention_dispatches",&MetalDecoderSession::LastChunkFlashAttentionDispatches);
+diff --git a/src/backends/metal/metal_context.h b/src/backends/metal/metal_context.h
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -124,12 +124,18 @@
+ class MetalContext {
+     friend class MetalCompiledGraph;
+     friend struct MetalCommittedAttentionReference;
+-    void EncodeAttentionChunkInternal(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t,size_t,size_t,size_t,size_t,bool,bool,bool,bool);
++    friend struct MetalHalfAttentionReference;
++    void EncodeAttentionChunkInternal(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t,size_t,size_t,size_t,size_t,bool,bool,bool,bool,bool halfKV=false);
+ #ifdef GARNET_METAL_COMMITTED_KV_MPS
+     void EncodeCommittedAttentionChunk(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t,size_t,size_t,size_t,size_t,bool);
+ #endif
+ #ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+     void NoteChunkKVCommitHoist();
++#endif
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++    void EncodeHalfAttentionChunk(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t,size_t,size_t,size_t,size_t,bool);
++    std::array<MetalMatrix,3> HalfAttentionScratchForTest() const;
++    uint32_t HalfAttentionPartialStatusForTest() const;
+ #endif
+     struct Impl;
+     std::unique_ptr<Impl> impl_;
+@@ -459,6 +465,8 @@
+     size_t LastChunkKVScatterDispatches() const;
+     size_t LastChunkKVHoistedCommits() const;
+     size_t LastCommittedKVAttentionDispatches() const;
++    size_t LastHalfAttentionDispatches() const;
++    size_t HalfAttentionScratchBytes() const;
+ #ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+     bool CanHoistKVControls(const MetalMatrix&,const MetalMatrix&,size_t batch,size_t chunk,size_t capacity) const;
+ #endif
+diff --git a/src/backends/metal/metal_context.mm b/src/backends/metal/metal_context.mm
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -60,6 +60,9 @@
+ #endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+ #include "chunk_attention_mps_shader.h"
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++#include "chunk_half_attention_shader.h"
++#endif
+ #ifdef GARNET_METAL_COMMITTED_KV_MPS
+ #include "chunk_mps_committed_shader.h"
+ #endif
+@@ -554,6 +557,13 @@
+         std::map<std::array<size_t,3>,RequestProducts> requestProducts;
+ #endif
+     };
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++    id<MTLLibrary> halfLibrary;
++    id<MTLComputePipelineState> halfAttention,halfPackQ,halfPackKV;
++    id<MTLBuffer> halfRangeStatus; // Shares the half scratch lease, never a graph-local owner.
++    bool halfLayoutQualified=false;
++    std::array<MetalMatrix,3> halfScratch;
++#endif
+     std::mutex chunkMPSMutex;
+     std::map<std::array<size_t,6>,ChunkMPSPlan> chunkMPSPlans;
+ #endif
+@@ -676,6 +686,9 @@
+     size_t chunkAttentionMPSDispatches=0,chunkFlashAttentionDispatches=0;
+     size_t chunkAttentionMPSMatrices=0,chunkAttentionMPSSkippedMatrices=0;
+     size_t chunkKVScatterDispatches=0,chunkKVHoistedCommits=0,committedAttentionDispatches=0;
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++    size_t halfAttentionDispatches=0;bool halfBatchStarted=false;
++#endif
+     size_t layoutVectorDispatches=0;
+     size_t chunkAttentionBucketDispatches=0,chunkAttentionTailDispatches=0,chunkAttentionBucketCapacity=0,chunkAttentionUnknownControls=0;
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+@@ -1954,6 +1967,27 @@
+                 throw std::runtime_error("Cannot compile bounded MPS chunk attention kernels");
+             return pipeline;
+         };
++
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++        @autoreleasepool {
++        if(![impl_->device supportsFamily:MTLGPUFamilyApple10])throw std::runtime_error("Half attention profile requires Apple10 hardware");
++        auto options=[MTLCompileOptions new];options.languageVersion=MTLLanguageVersion4_0;options.mathMode=MTLMathModeSafe;
++        NSError* error=nil;auto library=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kNativeHalfChunkShader] options:options error:&error];
++        if(!library)throw std::runtime_error(error.localizedDescription.UTF8String);
++        impl_->kernels->halfLibrary=library;
++        auto pipeline=[&](NSString* name){auto function=[library newFunctionWithName:name];if(!function)throw std::runtime_error("Missing native half attention function");auto result=[impl_->device newComputePipelineStateWithFunction:function error:&error];if(!result||result.threadExecutionWidth!=32||result.maxTotalThreadsPerThreadgroup<128)throw std::runtime_error("Unsupported native half pipeline geometry");return result;};
++        impl_->kernels->halfAttention=pipeline(@"half_policy_p16");impl_->kernels->halfPackQ=pipeline(@"half_policy_pack_q");impl_->kernels->halfPackKV=pipeline(@"half_policy_pack_kv");
++        auto command=[impl_->queue commandBuffer];if(!command)throw std::runtime_error("Cannot create half-layout guard command");
++        std::array<id<MTLBuffer>,3> buffers;const size_t sizes[]={192,32,2561};const char* names[]={"half_policy_capacities","half_policy_layout","half_policy_coordinates"};
++        for(size_t kind=0;kind<3;++kind){std::vector<uint32_t> words(sizes[kind]+32,0x7fc12345);if(kind==2)std::fill(words.begin()+16,words.end()-16,0);buffers[kind]=[impl_->device newBufferWithBytes:words.data() length:words.size()*4 options:MTLResourceStorageModeShared];if(!buffers[kind])throw std::runtime_error("Cannot allocate half-layout guard");auto encoder=[command computeCommandEncoder];[encoder setComputePipelineState:pipeline([NSString stringWithUTF8String:names[kind]])];[encoder setBuffer:buffers[kind] offset:64 atIndex:0];[encoder dispatchThreads:MTLSizeMake(32,1,1) threadsPerThreadgroup:MTLSizeMake(32,1,1)];[encoder endEncoding];}
++        [command commit];[command waitUntilCompleted];if(command.status!=MTLCommandBufferStatusCompleted)throw std::runtime_error("Half-layout guard execution failed");
++        for(size_t kind=0;kind<3;++kind){const auto* words=(const uint32_t*)buffers[kind].contents;for(size_t i=0;i<16;++i)if(words[i]!=0x7fc12345||words[16+sizes[kind]+i]!=0x7fc12345)throw std::runtime_error("Half-layout guard parent changed");for(size_t i=0;i<sizes[kind];++i){uint32_t expected=kind==0?std::array<uint32_t,6>{8,16,16,8,16,16}[i%6]:kind==1?0:uint32_t(i<2560);if(words[16+i]!=expected)throw std::runtime_error("Native half cooperative layout is unqualified");}}
++        impl_->kernels->halfRangeStatus=[impl_->device newBufferWithLength:sizeof(uint32_t) options:MTLResourceStorageModeShared];
++        if(!impl_->kernels->halfRangeStatus||!impl_->kernels->halfRangeStatus.contents)throw std::runtime_error("Cannot allocate shared half range status");
++        *(uint32_t*)impl_->kernels->halfRangeStatus.contents=0;
++        impl_->kernels->halfLayoutQualified=true;
++        }
++#endif
+         impl_->kernels->chunkMPSPack=mpsChunkPipeline(@"chunk_mps_pack");
+ #ifdef GARNET_METAL_COMMITTED_KV_MPS
+         impl_->kernels->chunkCommittedPack=mpsChunkPipeline(@"chunk_mps_committed_pack");
+@@ -4393,6 +4427,10 @@
+     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
+     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
+     impl_->chunkKVScatterDispatches=impl_->chunkKVHoistedCommits=impl_->committedAttentionDispatches=0;
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++    impl_->halfAttentionDispatches=0;impl_->halfBatchStarted=false;
++#endif
++
+     impl_->layoutVectorDispatches=0;
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
+@@ -5447,6 +5485,18 @@
+        g.rows!=q.rows||g.columns!=q.columns)
+         throw std::invalid_argument("MPS chunk attention requires its proved contiguous-cache profile");
+     const std::array<size_t,6> key{batch,heads,kvHeads,dim,capacity,chunk};
++
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++    if(batch<=4&&heads==32&&kvHeads==8&&dim==128&&capacity<=4096&&chunk<=128&&q.rows<=512) {
++        if(!impl_->kernels->halfLayoutQualified)throw std::logic_error("Half layout was not qualified");
++        if(!impl_->kernels->halfScratch[0].Valid()) {
++            const size_t bytes[]={512*4096*2,4*8*4096*128*2,4*8*4096*128*2};
++            std::array<MetalMatrix,3> prepared;
++            for(size_t i=0;i<3;++i){prepared[i]=Allocate(1,bytes[i]/4+32);auto matrix=prepared[i].impl_->matrix;std::fill_n((uint32_t*)((char*)matrix.data.contents+matrix.offset),matrix.columns,uint32_t(0x7e097e09));}
++            impl_->kernels->halfScratch=std::move(prepared);
++        }
++    }
++#endif
+     if(impl_->kernels->chunkMPSPlans.count(key))return;
+     const size_t queries=Elements(Elements(batch,heads),chunk),live=Elements(Elements(batch,kvHeads),chunk);
+     const size_t packedPitch=[MPSMatrixDescriptor rowBytesFromColumns:dim dataType:MPSDataTypeFloat32];
+@@ -5568,7 +5618,10 @@
+ }
+ #endif
+ void MetalContext::EncodeAttentionChunkInternal(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
+-    size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated,bool reference,bool fullRequestRows,bool committedKV) {
++    size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated,bool reference,bool fullRequestRows,bool committedKV,bool halfKV) {
++#ifndef GARNET_METAL_CHUNK_HALF_ATTENTION
++    (void)halfKV;
++#endif
+ #ifndef GARNET_METAL_COMMITTED_KV_MPS
+     (void)committedKV;
+ #endif
+@@ -5617,13 +5670,46 @@
+         const auto policy=SelectChunkAttentionPolicy(capacity,size_t(p.batch),chunk,
+             controlsReady?reinterpret_cast<const float*>(static_cast<const char*>(s.data.contents)+s.offset):nullptr,size_t(p.sStride),
+             controlsReady?reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset):nullptr,size_t(p.aStride),kMetalPrefillChunkLimit);
+-        if(policy.scalar) {
++        // A half-prefill producer must not change arithmetic when other owners
++        // arrive or leave. Keep the original tiny-token fallback only for the
++        // original FP32 path; opt-in half tails use the same qualified kernel.
++        if(policy.scalar&&!halfKV) {
+             // Tail inputs retain the same fixed layouts. Avoid packing and
+             // dense matrix products when there are at most eight real tokens.
+             EncodeStateKernel(13,inputs,output,&p,sizeof(p),Elements(q.rows,heads),nullptr,false);
+             ++impl_->chunkAttentionBucketDispatches;++impl_->chunkAttentionTailDispatches;
+             return;
+         }
++
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++        if(halfKV) {
++            if(!committedKV||!policy.known||fullRequestRows||p.batch>4||heads!=32||kvHeads!=8||dim!=128||chunk>128||q.rows>512)
++                throw std::invalid_argument("Half attention does not match its proved profile");
++            if(!impl_->chunkMPSLock.owns_lock())impl_->chunkMPSLock=std::unique_lock<std::mutex>(impl_->kernels->chunkMPSMutex);
++            if(!impl_->kernels->chunkMPSPlans.count({size_t(p.batch),heads,kvHeads,dim,capacity,chunk})||!impl_->kernels->halfRangeStatus||!impl_->kernels->halfScratch[0].Valid())
++                throw std::logic_error("Half attention must be prepared before encoding");
++            output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
++            struct Controls {uint32_t first[4]{},count[4]{};} controls;
++            const auto* positions=(const float*)((const char*)s.data.contents+s.offset);const auto* flags=(const float*)((const char*)a.data.contents+a.offset);
++            for(size_t b=0;b<p.batch;++b){while(controls.count[b]<chunk&&flags[b*p.aStride+controls.count[b]]!=0)++controls.count[b];if(controls.count[b])controls.first[b]=uint32_t(positions[b*p.sStride]);}
++            // CPU reset is safe only while holding the shared scratch lease and
++            // before this batch's first pack. Flush and later layers retain failures.
++            if(!impl_->halfBatchStarted){*(uint32_t*)impl_->kernels->halfRangeStatus.contents=0;impl_->halfBatchStarted=true;}
++            auto encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode half attention packing");
++            auto bind=[&](const MetalMatrix& m,size_t index,size_t extra=0){auto view=m.impl_->matrix;[encoder setBuffer:view.data offset:view.offset+extra atIndex:index];};
++            const auto& scratch=impl_->kernels->halfScratch;
++            [encoder setComputePipelineState:impl_->kernels->halfPackQ];bind(inputs[0],0);bind(scratch[0],1,64);[encoder setBytes:&p length:sizeof(p) atIndex:2];[encoder setBytes:&controls length:sizeof(controls) atIndex:3];[encoder setBuffer:impl_->kernels->halfRangeStatus offset:0 atIndex:4];bind(inputs[7],5);
++            [encoder dispatchThreads:MTLSizeMake(q.rows*4096,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
++            [encoder setComputePipelineState:impl_->kernels->halfPackKV];bind(inputs[3],0);bind(inputs[4],1);bind(scratch[1],2,64);bind(scratch[2],3,64);[encoder setBytes:&p length:sizeof(p) atIndex:4];[encoder setBytes:&controls length:sizeof(controls) atIndex:5];uint32_t extent=uint32_t(policy.capacity);[encoder setBytes:&extent length:sizeof(extent) atIndex:6];[encoder setBuffer:impl_->kernels->halfRangeStatus offset:0 atIndex:7];
++            [encoder dispatchThreads:MTLSizeMake(p.batch*8*extent*128,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
++            encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode native half attention");
++            [encoder setComputePipelineState:impl_->kernels->halfAttention];bind(scratch[0],0,64);bind(scratch[1],1,64);bind(scratch[2],2,64);bind(inputs[7],3);bind(output,4);auto packed=p;packed.qStride=4096;
++            [encoder setBytes:&packed length:sizeof(packed) atIndex:5];[encoder setBytes:&controls length:sizeof(controls) atIndex:6];
++            [encoder dispatchThreadgroups:MTLSizeMake(32,(chunk+63)/64,p.batch) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
++            output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
++            ++impl_->halfAttentionDispatches;++impl_->chunkAttentionBucketDispatches;impl_->chunkAttentionBucketCapacity=std::max(impl_->chunkAttentionBucketCapacity,policy.capacity);return;
++        }
++#endif
+ #ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
+         // Only completed controls can establish the contiguous active-prefix
+         // overlay. Unknown, ragged and overwrite inputs retain the old path.
+@@ -5877,6 +5963,40 @@
+ size_t MetalContext::LastChunkAttentionIndex32Dispatches() const {return impl_->chunkAttentionIndex32Dispatches;}
+ size_t MetalContext::LastChunkKVScatterDispatches() const {return impl_->chunkKVScatterDispatches;}
+ size_t MetalContext::LastChunkKVHoistedCommits() const {return impl_->chunkKVHoistedCommits;}
++
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++void MetalContext::EncodeHalfAttentionChunk(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated) {
++    if(inputs.size()!=8||!inputs[3].impl_||heads!=32||kvHeads!=8||dim!=128||capacity>4096||chunk<2||chunk>128||!CanHoistKVControls(inputs[5],inputs[6],inputs[3].impl_->matrix.rows,chunk,capacity))throw std::invalid_argument("Half attention requires compiler-proved committed KV and completed contiguous controls");
++    EncodeAttentionChunkInternal(inputs,output,heads,kvHeads,dim,capacity,chunk,gated,false,false,true,true);
++}
++std::array<MetalMatrix,3> MetalContext::HalfAttentionScratchForTest() const {
++    if(impl_->command||impl_->submitted.count)throw std::logic_error("Inspect half scratch only after drain");
++    std::lock_guard<std::mutex> lock(impl_->kernels->chunkMPSMutex);
++    return impl_->kernels->halfScratch;
++}
++uint32_t MetalContext::HalfAttentionPartialStatusForTest() const {
++    if(!impl_->command||!impl_->submitted.count||!impl_->chunkMPSLock.owns_lock()||!impl_->halfBatchStarted)
++        throw std::logic_error("Partial status requires this context's flushed half scratch lease");
++    for(id<MTLCommandBuffer> prior in impl_->submitted){[prior waitUntilCompleted];if(prior.status!=MTLCommandBufferStatusCompleted)throw std::runtime_error("Partial half command failed");}
++    return *(const uint32_t*)impl_->kernels->halfRangeStatus.contents;
++}
++#endif
++size_t MetalContext::LastHalfAttentionDispatches() const {
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++    return impl_->halfAttentionDispatches;
++#else
++    return 0;
++#endif
++}
++size_t MetalContext::HalfAttentionScratchBytes() const {
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++    std::unique_lock<std::mutex> lock(impl_->kernels->chunkMPSMutex,std::defer_lock);
++    if(!impl_->chunkMPSLock.owns_lock())lock.lock();
++    size_t bytes=0;for(const auto& owner:impl_->kernels->halfScratch)if(owner.Valid())bytes+=owner.impl_->matrix.rows*owner.impl_->matrix.rowBytes;return bytes;
++#else
++    return 0;
++#endif
++}
+ size_t MetalContext::LastCommittedKVAttentionDispatches() const {return impl_->committedAttentionDispatches;}
+ #ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+ void MetalContext::NoteChunkKVCommitHoist(){impl_->chunkKVHoistedCommits+=2;}
+@@ -6019,6 +6139,12 @@
+         [prior waitUntilCompleted];observe(prior);
+         if(prior.status!=MTLCommandBufferStatusCompleted){success=false;if(!failure)failure=prior.error.localizedDescription;}
+     }
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++    // Other contexts may currently hold this shared flag. Only the lease
++    // owner that encoded half work may inspect it or fail its pending outputs.
++    if(impl_->halfBatchStarted){if(!impl_->chunkMPSLock.owns_lock()||*(const uint32_t*)impl_->kernels->halfRangeStatus.contents!=0){success=false;failure=@"Half attention input outside finite bounded numerical domain";}}
++    impl_->halfBatchStarted=false;
++#endif
+     // One observed GPU span, including inter-command gaps; never sum overlaps.
+     impl_->gpuMs=success&&std::isfinite(first)?(last-first)*1000.0:0;
+     for(auto& output:impl_->outputs){output->pending=false;output->ready=success;}
+@@ -6078,6 +6204,10 @@
+     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
+     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
+     impl_->chunkKVScatterDispatches=impl_->chunkKVHoistedCommits=impl_->committedAttentionDispatches=0;
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++    impl_->halfAttentionDispatches=0;impl_->halfBatchStarted=false;
++#endif
++
+     impl_->layoutVectorDispatches=0;
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
+diff --git a/src/backends/metal/token_prefix_session.cpp b/src/backends/metal/token_prefix_session.cpp
+--- a/src/backends/metal/token_prefix_session.cpp
++++ b/src/backends/metal/token_prefix_session.cpp
+@@ -89,13 +89,16 @@
+     }
+     if(fields[3]!="text_zero_based_3axis_v1"||fields[5]!="text")
+         throw std::invalid_argument("Initial hybrid token-prefix profile requires plain text positions");
+-#if defined(GARNET_METAL_PREFIX_PREFILL_ONLY)||defined(GARNET_METAL_COMMITTED_KV_MPS)
++#if defined(GARNET_METAL_PREFIX_PREFILL_ONLY)||defined(GARNET_METAL_COMMITTED_KV_MPS)||defined(GARNET_METAL_CHUNK_HALF_ATTENTION)
+     const std::string producerDomain=
+ #ifdef GARNET_METAL_PREFIX_PREFILL_ONLY
+         "|native-prefill-snapshots-v1"
+ #endif
+ #ifdef GARNET_METAL_COMMITTED_KV_MPS
+         "|committed-mps-fp32-v1"
++#endif
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++        "|fp16-prefill-all-p16-gpupack-v1"
+ #endif
+         ;
+     if(fields[1].size()>4096-producerDomain.size())throw std::invalid_argument("Prefix execution profile leaves no room for native producer domain");
+diff --git a/src/entry/metal_main.cpp b/src/entry/metal_main.cpp
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -268,6 +268,9 @@
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+     info+="; chunk_attention_index32";
+ #endif
++#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
++    info+="; fp16_prefill_all_p16_gpupack_v1";
++#endif
+ #ifdef GARNET_METAL_COMMITTED_KV_MPS
+     info+="; committed_kv_mps_fp32_v1";
+ #endif
+diff --git a/test2026/metal/half_chunk_attention_test.cpp b/test2026/metal/half_chunk_attention_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/half_chunk_attention_test.cpp
+@@ -0,0 +1,159 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "metal_context.h"
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <chrono>
++#include <cstring>
++#include <filesystem>
++#include <fstream>
++#include <iostream>
++#include <limits>
++#include <stdexcept>
++using namespace Garnet;
++namespace Garnet {struct MetalHalfAttentionReference {
++ static void Run(MetalContext& g,const std::vector<MetalMatrix>& a,const MetalMatrix& o,size_t c,size_t t,bool gated){g.EncodeHalfAttentionChunk(a,o,32,8,128,c,t,gated);}
++ static std::array<MetalMatrix,3> Scratch(MetalContext& g){return g.HalfAttentionScratchForTest();}
++ static uint32_t PartialStatus(MetalContext& g){return g.HalfAttentionPartialStatusForTest();}
++ static MetalMatrix CacheView(MetalContext& g,const MetalMatrix& m,size_t n,size_t c){return g.PrepareKVRowSpan(m,1,n,8,128,c);}
++};}
++namespace {
++void Need(bool b,const char* s){if(!b)throw std::runtime_error(s);}
++float Word(uint32_t u){float x;std::memcpy(&x,&u,4);return x;}
++uint16_t HalfBits(float x){_Float16 h=(_Float16)x;uint16_t v;std::memcpy(&v,&h,2);return v;}
++double Half(float x){return double((_Float16)x);}
++float Value(size_t i,uint32_t salt){uint32_t x=uint32_t(i)^salt;x^=x>>16;x*=0x7feb352dU;x^=x>>15;x*=0x846ca68bU;x^=x>>16;return float(int(x%20001)-10000)*.00003f;}
++std::vector<float> Read(const std::filesystem::path& p){std::ifstream f(p,std::ios::binary|std::ios::ate);Need(bool(f),"Missing trained fixture");size_t n=f.tellg();Need(n&&n%4==0,"Invalid fixture bytes");std::vector<float> a(n/4);f.seekg(0);f.read((char*)a.data(),n);Need(bool(f),"Truncated fixture");return a;}
++void Save(const std::filesystem::path& p,const std::vector<float>& a){std::ofstream f(p,std::ios::binary);f.write((const char*)a.data(),a.size()*4);Need(bool(f),"Cannot save native replay");}
++std::filesystem::path FreshReference(const std::filesystem::path& root){std::filesystem::create_directories(root);auto name="reference-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());auto out=root/name;Need(std::filesystem::create_directory(out),"Fresh reference directory required");std::ofstream f(root/"active.txt");f<<name<<'\n';Need(bool(f),"Cannot select reference run");return out;}
++std::filesystem::path ResolveReference(const std::filesystem::path& root){std::ifstream f(root/"active.txt");std::string name;f>>name;Need(bool(f)&&name.find('/')==std::string::npos&&name.find("..") ==std::string::npos&&!name.empty(),"Missing reference run");return root/name;}
++struct Fixture {
++ MetalContext& gpu;size_t batch,chunk,cap,first,rows;bool gated,offsetCache;std::array<std::vector<float>,8> data;
++ std::array<std::vector<float>,8> initialParents;std::array<MetalMatrix,8> parents;std::vector<MetalMatrix> args,rounded;
++ MetalMatrix outParent,out,control,oldControl,copiedSlots,zeroSlots;std::vector<float> outPoison;
++ size_t fp64=0,checked=0;double maxFraction=0;
++ Fixture(MetalContext& g,size_t b,size_t t,size_t c,size_t f,bool gate,bool ragged,int adversary=0,const std::filesystem::path& fixture={},size_t ci=0):gpu(g),batch(b),chunk(t),cap(c),first(f),rows(b*t),gated(gate),offsetCache(b<=2){
++  const size_t widths[]={4096,1024,1024,8*cap*128,8*cap*128,chunk,chunk,4096};
++  for(size_t i=0;i<8;++i){size_t n=(i<3||i==7?rows:batch)*widths[i];data[i].resize(n);for(size_t j=0;j<n;++j)data[i][j]=Value(j,17+37*i);}
++  for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t){data[5][b*chunk+t]=float(first+t);data[6][b*chunk+t]=1;}
++  if(ragged){for(size_t t=chunk-3;t<chunk;++t)data[6][chunk+t]=0;for(size_t t=1;t<chunk;++t)data[6][2*chunk+t]=0;for(size_t t=0;t<chunk;++t)data[6][3*chunk+t]=0;}
++  if(adversary==1){std::fill(data[0].begin(),data[0].end(),1.00048828125f);for(size_t r=0;r<rows;++r)for(size_t d=0;d<1024;++d){data[1][r*1024+d]=r%2?1.0f:1.00048828125f;data[2][r*1024+d]=r%2?-30.0f:30.0f;}}
++  if(adversary==2){for(size_t r=0;r<rows;++r){for(size_t d=0;d<4096;++d)data[0][r*4096+d]=float(d%128==0);for(size_t d=0;d<1024;++d){data[1][r*1024+d]=d%128?0:-float(22*std::sqrt(128.));data[2][r*1024+d]=2048;}}
++   for(size_t b=0;b<batch;++b)for(size_t h=0;h<8;++h)for(size_t t=0;t<cap;++t)for(size_t d=0;d<128;++d){size_t at=((b*8+h)*cap+t)*128+d;data[3][at]=t&&d==0?-float(22*std::sqrt(128.)):0;data[4][at]=t?2048:0;}}
++  if(!fixture.empty())for(size_t i=0;i<8;++i){auto a=Read(fixture/("case"+std::to_string(ci)+"-input"+std::to_string(i)+".f32"));size_t nr=i<3||i==7?rows:batch,stride=(a.size()-32)/nr;Need(a.size()==32+nr*stride&&stride>=widths[i],"Wrong trained fixture extent");for(size_t r=0;r<nr;++r)std::copy_n(a.begin()+16+r*stride,widths[i],data[i].begin()+r*widths[i]);}
++  for(size_t i=0;i<8;++i){size_t nr=i<3||i==7?rows:batch;
++   if(i==3||i==4){if(offsetCache){initialParents[i].assign((batch+2)*widths[i],Word(0x7fc12345));std::copy(data[i].begin(),data[i].end(),initialParents[i].begin()+widths[i]);parents[i]=gpu.Upload(initialParents[i],batch+2,widths[i]);args.push_back(MetalHalfAttentionReference::CacheView(gpu,parents[i],batch,cap));}else{initialParents[i]=data[i];parents[i]=gpu.Upload(data[i],batch,widths[i]);args.push_back(parents[i]);}}
++   else if(widths[i]%4==0){initialParents[i].assign(data[i].size()+32,Word(0x7fc12345));std::copy(data[i].begin(),data[i].end(),initialParents[i].begin()+16);parents[i]=gpu.Upload(initialParents[i],1,initialParents[i].size());args.push_back(gpu.PrepareDiagnosticDenseView(parents[i],16,nr,widths[i]));}
++   else{initialParents[i]=data[i];parents[i]=gpu.Upload(data[i],nr,widths[i]);args.push_back(parents[i]);}
++   auto r=data[i];if(i<5)for(auto& x:r)x=float(Half(x));rounded.push_back(gpu.Upload(r,nr,widths[i]));
++  }
++  outPoison.assign(rows*4096+32,Word(0x7fc12345));outParent=gpu.Upload(outPoison,1,outPoison.size());out=gpu.PrepareDiagnosticDenseView(outParent,16,rows,4096);
++  control=gpu.Allocate(rows,4096);oldControl=gpu.Allocate(rows,4096);copiedSlots=gpu.Allocate(batch,chunk);zeroSlots=gpu.Upload(std::vector<float>(batch*chunk,0),batch,chunk);
++  gpu.PrepareAttentionChunk(args,32,8,128,cap,chunk);Need(gpu.HalfAttentionScratchBytes()==68ULL*1024*1024+384,"Half profile scratch size changed");
++ }
++ std::string ReferenceKey() const {uint64_t h=1469598103934665603ULL;for(const auto& a:data)for(float x:a){uint32_t bits;std::memcpy(&bits,&x,4);h^=bits;h*=1099511628211ULL;}return std::to_string(batch)+":"+std::to_string(chunk)+":"+std::to_string(cap)+":"+std::to_string(first)+":"+std::to_string(gated)+":"+std::to_string(h);}
++ void MakeReference(const std::filesystem::path& folder,size_t ci){gpu.Begin();gpu.EncodeAttentionChunk(rounded,control,32,8,128,cap,chunk,gated);gpu.EncodeAttentionChunk(args,oldControl,32,8,128,cap,chunk,gated);gpu.SubmitAndWait();Save(folder/("case"+std::to_string(ci)+"-rounded-control.f32"),gpu.Download(control));Save(folder/("case"+std::to_string(ci)+"-original-control.f32"),gpu.Download(oldControl));std::ofstream f(folder/("case"+std::to_string(ci)+"-input-key.txt"));f<<ReferenceKey()<<'\n';Need(bool(f),"Cannot bind reference input");}
++ size_t Count(size_t b) const {size_t n=0;while(n<chunk&&data[6][b*chunk+n])++n;return n;}
++ void Commit(){CommitOn(gpu);}
++ void CommitOn(MetalContext& execution){for(size_t i=0;i<2;++i)execution.EncodeKVChunk(args[1+i],args[3+i],args[5],args[6],args[3+i],8,128,cap,chunk,true);}
++ void Poison(){auto scratch=MetalHalfAttentionReference::Scratch(gpu);for(size_t i=0;i<3;++i){const size_t counts[]={512*4096/2+32,4*8*4096*128/2+32,4*8*4096*128/2+32};std::vector<float> a(counts[i],Word(0x7e097e09));gpu.Update(scratch[i],a);}}
++ void CheckScratch(bool used){auto scratch=MetalHalfAttentionReference::Scratch(gpu);for(size_t part=0;part<3;++part){auto parent=gpu.Download(scratch[part]);std::vector<uint16_t> expected(parent.size()*2,0x7e09);if(used){
++   if(part==0)for(size_t row=0;row<rows;++row)for(size_t d=0;d<4096;++d)expected[32+row*4096+d]=HalfBits(row%chunk<Count(row/chunk)?data[0][row*4096+d]:0);
++   else{size_t extent=gpu.LastChunkAttentionBucketCapacity();for(size_t b=0;b<batch;++b)for(size_t h=0;h<8;++h)for(size_t t=0;t<extent;++t)for(size_t d=0;d<128;++d){float x=0;if(Count(b)&&t<first+Count(b))x=t<first?data[2+part][((b*8+h)*cap+t)*128+d]:data[part][((b*chunk+t-first)*8+h)*128+d];expected[32+((b*8+h)*cap+t)*128+d]=HalfBits(x);}}}
++   Need(!std::memcmp(parent.data(),expected.data(),parent.size()*4),"Half scratch complete write/guard/tail differs");checked+=expected.size();}}
++ std::vector<float> Run(const std::filesystem::path& folder,size_t ci,const std::filesystem::path& references){
++  size_t total=0;for(size_t b=0;b<batch;++b)total+=Count(b);bool half=true;
++  std::ifstream inputKey(references/("case"+std::to_string(ci)+"-input-key.txt"));std::string key;inputKey>>key;Need(bool(inputKey)&&key==ReferenceKey(),"Reference inputs/shape differ");
++  auto originalReference=Read(references/("case"+std::to_string(ci)+"-original-control.f32"));auto reference=half?Read(references/("case"+std::to_string(ci)+"-rounded-control.f32")):originalReference;Need(reference.size()==rows*4096&&originalReference.size()==rows*4096,"Reference output extent differs");gpu.Update(outParent,outPoison);Poison();auto owners=MetalContext::ProfileOwnerStats();size_t plans=gpu.ChunkAttentionMPSPlanCount();
++  gpu.Begin();Commit();MetalHalfAttentionReference::Run(gpu,args,out,cap,chunk,gated);gpu.Flush();gpu.SubmitAndWait();
++  Need(gpu.LastHalfAttentionDispatches()==size_t(half),"Half selection/scalar fallback counter differs");Need(gpu.LastChunkAttentionMPSDispatches()==0,"Private half path used MPS products");
++  auto got=gpu.Download(out);auto parent=gpu.Download(outParent);for(size_t i=0;i<16;++i){Need(!std::memcmp(&parent[i],&outPoison[i],4)&&!std::memcmp(&parent[parent.size()-16+i],&outPoison[outPoison.size()-16+i],4),"Offset output guard changed");}
++  std::vector<std::vector<double>> prefix(batch*8);
++  for(size_t b=0;b<batch;++b)for(size_t h=0;h<8;++h){double mx=0;for(size_t s=0;s<first+Count(b);++s){for(size_t d=0;d<128;++d){float val=s<first?data[4][((b*8+h)*cap+s)*128+d]:data[2][((b*chunk+s-first)*8+h)*128+d];mx=std::max(mx,std::abs(Half(val)));}prefix[b*8+h].push_back(mx);}}
++  for(size_t i=0;i<got.size();++i){Need(std::isfinite(got[i]),"Native half output nonfinite");size_t flat=i/4096,b=flat/chunk,t=flat%chunk,h=i%4096/128;if(t>=Count(b)){Need(got[i]==0,"Inactive output stale");continue;}double bound=1e-5+2e-4*std::abs(double(reference[i]));if(half)bound+=(std::ldexp(1.,-11)+std::ldexp(1.,-40)*(first+t+1))*prefix[b*8+h/4][first+t];Need(std::abs(double(got[i])-reference[i])<=bound,"Complete native half output exceeds fixed new-policy budget");}
++  for(size_t b=0;b<batch;++b)if(Count(b))for(size_t t:std::vector<size_t>{0,Count(b)/2,Count(b)-1})for(size_t h:{size_t(0),size_t(7),size_t(8),size_t(31)}){
++   size_t visible=first+t+1,kh=h/4;std::vector<double> probs(visible);double maximum=-INFINITY;
++   auto operand=[&](float x){return half?Half(x):double(x);};
++   for(size_t s=0;s<visible;++s){double dot=0;for(size_t d=0;d<128;++d){float key=s<first?data[3][((b*8+kh)*cap+s)*128+d]:data[1][((b*chunk+s-first)*8+kh)*128+d];dot+=operand(data[0][((b*chunk+t)*32+h)*128+d])*operand(key);}probs[s]=dot/std::sqrt(128.);maximum=std::max(maximum,probs[s]);}
++   double sum=0;for(auto& x:probs){x=std::exp(x-maximum);sum+=x;}
++   for(size_t d=0;d<128;++d){double expected=0,weighted=0,maxv=0;for(size_t s=0;s<visible;++s){float raw=s<first?data[4][((b*8+kh)*cap+s)*128+d]:data[2][((b*chunk+s-first)*8+kh)*128+d];double val=operand(raw);expected+=probs[s]/sum*val;weighted+=probs[s]/sum*std::abs(val);maxv=std::max(maxv,std::abs(val));}size_t i=((b*chunk+t)*32+h)*128+d;if(gated)expected/=1+std::exp(-double(data[7][i]));double bound=1e-5+2e-4*std::abs(expected);if(half)bound+=std::ldexp(1.,-11)*weighted+std::ldexp(1.,-40)*visible*maxv;double fraction=std::abs(double(got[i])-expected)/bound;Need(fraction<=1,"Native half exceeds fixed FP64 new-policy bound");maxFraction=std::max(maxFraction,fraction);++fp64;}}
++  CheckScratch(half);
++  for(size_t i=0;i<8;++i){auto expected=initialParents[i];if(i==3||i==4)for(size_t b=0;b<batch;++b)for(size_t t=0;t<Count(b);++t)for(size_t h=0;h<8;++h)for(size_t d=0;d<128;++d){size_t at=((b*8+h)*cap+first+t)*128+d;if(offsetCache)at+=8*cap*128;expected[at]=data[i-2][((b*chunk+t)*8+h)*128+d];}auto actual=gpu.Download(parents[i]);Need(actual.size()==expected.size()&&!std::memcmp(actual.data(),expected.data(),actual.size()*4),"Input/canonical-cache full parent differs");checked+=actual.size();}
++  auto after=MetalContext::ProfileOwnerStats();Need(owners.matrices==after.matrices&&owners.pipelineSets==after.pipelineSets&&plans==gpu.ChunkAttentionMPSPlanCount(),"Half execution allocated native owners/plans");
++  if(!folder.empty()){Save(folder/("case"+std::to_string(ci)+"-native-output.f32"),got);Save(folder/("case"+std::to_string(ci)+"-rounded-control.f32"),reference);Save(folder/("case"+std::to_string(ci)+"-original-control.f32"),originalReference);Save(folder/("case"+std::to_string(ci)+"-output-parent.f32"),parent);}
++  std::cout<<"half_native cell B="<<batch<<" T="<<chunk<<" C="<<cap<<" first="<<first<<" dispatch="<<size_t(half)<<" fp64="<<fp64<<" max_fraction="<<maxFraction<<" checked="<<checked<<" PASS\n";return got;
++ }
++ void RejectControls(){
++  auto reject=[&](const std::vector<MetalMatrix>& a,const MetalMatrix& target){gpu.Begin();bool rejected=false;try{MetalHalfAttentionReference::Run(gpu,a,target,cap,chunk,gated);}catch(const std::exception&){rejected=true;}gpu.Abort();Need(rejected,"Invalid half input/control admitted");Need(gpu.LastHalfAttentionDispatches()==0,"Abort retained half counter");};
++  auto positions=data[5];positions[1]=positions[0];gpu.Update(args[5],positions);reject(args,out);gpu.Update(args[5],data[5]);
++  auto flags=data[6];flags[1]=0;gpu.Update(args[6],flags);reject(args,out);gpu.Update(args[6],data[6]);reject(args,args[0]);
++  gpu.Begin();gpu.EncodeAdd(args[5],zeroSlots,copiedSlots);auto pending=args;pending[5]=copiedSlots;bool rejected=false;try{MetalHalfAttentionReference::Run(gpu,pending,out,cap,chunk,gated);}catch(const std::exception&){rejected=true;}gpu.Abort();Need(rejected,"Pending half controls admitted");
++ }
++ void RejectRange(){for(int mode=0;mode<6;++mode){gpu.Update(outParent,outPoison);auto bad=data[0];if(mode<3)bad[0]=mode==0?2049.0f:mode==1?std::numeric_limits<float>::quiet_NaN():std::numeric_limits<float>::infinity();gpu.Update(args[0],bad);if(mode>=3){size_t index=mode==3?3:mode==4?4:7;auto altered=data[index];altered[0]=mode==3?-std::numeric_limits<float>::infinity():mode==4?2049.0f:std::numeric_limits<float>::quiet_NaN();gpu.Update(args[index],altered);}gpu.Begin();Commit();MetalHalfAttentionReference::Run(gpu,args,out,cap,chunk,gated);if(mode==1)gpu.Flush();bool failed=false;try{gpu.SubmitAndWait();}catch(const std::runtime_error&){failed=true;}Need(failed,"Out-of-domain GPU value admitted");bool unreadable=false;try{gpu.Download(out);}catch(const std::exception&){unreadable=true;}Need(unreadable,"Failed half output became ready");gpu.Abort();Need(gpu.LastHalfAttentionDispatches()==0,"Failed/aborted half counter retained");gpu.Update(args[0],data[0]);for(size_t i:std::vector<size_t>{3,4,7})gpu.Update(args[i],data[i]);}
++ }
++};
++void CheckContextHandoff(Fixture& f,const std::vector<float>& expected){
++ // Preparation belongs to f.gpu; this session has never prepared an attention
++ // profile. This matches graph preparation followed by decoder execution.
++ MetalContext session;auto owners=MetalContext::ProfileOwnerStats();
++ f.gpu.Update(f.outParent,f.outPoison);f.Poison();session.Begin();f.CommitOn(session);
++ MetalHalfAttentionReference::Run(session,f.args,f.out,f.cap,f.chunk,f.gated);session.Flush();
++ Need(MetalHalfAttentionReference::PartialStatus(session)==0,"Valid handoff range status differs");
++ bool pending=true;try{f.gpu.Download(f.out);pending=false;}catch(const std::exception&){}Need(pending,"Flushed handoff result published early");
++ session.SubmitAndWait();auto got=session.Download(f.out);Need(got.size()==expected.size()&&!std::memcmp(got.data(),expected.data(),got.size()*4),"Graph/session handoff changed complete output");
++ Need(session.LastHalfAttentionDispatches()==1,"Session did not use prepared shared half path");f.CheckScratch(true);
++ auto after=MetalContext::ProfileOwnerStats();Need(owners.matrices==after.matrices&&owners.pipelineSets==after.pipelineSets,"Cross-context half execution allocated native owners");
++
++ auto bad=f.data[0];bad[0]=std::numeric_limits<float>::quiet_NaN();f.gpu.Update(f.args[0],bad);
++ session.Begin();f.CommitOn(session);MetalHalfAttentionReference::Run(session,f.args,f.out,f.cap,f.chunk,f.gated);session.Flush();
++ auto failure=MetalHalfAttentionReference::PartialStatus(session);Need(failure==1,"Invalid flushed Q did not set range flag");
++ // A completed non-half batch must succeed while another context owns a
++ // failed half batch. Begin, Abort and destruction must not clear its flag.
++ f.gpu.Begin();f.gpu.EncodeAdd(f.args[5],f.zeroSlots,f.copiedSlots);f.gpu.SubmitAndWait();
++ Need(f.gpu.Download(f.copiedSlots)==f.data[5],"Unrelated non-half batch inherited failure");
++ {MetalContext other;other.Begin();other.Abort();other.Begin();other.SubmitAndWait();}
++ Need(MetalHalfAttentionReference::PartialStatus(session)==failure,"Unrelated context cleared active half failure");
++ // A later valid dispatch in the same partially submitted batch must not
++ // reset an earlier error, and neither result may become readable.
++ f.gpu.Update(f.args[0],f.data[0]);MetalHalfAttentionReference::Run(session,f.args,f.control,f.cap,f.chunk,f.gated);session.Flush();
++ Need(MetalHalfAttentionReference::PartialStatus(session)==failure,"Later valid half dispatch cleared batch failure");
++ bool rejected=false;try{session.SubmitAndWait();}catch(const std::runtime_error&){rejected=true;}Need(rejected,"Cross-context invalid half batch admitted");
++ for(auto m:{f.out,f.control}){bool unreadable=false;try{f.gpu.Download(m);}catch(const std::exception&){unreadable=true;}Need(unreadable,"Failed shared-status output published");}
++ session.Abort();Need(session.LastHalfAttentionDispatches()==0,"Session Abort retained half dispatches");
++ // Failed batches intentionally invalidate all written owners, including
++ // canonical KV. Restore fixture state before subsequent rejection/recovery.
++ for(size_t i:{size_t(3),size_t(4)})f.gpu.Update(f.args[i],f.data[i]);
++ std::cout<<"half_native graph/session handoff and shared failure isolation PASS\n";
++}
++void CheckBatchIndependence(MetalContext& gpu){
++ Fixture alone(gpu,1,8,256,0,false,false),batched(gpu,4,8,256,0,false,false);
++ auto run=[&](Fixture& f){gpu.Begin();f.Commit();MetalHalfAttentionReference::Run(gpu,f.args,f.out,f.cap,f.chunk,f.gated);gpu.SubmitAndWait();Need(gpu.LastHalfAttentionDispatches()==1,"Half tiny tail changed numerical policy");return gpu.Download(f.out);};
++ auto expected=run(alone);
++ auto compare=[&](){auto got=run(batched);Need(!std::memcmp(got.data(),expected.data(),expected.size()*4),"Same request changed with batch occupancy/context bucket");};
++ compare();
++ // Unrelated owners extend the selected context bucket from128 to256.
++ for(size_t b=1;b<4;++b)for(size_t t=0;t<8;++t)batched.data[5][b*8+t]=float(128+t);
++ gpu.Update(batched.args[5],batched.data[5]);compare();Need(gpu.LastChunkAttentionBucketCapacity()==256,"Long-owner bucket case not exercised");
++ // The same first owner remains after all other owners retire; total8 now.
++ for(size_t b=1;b<4;++b)for(size_t t=0;t<8;++t)batched.data[6][b*8+t]=0;
++ gpu.Update(batched.args[6],batched.data[6]);compare();Need(gpu.LastChunkAttentionBucketCapacity()==128,"Short-owner bucket case not exercised");
++ std::fill(batched.data[6].begin(),batched.data[6].end(),0);gpu.Update(batched.args[6],batched.data[6]);auto empty=run(batched);for(float x:empty)Need(x==0,"Empty half owners retained stale values");
++ std::cout<<"half_native batch occupancy, context bucket, tiny tail and empty-owner policy PASS exact_words="<<3*expected.size()<<'\n';
++}
++}
++int main(int argc,char** argv){try{
++ size_t samples=0,words=0,cells=0;double fraction=0;std::string mode=argc>1?argv[1]:"";
++ bool makeReference=mode=="--reference"||mode=="--reference-trained",trained=mode=="--reference-trained"||mode=="--trained";
++ Need((mode=="--reference"&&argc==3)||(mode=="--selftest"&&argc==3)||(mode=="--reference-trained"&&argc==4)||(mode=="--trained"&&argc==5),"Usage: test --reference ROOT | --selftest ROOT | --reference-trained FIXTURE ROOT | --trained FIXTURE ROOT FRESH_OUTPUT");
++ std::filesystem::path input=trained?argv[2]:"",root=trained?argv[3]:argv[2],references=makeReference?FreshReference(root):ResolveReference(root),output=mode=="--trained"?argv[4]:"";
++ if(!output.empty()){Need(!std::filesystem::exists(output),"Fresh native output required");std::filesystem::create_directories(output);}
++ {MetalContext gpu;
++ if(trained){for(size_t ci=0;ci<3;++ci){Fixture f(gpu,4,128,4096,1920,false,false,0,input,ci);if(makeReference)f.MakeReference(references,ci);else f.Run(output,ci,references);samples+=f.fp64;words+=f.checked;fraction=std::max(fraction,f.maxFraction);++cells;}}
++ else{const size_t shapes[][4]={{1,8,128,0},{4,17,256,128},{1,128,4096,1920},{4,128,4096,1920},{4,128,4096,3840},{4,128,4096,0},{1,17,128,0},{1,17,4096,3840}};
++  for(size_t ci=0;ci<8;++ci){auto a=shapes[ci];Fixture f(gpu,a[0],a[1],a[2],a[3],ci==1||ci==4,ci==1||ci==4,ci==6?1:ci==7?2:0);if(makeReference)f.MakeReference(references,ci);else{auto expected=f.Run({},ci,references);if(ci==1){CheckContextHandoff(f,expected);f.RejectControls();f.RejectRange();f.Run({},ci,references);}}samples+=f.fp64;words+=f.checked;fraction=std::max(fraction,f.maxFraction);++cells;}}
++ if(!makeReference&&!trained)CheckBatchIndependence(gpu);
++ }
++ auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Half attention retained owners");
++ auto memory=MetalContext::MemoryStats();if(!makeReference)Need(memory.allocated<=4ULL*1024*1024,"Half attention device allocations remain after close");
++ std::cout<<(makeReference?"Native MPS reference PASS":"Native half attention PASS")<<" cells="<<cells<<" fp64_values="<<samples<<" checked_parent_words="<<words<<" max_fraction="<<fraction<<" closed_device_bytes="<<memory.allocated<<" all_owners_closed=true\n";return 0;
++ }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

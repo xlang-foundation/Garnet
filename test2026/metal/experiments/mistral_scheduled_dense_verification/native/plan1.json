@@ -1,0 +1,29 @@
+{
+  "scope": "Native scheduler-owned dense target verification and token-span commit for serving",
+  "previous_goal_turn_classification": "progress",
+  "base_native": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-native1",
+  "option": "GARNET_METAL_DENSE_VERIFY_SCHEDULER",
+  "default_on": false,
+  "api": "continuous_scheduler.verify_decode_json(hidden,positions,slots,active,tokens,stops)",
+  "native_owns": [
+    "request identity and row epochs",
+    "known token and remaining budget",
+    "submitted slot/mask/position validation",
+    "target verify/accepted rollback",
+    "token-ledger progress proof",
+    "prefix capture before terminal release",
+    "multi-token completion and inflight removal"
+  ],
+  "physical_tokens_limit": 4,
+  "c4_t4_unqualified": true,
+  "required_before_serving": [
+    "prior split ownership audit2",
+    "serial native suites and disabled configuration",
+    "managed full-model known IDs/full KV/hidden against frozen current ordinary",
+    "malformed proposals/budgets rejected without advancing scheduler",
+    "returning prompt/append/late/early prefix lineage",
+    "HTTP matched C1/C4 profiling"
+  ],
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

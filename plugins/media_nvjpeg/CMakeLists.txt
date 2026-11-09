@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.18)
+project(garnet_media_nvjpeg LANGUAGES CXX CUDA)
+include(../media_common/standalone.cmake)
+set(CMAKE_CUDA_STANDARD 17)
+find_package(CUDAToolkit REQUIRED)
+add_library(garnet_media_nvjpeg SHARED jpeg_codec.cu)
+target_link_libraries(garnet_media_nvjpeg PRIVATE CUDA::cudart CUDA::nvjpeg)

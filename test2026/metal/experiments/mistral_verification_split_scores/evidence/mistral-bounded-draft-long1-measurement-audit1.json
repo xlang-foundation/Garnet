@@ -1,0 +1,118 @@
+{
+  "passed": true,
+  "scope": "Audit fresh2K native stages; no serving TTFT or comparator speed admission.",
+  "rows": [
+    {
+      "cohort": 1,
+      "mode": "ordinary",
+      "prompt_tokens": 2048,
+      "output_tokens": 128,
+      "native_prefill_seconds": 3.378541500074789,
+      "decode_seconds": 7.200205834116787,
+      "decode_tokens_per_second": 17.638384641482748,
+      "native_request_seconds": 10.578747334191576,
+      "native_request_output_tokens_per_second": 12.099731277850934,
+      "accepted_draft": 0,
+      "proposed": 0,
+      "target_calls": 127,
+      "draft_seconds": 0,
+      "target_seconds": 7.200205834116787,
+      "prepared_metal_bytes": 5744803840
+    },
+    {
+      "cohort": 1,
+      "mode": "bounded",
+      "prompt_tokens": 2048,
+      "output_tokens": 128,
+      "native_prefill_seconds": 3.3889418749604374,
+      "decode_seconds": 5.931318250019103,
+      "decode_tokens_per_second": 21.41176626285244,
+      "native_request_seconds": 9.32026012497954,
+      "native_request_output_tokens_per_second": 13.733522271223196,
+      "accepted_draft": 80,
+      "proposed": 138,
+      "target_calls": 47,
+      "draft_seconds": 1.0068740386050195,
+      "target_seconds": 4.92210837174207,
+      "prepared_metal_bytes": 5744803840
+    },
+    {
+      "cohort": 2,
+      "mode": "bounded",
+      "prompt_tokens": 2048,
+      "output_tokens": 128,
+      "native_prefill_seconds": 3.4103410001844168,
+      "decode_seconds": 5.920763500034809,
+      "decode_tokens_per_second": 21.449936312986214,
+      "native_request_seconds": 9.331104500219226,
+      "native_request_output_tokens_per_second": 13.717561516644976,
+      "accepted_draft": 80,
+      "proposed": 138,
+      "target_calls": 47,
+      "draft_seconds": 1.0011253755073994,
+      "target_seconds": 4.9173337877728045,
+      "prepared_metal_bytes": 5744803840
+    },
+    {
+      "cohort": 2,
+      "mode": "ordinary",
+      "prompt_tokens": 2048,
+      "output_tokens": 128,
+      "native_prefill_seconds": 3.4506381249520928,
+      "decode_seconds": 7.434066375019029,
+      "decode_tokens_per_second": 17.08351709459615,
+      "native_request_seconds": 10.884704499971122,
+      "native_request_output_tokens_per_second": 11.759621035218697,
+      "accepted_draft": 0,
+      "proposed": 0,
+      "target_calls": 127,
+      "draft_seconds": 0,
+      "target_seconds": 7.434066375019029,
+      "prepared_metal_bytes": 5744803840
+    }
+  ],
+  "comparisons": [
+    {
+      "cohort": 1,
+      "decode_rate_ratio": 1.2139301131065756,
+      "native_request_rate_ratio": 1.1350270477793984,
+      "declared_native_stage_gate_passed": true
+    },
+    {
+      "cohort": 2,
+      "decode_rate_ratio": 1.2555925219737831,
+      "native_request_rate_ratio": 1.1664969028816894,
+      "declared_native_stage_gate_passed": true
+    }
+  ],
+  "declared_native_stage_gate_passed": true,
+  "bounded_proposals_commits_and_draft_history_repeat_exactly": true,
+  "all_output_ids_exact_frozen_native": true,
+  "all_full_kv_hidden_exact_current_ordinary": true,
+  "state_digest_pairs": 260,
+  "target_context_unchanged": true,
+  "helper_base_tokens": 221,
+  "helper_capacity": 512,
+  "negative_controls_rejected": [
+    "wrong_output",
+    "wrong_state",
+    "fake_rate",
+    "future_prefix",
+    "false_cache_lcp",
+    "fake_acceptance",
+    "missing_rollback",
+    "live_owner"
+  ],
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/cohort1-ordinary-result1.json": "f5854f5aa7d8726d2fbead01a26a60d1ef46c3258a58c16591d9bea64870cafb",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/cohort1-bounded-result1.json": "e63d65fd1487350d40a8c3d28677cdbf23302b0c66fb0abc74025afe4884cf33",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/cohort2-bounded-result1.json": "fb0462a81585af31ae636e25c2bd7ba6cf76409d06927435088d10e66bbe0482",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/cohort2-ordinary-result1.json": "bc2f3ba41f0f69a7af32596c16d0a298643da94a3826aec533028924ba004f70"
+  },
+  "no_comparator_execution": true,
+  "serving_ttft_measured": false,
+  "matched_http_speedup_admitted": false,
+  "coding_quality_qualified": false,
+  "production_runtime_integrated": false,
+  "goal_complete": false
+}

@@ -1,0 +1,20 @@
+{
+  "scope": "Additional B2 compact span/verification interleave; no performance or coding-quality claim",
+  "jobs": "S:64 prompt tokens/8outputs; P/Q:2048prompt tokens/2outputs, contiguous row1/2",
+  "stops": [],
+  "stop_policy_reason": "Geometry probe uses only native output budgets to guarantee eight survivor steps, independently of content/EOS; primary real-serving-policy arms use EOS2.",
+  "sequence": [
+    "ordinary",
+    "verify"
+  ],
+  "mandatory": [
+    "B2 spans start at row1, sharing prefix storage with independently decoding row0",
+    "actual compact rows2 routes at128 and256 and zero compact routing during verification",
+    "whole four-row KV/hidden match current ordinary before/after interleave and close",
+    "all12 output IDs agree",
+    "all native owners closed"
+  ],
+  "no_comparator_execution": true,
+  "performance_measured": false,
+  "goal_complete": false
+}

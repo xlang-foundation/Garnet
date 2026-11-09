@@ -1,0 +1,37 @@
+{
+  "status": "diagnostic_b1_scheduled_speculation_http_qualified_no_full_profile_promotion",
+  "requests": 6,
+  "output_ids_exact_native": 768,
+  "native_target_calls": 282,
+  "split_layer_dispatches": 9024,
+  "warmed_median": {
+    "ttft_median_seconds": 3.511908083455637,
+    "decode_median_tps": 23.77333731818011,
+    "aggregate_tps": 14.438306699621641
+  },
+  "diagnostic_ratios_vs_frozen_references": {
+    "vllm-metal": {
+      "ttft_native_over_reference": 0.8324720354875961,
+      "decode_native_over_reference": 1.1456355576367792,
+      "aggregate_native_over_reference": 1.1695518352213041
+    },
+    "sglang-mlx": {
+      "ttft_native_over_reference": 0.8444459628162088,
+      "decode_native_over_reference": 1.1464212009293482,
+      "aggregate_native_over_reference": 1.1533832064342386
+    }
+  },
+  "active_rows": 1,
+  "reference_max_sequences": 4,
+  "maximum_concurrency_profiles_match": false,
+  "c4_measured": false,
+  "http_full_kv_hidden_observed": false,
+  "separate_native_state_gate": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-verification1/qualification-audit2.json",
+  "prefix_cache_enabled": false,
+  "selected_full_serving_comparison_promoted": false,
+  "no_comparator_execution": true,
+  "all_owned_engines_terminal": true,
+  "coding_quality_qualified": false,
+  "goal_complete": false,
+  "next_action": "Qualify C4 native scheduled verification, compact owner prefill coexistence and up-to16 verification token rows before C4 speculation. Add new-build returning/append/late/early prefix lifecycle; optimize larger prefill profiles and shared GQA KV reads."
+}

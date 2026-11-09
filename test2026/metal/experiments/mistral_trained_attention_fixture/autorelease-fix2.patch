@@ -1,0 +1,76 @@
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -5537,6 +5537,7 @@
+ }
+ #ifdef GARNET_METAL_ATTENTION_FIXTURE_CAPTURE
+ void MetalContext::DiagnosticAttentionCaptureArm(const std::string& directory) {
++    @autoreleasepool {
+     if(impl_->command||impl_->submitted.count||impl_->attentionFixture)throw std::logic_error("Capture arm requires a drained context without an existing capture");
+     auto next=std::make_unique<DiagnosticAttentionFixture>();next->directory=std::filesystem::path(directory);
+     if(!next->directory.is_absolute()||std::filesystem::exists(next->directory)||!std::filesystem::is_directory(next->directory.parent_path()))throw std::invalid_argument("Capture requires a fresh absolute directory with existing parent");
+@@ -5546,9 +5547,12 @@
+             auto* p=static_cast<uint32_t*>(buffer.contents);std::fill(p,p+bytes/4,DiagnosticAttentionFixture::poison);next->records[record].planes[i].data=buffer;next->reservedBytes+=bytes;}}
+     if(next->reservedBytes>512*1024*1024)throw std::logic_error("Capture exceeds fixed512MiB preparation bound");
+     if(!std::filesystem::create_directory(next->directory))throw std::runtime_error("Capture directory creation failed");impl_->attentionFixture=std::move(next);
++    }
+ }
+ void MetalContext::DiagnosticAttentionCaptureCancel() {
++    @autoreleasepool {
+     if(impl_->command||impl_->submitted.count)throw std::logic_error("Capture cancel requires drained work");impl_->attentionFixture.reset();
++    }
+ }
+ size_t MetalContext::CaptureAttentionBefore(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated,bool reference,bool fullRequestRows) {
+     auto& c=*impl_->attentionFixture;
+@@ -5582,6 +5586,7 @@
+     [blit endEncoding];plane.copied=true;record.after=true;
+ }
+ std::string MetalContext::DiagnosticAttentionCaptureFinish() {
++    @autoreleasepool {
+     if(impl_->command||impl_->submitted.count||!impl_->attentionFixture)throw std::logic_error("Capture finish requires a captured drained frame");auto& c=*impl_->attentionFixture;
+     if(c.failed||c.calls!=32)throw std::logic_error("Capture frame failed or is incomplete");
+     nlohmann::json report={{"scope","Untimed native ordered blit capture of actual trained attention operands/results; no neural or xModel changes"},{"batch",4},{"chunk",128},{"capacity",4096},{"heads",32},{"kv_heads",8},{"dim",128},{"gated",false},{"first_slot",1920},{"attention_calls",c.calls},{"reserved_bytes",c.reservedBytes},{"layers",nlohmann::json::array()},{"timing_admitted",false}};
+@@ -5597,16 +5602,19 @@
+         report["completed"]=true;result=report.dump(2);std::ofstream file(c.directory/"capture.json");file<<result<<'\n';file.close();if(!file)throw std::runtime_error("Capture metadata write failed");
+     }catch(...){c.failed=true;throw;}
+     impl_->attentionFixture.reset();return result;
++    }
+ }
+ #endif
+ #ifdef GARNET_METAL_ATTENTION_FIXTURE_CAPTURE
+ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
+     size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated,bool reference,bool fullRequestRows) {
++    @autoreleasepool {
+     if(!impl_->attentionFixture){EncodeAttentionChunkUncaptured(inputs,output,heads,kvHeads,dim,capacity,chunk,gated,reference,fullRequestRows);return;}
+     try {const auto record=CaptureAttentionBefore(inputs,output,heads,kvHeads,dim,capacity,chunk,gated,reference,fullRequestRows);
+         EncodeAttentionChunkUncaptured(inputs,output,heads,kvHeads,dim,capacity,chunk,gated,reference,fullRequestRows);
+         CaptureAttentionAfter(record,output);
+     }catch(...){impl_->attentionFixture->failed=true;throw;}
++    }
+ }
+ void MetalContext::EncodeAttentionChunkUncaptured(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
+     size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated,bool reference,bool fullRequestRows) {
+--- a/test2026/metal/attention_fixture_capture_test.cpp
++++ b/test2026/metal/attention_fixture_capture_test.cpp
+@@ -24,18 +24,20 @@
+    if(i<8)args.push_back(a);else output=a;
+   }
+   gpu.PrepareAttentionChunk(args,32,8,128,4096,128);
++  const auto beforeCapture=MetalContext::MemoryStats().allocated;
+   gpu.Begin();reject([&]{gpu.DiagnosticAttentionCaptureArm((root/"open").string());});gpu.Abort();
+   gpu.DiagnosticAttentionCaptureArm((root/"partial").string());reject([&]{gpu.DiagnosticAttentionCaptureArm((root/"duplicate").string());});
+-  gpu.Begin();gpu.EncodeAttentionChunk(args,output,32,8,128,4096,128,false);gpu.Flush();reject([&]{gpu.DiagnosticAttentionCaptureFinish();});reject([&]{gpu.DiagnosticAttentionCaptureCancel();});gpu.Abort();reject([&]{gpu.DiagnosticAttentionCaptureFinish();});gpu.DiagnosticAttentionCaptureCancel();
++  gpu.Begin();gpu.EncodeAttentionChunk(args,output,32,8,128,4096,128,false);gpu.Flush();reject([&]{gpu.DiagnosticAttentionCaptureFinish();});reject([&]{gpu.DiagnosticAttentionCaptureCancel();});gpu.Abort();reject([&]{gpu.DiagnosticAttentionCaptureFinish();});gpu.DiagnosticAttentionCaptureCancel();need(MetalContext::MemoryStats().allocated<=beforeCapture+4194304,"Partial/abort capture retained device buffers");
+   // Repair the complete initialized output parent after an aborted span.
+   gpu.Update(parents[8],parentValues[8]);
+   gpu.DiagnosticAttentionCaptureArm((root/"complete").string());gpu.Begin();for(size_t i=0;i<32;++i)gpu.EncodeAttentionChunk(args,output,32,8,128,4096,128,false);gpu.SubmitAndWait();
+-  auto actual=gpu.Download(output);auto meta=json::parse(gpu.DiagnosticAttentionCaptureFinish());need(meta["completed"]==true&&meta["attention_calls"]==32&&meta["layers"].size()==3,"Capture completion metadata invalid");need(meta["reserved_bytes"].get<size_t>()<512*1024*1024,"Capture storage bound invalid");size_t words=0;
++  auto actual=gpu.Download(output);auto meta=json::parse(gpu.DiagnosticAttentionCaptureFinish());need(MetalContext::MemoryStats().allocated<=beforeCapture+4194304,"Finished capture retained device buffers");need(meta["completed"]==true&&meta["attention_calls"]==32&&meta["layers"].size()==3,"Capture completion metadata invalid");need(meta["reserved_bytes"].get<size_t>()<512*1024*1024,"Capture storage bound invalid");size_t words=0;
+   for(const auto& layer:meta["layers"]){for(size_t i=0;i<9;++i){auto p=layer["planes"][i];std::ifstream f(root/"complete"/p["file"].get<std::string>(),std::ios::binary|std::ios::ate);need(f&&f.tellg()==std::streamoff((values[i].size()+32)*4),"Captured file length invalid");std::vector<float> saved(values[i].size()+32);f.seekg(0);f.read((char*)saved.data(),saved.size()*4);need(bool(f),"Cannot read capture");const auto& expected=i==8?actual:values[i];need(!std::memcmp(saved.data()+16,expected.data(),expected.size()*4),"Captured logical data differs");for(size_t j=0;j<16;++j){uint32_t a,b;std::memcpy(&a,&saved[j],4);std::memcpy(&b,&saved[saved.size()-1-j],4);need(a==0x7fc12345&&b==a,"Capture parent guard changed");}need(p["source_offset"].get<size_t>()==((i==3||i==4)?0:64),"Actual view offset not retained");words+=saved.size();}}
+   for(size_t i=0;i<8;++i){auto v=gpu.Download(parents[i]);need(v.size()==parentValues[i].size()&&!std::memcmp(v.data(),parentValues[i].data(),v.size()*4),"Capture changed a readonly input parent");}
+   auto outputParent=gpu.Download(parents[8]);for(size_t i=0;i<16;++i)need(outputParent[i]==.03125f&&outputParent[outputParent.size()-1-i]==.03125f,"Actual output source-parent guard changed");
+   reject([&]{gpu.DiagnosticAttentionCaptureFinish();});gpu.DiagnosticAttentionCaptureArm((root/"cancel").string());gpu.DiagnosticAttentionCaptureCancel();reject([&]{gpu.DiagnosticAttentionCaptureFinish();});
+   std::cout<<"Native trained attention capture PASS: "<<words<<" exported parent words, exact logical copies/guards/nonzero offsets, readonly inputs, open/duplicate/partial/abort/cancel/finish guards\n";
+  }
++ need(MetalContext::MemoryStats().allocated<=4194304,"Closed capture context retained device buffers");
+  auto owners=MetalContext::ProfileOwnerStats();need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Capture retained native owners");fs::remove_all(root);return 0;
+ }catch(const std::exception& e){std::cerr<<e.what()<<"; retained test root "<<root<<'\n';return 1;}}

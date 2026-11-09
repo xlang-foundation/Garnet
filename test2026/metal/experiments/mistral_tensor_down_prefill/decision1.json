@@ -1,0 +1,41 @@
+{
+  "passed": true,
+  "decision": "Retain as a default-off bounded native candidate. Exact full-model/lifecycle qualification passed; native prefill gain is small and the 2x target remains unmet. No production-default or HTTP admission.",
+  "native_tests_per_build": 56,
+  "native_builds": [
+    "on",
+    "default-off"
+  ],
+  "exact_qualification_output_ids": 494,
+  "full_state_digest_pairs": 40820,
+  "measured_first_prediction_ids": 96,
+  "measured_bursts": 16,
+  "warmup_bursts": 8,
+  "cohorts": [
+    {
+      "order": "forward",
+      "disabled_first_prediction_seconds": 14.248899614671245,
+      "enabled_first_prediction_seconds": 14.135397916950751,
+      "first_prediction_ratio": 1.0080296075418143,
+      "prefill_burst_ratio": 1.008466859380574
+    },
+    {
+      "order": "reverse",
+      "disabled_first_prediction_seconds": 14.785966447729152,
+      "enabled_first_prediction_seconds": 14.577477510320023,
+      "first_prediction_ratio": 1.0143021271863757,
+      "prefill_burst_ratio": 1.0144408394032327
+    }
+  ],
+  "operator_down_ratios": [
+    1.0677809027337752,
+    1.072527051536475
+  ],
+  "extra_gpu_buffers": 0,
+  "xmodel_operator_changes": false,
+  "reference_benchmarks_rerun": false,
+  "http_comparison_unchanged": true,
+  "no_ane_claim": true,
+  "next_step": "Screen direct tensor operands with a larger row tile to reuse each unpacked weight over more actual token rows, before any new model integration. Keep current lower-cost fallback for partial profiles.",
+  "goal_complete": false
+}

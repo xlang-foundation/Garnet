@@ -54,8 +54,9 @@ workspace/
 From an empty workspace:
 
 ```powershell
-git clone https://github.com/CantorAI/xlang3.git
-git clone https://github.com/CantorAI/Garnet.git
+git clone https://github.com/xlang-foundation/xlang3.git
+git clone https://github.com/xlang-foundation/Garnet.git
+git -C xlang3 checkout 070b94aa0b32bb32b0fda7e9d900f8d04b38fa0a
 ```
 
 Install the CUDA Toolkit and unpack TensorRT separately. Confirm that the

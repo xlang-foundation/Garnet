@@ -1,0 +1,69 @@
+{
+  "scope": "Paired serial native learned-coder draft stage with exactly the same input/proposer and compile options except default-off versus enabled four-row FP32 decode fusion; no HTTP/comparator execution or coding quality claim.",
+  "source": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-native1/source3",
+  "source_bindings": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-native1/source-bindings3.json",
+  "libraries": {
+    "control": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-native1/build-default-off3",
+    "candidate": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-native1/library3"
+  },
+  "sequence": [
+    [
+      1,
+      "control"
+    ],
+    [
+      1,
+      "candidate"
+    ],
+    [
+      2,
+      "candidate"
+    ],
+    [
+      2,
+      "control"
+    ]
+  ],
+  "input": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-coder1/input1.json",
+  "input_sha256": "e254d5b5877e6b23b8f1c959b0275b4b8690d9afed20ceda0a6b306de2de3cd4",
+  "base_input_sha256": "e254d5b5877e6b23b8f1c959b0275b4b8690d9afed20ceda0a6b306de2de3cd4",
+  "reference": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-draft-head-profile1/generation-result2.json",
+  "fixture": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-coding-context-fixture1/fixture.json",
+  "worker_sha256": "1ade4ae51e9d4cf690622ed6918e87057b0039c8f835757b2a46920edd4ddf5b",
+  "base_worker_sha256": "e0b95c828eef77a954c8ccd2eb661617356d5823cc5fbe7bea601f35145aee99",
+  "worker_changes": [
+    {
+      "old": "output=sys.argv[4];assert not os.path.exists(output)",
+      "new": "output=sys.argv[4];assert not os.path.exists(output)\nfused_enabled='native_fused_q4_decode_rows4_default_v1' in garnet.backend_info()"
+    },
+    {
+      "old": "prepared=prepared,records=records,cleanup=cleanup,scope=__doc__,projection_occupancy=occupancy)",
+      "new": "prepared=prepared,records=records,cleanup=cleanup,scope=__doc__,projection_occupancy=occupancy,fused_decode_enabled=fused_enabled)"
+    },
+    {
+      "old": " decoder.prepare_prefill(128);decoder.prepare_verification(4)",
+      "new": " decoder.prepare_prefill(128);decoder.prepare_verification(4)\n if fused_enabled:assert [g.fused_decode_sites for g in decoder.verification_graphs]==[1]*32 and 1<=decoder.session.fused_decode_profiles<=2"
+    },
+    {
+      "old": "  memory=json.loads(garnet.memory_stats_json()))\n assert prepared",
+      "new": "  memory=json.loads(garnet.memory_stats_json()),fused_decode_profiles=decoder.session.fused_decode_profiles if fused_enabled else 0)\n assert prepared"
+    },
+    {
+      "old": "      assert metrics['target_affine_misses']==0 and metrics['target_affine_dispatches']==225",
+      "new": "      assert metrics['target_affine_misses']==0 and metrics['target_affine_dispatches']==225\n      if fused_enabled:\n       assert metrics['target_fused_q4_decode_blocks']==(32 if length==4 else 0)\n       assert 0<=metrics['target_fused_q4_decode_input_copies']<=metrics['target_fused_q4_decode_blocks']"
+    },
+    {
+      "old": "      submitted=[known];emitted=[decoder.step([known])[0]];consumed=1;metrics=None",
+      "new": "      submitted=[known];emitted=[decoder.step([known])[0]];consumed=1;metrics=None\n      if fused_enabled:assert decoder.session.fused_decode_blocks==0"
+    }
+  ],
+  "minimum_stage_gain_ratio": 1.03,
+  "no_individual_case_regression_below_ratio": 0.98,
+  "require_both_cohorts": true,
+  "strict_coding_score_unchanged": "0/8",
+  "source_native_provenance_sha256": "a24b9df29897b392cf94556ecf38fee8eb112424e491c3e46fe2cad82f340c3c",
+  "prefix_gate": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-prefix-http1/lifecycle-audit1.json",
+  "no_comparator_execution": true,
+  "production_runtime_integrated": false,
+  "goal_complete": false
+}

@@ -1,0 +1,225 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -1145,3 +1145,8 @@
+     target_link_libraries(garnet_value_profile_test PRIVATE garnet_metal)
+     add_test(NAME metal_value_profile_reference COMMAND garnet_value_profile_test)
+ endif()
++
++# Local diagnostic experiment only, not a production option.
++add_executable(garnet_mps_envelope_test test2026/metal/mps_envelope_test.cpp)
++target_link_libraries(garnet_mps_envelope_test PRIVATE garnet_metal)
++add_test(NAME metal_mps_envelope_bit_identity COMMAND garnet_mps_envelope_test)
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -647,7 +647,10 @@
+     std::map<std::array<size_t,2>,MetalMatrix> fusedHeadScratch;
+ #endif
+     struct CounterRegion {const char* kind="session";size_t op=SIZE_MAX,rows=0,columns=0;};
+-    struct CounterEncoder {CounterRegion region;const char* site;size_t command;};
++    struct CounterEncoder {CounterRegion region;const char* site;size_t command;bool marker=false;};
++    struct MpsCounterEnvelope {CounterRegion region;const char* site;size_t before,after,command;};
++    std::vector<MpsCounterEnvelope> mpsCounterEnvelopes;
++    id<MTLComputePipelineState> mpsCounterMarker=nil;
+     id<MTLCounterSampleBuffer> gpuCounters=nil;
+     std::vector<CounterEncoder> counterEncoders;
+     CounterRegion counterRegion;
+@@ -664,6 +667,31 @@
+         if(!encoder)throw std::runtime_error("Cannot create sampled compute encoder");
+         counterEncoders.push_back({counterRegion,site,partialSubmissions});
+         return encoder;
++    }
++    size_t MpsCounterBoundary(const std::vector<MPSMatrix*>& matrices) {
++        if(!gpuCounters)return SIZE_MAX;
++        if(matrices.empty()||matrices.size()>4||!mpsCounterMarker)
++            throw std::runtime_error("Invalid MPS envelope boundary");
++        // Integer volatile read/write of the exact same first word preserves
++        // bits, while recording a real read/write hazard with MPS. This orders
++        // each envelope against its inputs and outputs, not just wall-clock
++        // proximity of an unrelated timestamp kernel. Only diagnostics use it.
++        const size_t index=counterEncoders.size();
++        auto encoder=ComputeEncoder("MpsCounterBoundary");counterEncoders.back().marker=true;
++        [encoder setComputePipelineState:mpsCounterMarker];std::array<uint64_t,4> offsets{};
++        for(size_t i=0;i<4;++i) {
++            auto matrix=matrices[std::min(i,matrices.size()-1)];
++            if(!matrix||matrix.device!=device||matrix.offset%4||matrix.offset>matrix.data.length||matrix.data.length-matrix.offset<4)
++                throw std::runtime_error("Invalid MPS envelope resource span");
++            offsets[i]=matrix.offset/4;[encoder setBuffer:matrix.data offset:0 atIndex:i];
++        }
++        [encoder setBytes:offsets.data() length:sizeof(offsets) atIndex:4];
++        [encoder dispatchThreads:MTLSizeMake(1,1,1) threadsPerThreadgroup:MTLSizeMake(1,1,1)];[encoder endEncoding];return index;
++    }
++    void MpsCounterFinish(const char* site,size_t before,const std::vector<MPSMatrix*>& matrices) {
++        if(!gpuCounters)return;
++        const auto after=MpsCounterBoundary(matrices);
++        mpsCounterEnvelopes.push_back({counterRegion,site,before,after,partialSubmissions});
+     }
+     double gpuMs=0;
+     std::vector<std::shared_ptr<MetalMatrix::Impl>> outputs;
+@@ -4195,6 +4223,12 @@
+     NSError* error=nil;
+     auto buffer=[impl_->device newCounterSampleBufferWithDescriptor:descriptor error:&error];
+     if(!buffer)throw std::runtime_error("Cannot allocate GPU timestamp counters");
++    NSString* markerSource=@"#include <metal_stdlib>\nusing namespace metal;\nkernel void mps_envelope_marker(device volatile uint* a [[buffer(0)]],device volatile uint* b [[buffer(1)]],device volatile uint* c [[buffer(2)]],device volatile uint* d [[buffer(3)]],constant ulong4& o [[buffer(4)]]){uint x=a[o.x],y=b[o.y],z=c[o.z],w=d[o.w];a[o.x]=x;b[o.y]=y;c[o.z]=z;d[o.w]=w;}\n";
++    auto markerLibrary=[impl_->device newLibraryWithSource:markerSource options:nil error:&error];
++    if(!markerLibrary)throw std::runtime_error("Cannot compile MPS envelope marker");
++    auto marker=[impl_->device newComputePipelineStateWithFunction:[markerLibrary newFunctionWithName:@"mps_envelope_marker"] error:&error];
++    if(!marker||marker.maxTotalThreadsPerThreadgroup<1)throw std::runtime_error("Cannot prepare MPS envelope marker");
++    impl_->mpsCounterMarker=marker;impl_->mpsCounterEnvelopes.reserve(256);
+     impl_->counterEncoders.reserve(2048);impl_->gpuCounters=buffer;
+     }
+ }
+@@ -4219,7 +4253,7 @@
+     impl_->valueProfileDispatches=0;
+ #endif
+     if(impl_->gpuCounters) {
+-        impl_->counterEncoders.clear();impl_->counterRegion={};
++        impl_->counterEncoders.clear();impl_->mpsCounterEnvelopes.clear();impl_->counterRegion={};
+         [impl_->device sampleTimestamps:&impl_->counterCpu0 gpuTimestamp:&impl_->counterGpu0];
+     }
+ #ifdef GARNET_METAL_VERIFY_ATTENTION
+@@ -5497,14 +5531,18 @@
+                 auto value=[[MPSMatrix alloc] initWithBuffer:vc.data offset:vc.offset+offset descriptor:products.cache];
+                 if(!key||!value)throw std::runtime_error("Cannot bind bounded request cache views");
+                 requestBindings.push_back({&products,key,value});
++                const auto mpsBoundary=impl_->MpsCounterBoundary({products.query,key,products.key});
+                 [products.qkCache encodeToCommandBuffer:impl_->command leftMatrix:products.query rightMatrix:key resultMatrix:products.cacheScores];
+                 [products.qkLive encodeToCommandBuffer:impl_->command leftMatrix:products.query rightMatrix:products.key resultMatrix:products.liveScores];
++                impl_->MpsCounterFinish("MPS_QK_cache_live",mpsBoundary,{products.cacheScores,products.liveScores});
+             }
+         }else
+ #endif
+         {
+-            [qkCache encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:keyView resultMatrix:cacheScoreView];
++            const auto mpsBoundary=impl_->MpsCounterBoundary({plan.queryView,keyView,plan.keyView});
++                [qkCache encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:keyView resultMatrix:cacheScoreView];
+             [plan.qkLive encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:plan.keyView resultMatrix:plan.liveScoreView];
++                impl_->MpsCounterFinish("MPS_QK_cache_live",mpsBoundary,{cacheScoreView,plan.liveScoreView});
+         }
+         auto softmax=impl_->ComputeEncoder(__func__);
+         if(!softmax)throw std::runtime_error("Cannot encode MPS attention selection/softmax");
+@@ -5522,15 +5560,19 @@
+             scheduledRequests=0;
+             for(const auto& binding:requestBindings) {
+                 const auto& products=*binding.products;
++                const auto mpsBoundary=impl_->MpsCounterBoundary({products.cacheScores,binding.value,products.liveProb,products.value});
+                 [products.pvCache encodeToCommandBuffer:impl_->command leftMatrix:products.cacheScores rightMatrix:binding.value resultMatrix:products.query];
+                 [products.pvLive encodeToCommandBuffer:impl_->command leftMatrix:products.liveProb rightMatrix:products.value resultMatrix:products.livePart];
++                impl_->MpsCounterFinish("MPS_PV_cache_live",mpsBoundary,{products.query,products.livePart});
+                 scheduledRequests+=products.cache.matrices/kvHeads;
+             }
+         }else
+ #endif
+         {
+-            [pvCache encodeToCommandBuffer:impl_->command leftMatrix:cacheScoreView rightMatrix:valueView resultMatrix:plan.queryView];
++            const auto mpsBoundary=impl_->MpsCounterBoundary({cacheScoreView,valueView,plan.liveProbView,plan.valueView});
++                [pvCache encodeToCommandBuffer:impl_->command leftMatrix:cacheScoreView rightMatrix:valueView resultMatrix:plan.queryView];
+             [plan.pvLive encodeToCommandBuffer:impl_->command leftMatrix:plan.liveProbView rightMatrix:plan.valueView resultMatrix:plan.livePartView];
++                impl_->MpsCounterFinish("MPS_PV_cache_live",mpsBoundary,{plan.queryView,plan.livePartView});
+         }
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS
+         impl_->chunkAttentionMPSMatrices+=scheduledRequests*kvHeads*4;
+@@ -5799,12 +5841,21 @@
+         // Raw intervals can overlap: never sum them as elapsed GPU time.
+         // CPU timestamps are nanoseconds, calibrated to GPU clock samples.
+         const double scale=double(cpu1-impl_->counterCpu0)/double(gpu1-impl_->counterGpu0)/1e6;
+-        std::fprintf(stderr,"metal_gpu_counters {\"diagnostic_only\":true,\"mps_encoders_observed\":false,\"cpu0\":%llu,\"gpu0\":%llu,\"cpu1\":%llu,\"gpu1\":%llu,\"gpu_ms\":%.9g,\"partial_submissions\":%zu,\"rows\":[",
++        std::fprintf(stderr,"metal_gpu_counters {\"diagnostic_only\":true,\"mps_encoders_observed\":false,\"mps_inclusive_envelopes_observed\":true,\"cpu0\":%llu,\"gpu0\":%llu,\"cpu1\":%llu,\"gpu1\":%llu,\"gpu_ms\":%.9g,\"partial_submissions\":%zu,\"rows\":[",
+             (unsigned long long)impl_->counterCpu0,(unsigned long long)impl_->counterGpu0,(unsigned long long)cpu1,(unsigned long long)gpu1,impl_->gpuMs,impl_->partialSubmissions);
+         for(size_t i=0;i<count;++i) {
+             const auto& e=impl_->counterEncoders[i];
+-            std::fprintf(stderr,"%s{\"site\":\"%s\",\"kind\":\"%s\",\"op\":%zu,\"rows\":%zu,\"columns\":%zu,\"command\":%zu,\"start\":%llu,\"end\":%llu,\"ms\":%.9g}",i?",":"",e.site,e.region.kind,e.region.op,e.region.rows,e.region.columns,e.command,
++            std::fprintf(stderr,"%s{\"site\":\"%s\",\"kind\":\"%s\",\"op\":%zu,\"rows\":%zu,\"columns\":%zu,\"command\":%zu,\"marker\":%s,\"start\":%llu,\"end\":%llu,\"ms\":%.9g}",i?",":"",e.site,e.region.kind,e.region.op,e.region.rows,e.region.columns,e.command,e.marker?"true":"false",
+                 (unsigned long long)values[i*2].timestamp,(unsigned long long)values[i*2+1].timestamp,(values[i*2+1].timestamp-values[i*2].timestamp)*scale);
++        }
++        std::fprintf(stderr,"],\"mps_envelopes\":[");
++        for(size_t i=0;i<impl_->mpsCounterEnvelopes.size();++i) {
++            const auto& e=impl_->mpsCounterEnvelopes[i];
++            if(e.before>=count||e.after>=count||e.before>=e.after||!impl_->counterEncoders[e.before].marker||!impl_->counterEncoders[e.after].marker)
++                throw std::runtime_error("Invalid MPS envelope ownership");
++            const auto begin=values[e.before*2+1].timestamp,end=values[e.after*2].timestamp;
++            if(end<begin)throw std::runtime_error("Reversed ordered MPS envelope");
++            std::fprintf(stderr,"%s{\"site\":\"%s\",\"kind\":\"%s\",\"op\":%zu,\"command\":%zu,\"before_encoder\":%zu,\"after_encoder\":%zu,\"start\":%llu,\"end\":%llu,\"ms\":%.9g}",i?",":"",e.site,e.region.kind,e.region.op,e.command,e.before,e.after,(unsigned long long)begin,(unsigned long long)end,(end-begin)*scale);
+         }
+         std::fprintf(stderr,"]}\n");
+     }
+--- /dev/null
++++ b/test2026/metal/mps_envelope_test.cpp
+@@ -0,0 +1,78 @@
++// SPDX-License-Identifier: Apache-2.0
++// Prove complete attention writes before sharing their output allocations.
++#include "metal_context.h"
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <cstring>
++#include <iostream>
++#include <limits>
++#include <stdexcept>
++#include <vector>
++using namespace Garnet;
++namespace {
++void Need(bool v,const char* why){if(!v)throw std::runtime_error(why);}
++void Cell(const char* label,size_t batch,size_t chunk,size_t heads,size_t kv,size_t dim,size_t capacity,
++          size_t prefix,std::array<size_t,4> counts,int mutation,bool gated) {
++    MetalContext gpu;const size_t rows=batch*chunk,width=heads*dim,cache=kv*capacity*dim;
++    auto values=[](size_t n,double phase){std::vector<float> x(n);for(size_t i=0;i<n;++i)x[i]=float(.23*std::sin(i*.137+phase)+.17*std::cos(i*.071+phase));return x;};
++    auto q=values(rows*width,.1),k=values(rows*kv*dim,.7),v=values(k.size(),1.3),kc=values(batch*cache,2.1),vc=values(kc.size(),3.4),gate=values(q.size(),4.7);
++    std::vector<float> slots(rows),active(rows);
++    for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t){active[b*chunk+t]=float(t<counts[b]);slots[b*chunk+t]=active[b*chunk+t]?float(prefix+t):0;}
++    if(mutation==1)active[(batch-1)*chunk+2]=0;
++    if(mutation==2){slots[8]=slots[6];slots[10]=slots[7];}
++    std::vector<MetalMatrix> args={gpu.Upload(q,rows,width),gpu.Upload(k,rows,kv*dim),gpu.Upload(v,rows,kv*dim),
++        gpu.Upload(kc,batch,cache),gpu.Upload(vc,batch,cache),gpu.Upload(slots,batch,chunk),gpu.Upload(active,batch,chunk),gpu.Upload(gate,rows,width)};
++    auto output=gpu.Upload(std::vector<float>(q.size(),std::numeric_limits<float>::quiet_NaN()),rows,width);
++    auto copied=gpu.Allocate(batch,chunk),zeros=gpu.Upload(std::vector<float>(rows,0),batch,chunk);
++    gpu.PrepareAttentionChunk(args,heads,kv,dim,capacity,chunk);
++    const auto plans=gpu.ChunkAttentionMPSPlanCount(),scratch=gpu.ChunkAttentionMPSScratchBytes();
++    const auto owners=MetalContext::ProfileOwnerStats();
++    std::vector<float> previous;size_t checked=0,inactive=0;double maximumError=0;
++    for(size_t repeat=0;repeat<2;++repeat) {
++        if(repeat)gpu.PrepareGpuCounters();
++        gpu.Update(output,std::vector<float>(q.size(),repeat?73.5f:std::numeric_limits<float>::quiet_NaN()));
++        gpu.Begin();auto inputs=args;if(mutation==3){gpu.EncodeAdd(args[5],zeros,copied);inputs[5]=copied;}
++        gpu.EncodeAttentionChunk(inputs,output,heads,kv,dim,capacity,chunk,gated);gpu.SubmitAndWait();
++        auto actual=gpu.Download(output);Need(actual.size()==q.size(),"Attention output extent changed");
++        if(repeat)Need(std::memcmp(actual.data(),previous.data(),actual.size()*sizeof(float))==0,"Attention retained poison or prior output");
++        previous=actual;
++        for(size_t i=0;i<actual.size();++i){Need(std::isfinite(actual[i]),"Attention did not overwrite every poisoned word");if(!active[i/width]){Need(actual[i]==0,"Inactive attention output retained scratch");++inactive;}}
++        // Independent FP64 samples include old-cache, live overlay, GQA,
++        // changed token positions, gating and zero-masked physical owners.
++        for(size_t sample=0;sample<128;++sample) {
++            const size_t index=(sample*104729+19)%actual.size(),flat=index/width,b=flat/chunk,t=flat%chunk,h=(index%width)/dim,d=index%dim,kh=h/(heads/kv);
++            if(!active[flat])continue;
++            const size_t visible=size_t(slots[flat])+1;std::vector<double> scores(visible),valuesAt(visible);double maximum=-INFINITY;
++            for(size_t pos=0;pos<visible;++pos) {
++                int latest=-1;for(size_t token=0;token<=t;++token)if(active[b*chunk+token]&&slots[b*chunk+token]==float(pos))latest=int(token);
++                double score=0;for(size_t col=0;col<dim;++col) {
++                    const double key=latest<0?kc[b*cache+(kh*capacity+pos)*dim+col]:k[(b*chunk+size_t(latest))*kv*dim+kh*dim+col];
++                    score+=double(q[flat*width+h*dim+col])*key;
++                }
++                scores[pos]=score/std::sqrt(double(dim));maximum=std::max(maximum,scores[pos]);
++                valuesAt[pos]=latest<0?vc[b*cache+(kh*capacity+pos)*dim+d]:v[(b*chunk+size_t(latest))*kv*dim+kh*dim+d];
++            }
++            double denominator=0,sum=0;for(size_t pos=0;pos<visible;++pos){double probability=std::exp(scores[pos]-maximum);denominator+=probability;sum+=probability*valuesAt[pos];}
++            double expected=sum/denominator;if(gated)expected/=1+std::exp(-double(gate[index]));
++            const double fraction=std::abs(double(actual[index])-expected)/(1e-5+2e-4*std::abs(expected));Need(fraction<=1,"Attention full-write output exceeds independent FP64 bound");maximumError=std::max(maximumError,fraction);++checked;
++        }
++    }
++    const auto after=MetalContext::ProfileOwnerStats();Need(owners.matrices==after.matrices&&owners.affineWeights==after.affineWeights&&owners.pipelineSets==after.pipelineSets&&plans==gpu.ChunkAttentionMPSPlanCount()&&scratch==gpu.ChunkAttentionMPSScratchBytes(),"Attention dispatch changed prepared native owners");
++    auto oldK=gpu.Download(args[3]),oldV=gpu.Download(args[4]);Need(oldK==kc&&oldV==vc,"Read-only attention changed KV");
++    std::cout<<"attention_full_write "<<label<<" words="<<2*q.size()<<" inactive_zero_words="<<inactive<<" fp64_samples="<<checked<<" maximum_error_fraction="<<maximumError<<" PASS\n";
++}
++}
++int main(){try{
++    Cell("owner512-initial",1,512,32,8,128,4096,0,{512,0,0,0},0,false);
++    Cell("owner512-cached",1,512,32,8,128,4096,3072,{512,0,0,0},0,false);
++    Cell("pair256-ragged",2,256,32,8,128,4096,3072,{256,173,0,0},0,false);
++    Cell("four128-gapped",4,128,32,8,128,4096,1920,{128,0,7,91},1,false);
++    Cell("scalar-tail",4,8,4,2,8,4096,3000,{1,0,2,0},0,true);
++    Cell("all-inactive",4,16,4,2,8,512,0,{0,0,0,0},0,true);
++    Cell("overwrite",2,16,4,2,8,512,384,{16,13,0,0},2,true);
++    Cell("pending-controls",2,16,4,2,8,512,384,{16,13,0,0},3,true);
++    Cell("small-gated",2,16,4,2,8,512,384,{16,9,0,0},0,true);
++    const auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Full-write test retained owners");
++    std::cout<<"attention_full_write PASS cases=9 poison_variants=2 all_owners_closed=true\n";return 0;
++}catch(const std::exception& e){std::cerr<<e.what()<<"\n";return 1;}}

@@ -15,6 +15,10 @@ namespace Garnet
     {
         if (m_config.prefillChunkTokens < 0 || m_config.prefillChunkTokens > m_config.maxPrefillTokensPerTick)
             throw std::invalid_argument("Invalid native prefill chunk budget");
+        if(m_config.completePrefillFirst && !m_config.prefillChunkTokens)
+            throw std::invalid_argument("Completion-first prefill requires bounded chunks");
+        if(m_config.prefillCompletionOwners<1||(m_config.completePrefillFirst&&m_config.prefillCompletionOwners>m_config.maxPrefillBatch))
+            throw std::invalid_argument("Prefill completion cohort exceeds batch profile");
         std::sort(m_config.decodeBuckets.begin(), m_config.decodeBuckets.end());
         m_config.decodeBuckets.erase(
             std::unique(
@@ -138,7 +142,7 @@ namespace Garnet
         int examined = static_cast<int>(m_prefillQueue.size());
         while (examined-- > 0 &&
                static_cast<int>(prefill.requests.size()) <
-                   m_config.maxPrefillBatch) {
+                   (m_config.completePrefillFirst ? std::min(m_config.prefillCompletionOwners,m_config.maxPrefillBatch) : m_config.maxPrefillBatch)) {
             const std::uint64_t id = m_prefillQueue.front();
             m_prefillQueue.pop_front();
             auto found = m_requests.find(id);
@@ -226,15 +230,60 @@ namespace Garnet
                 }
             }
         }
+        // Coalescing is separate from a single chunk's tensor workspace. Never
+        // place it ahead of a ready decoder or hide an early row's prompt end.
+        if(m_groupChunks>1&&decodeCandidates.empty()&&int(prefill.requests.size())==m_config.maxPrefillBatch&&
+           m_config.prefillChunkTokens==m_groupChunkTokens&&
+           (!prefill.prefillChunkTokens||prefill.prefillChunkTokens==m_groupChunkTokens)) {
+            const int64_t perRow=int64_t(m_groupChunkTokens)*m_groupChunks;
+            bool eligible=perRow*int64_t(prefill.requests.size())<=m_groupBudget;
+            for(const auto& request:prefill.requests) {
+                const auto& state=m_requests.at(request.id);
+                if(state.request.hasVision||state.request.positionDelta||state.request.promptTokens-state.prefillProcessed<perRow)eligible=false;
+            }
+            if(eligible) {
+                for(const auto& request:prefill.requests)if(!kvPool.EnsureCapacity(request.id,request.prefillOffset+int(perRow)))
+                    throw std::logic_error("Grouped prefill cannot retain its reserved context");
+                prefill.scheduledTokens=int(perRow*int64_t(prefill.requests.size()));
+                prefill.prefillChunkTokens=m_groupChunkTokens;prefill.prefillGroupChunks=m_groupChunks;
+                for(auto& request:prefill.requests){auto& state=m_requests.at(request.id);state.prefillScheduled=int(perRow);state.cachedHeadScheduled=false;request.prefillTokens=int(perRow);request.contextLength=request.prefillOffset+int(perRow);}
+            }
+        }
         if (!prefill.requests.empty()) tick.batches.push_back(std::move(prefill));
         return tick;
     }
 
+    bool ContinuousBatchScheduler::SetPrefillGrouping(int chunkTokens,int chunks,int tokenBudget) {
+        if(m_config.completePrefillFirst||!m_requests.empty()||chunkTokens<1||chunks<2||chunks>16||tokenBudget<1||
+           chunkTokens!=m_config.prefillChunkTokens||int64_t(chunkTokens)*chunks*m_config.maxPrefillBatch>tokenBudget)return false;
+        m_groupChunkTokens=chunkTokens;m_groupChunks=chunks;m_groupBudget=tokenBudget;return true;
+    }
+    bool ContinuousBatchScheduler::AbandonPrefillChunk(std::uint64_t id) {
+        auto found=m_requests.find(id);if(found==m_requests.end())return false;auto& state=found->second;
+        if(state.stage!=RequestStage::Prefill||state.prefillScheduled<=0)return false;
+        state.prefillScheduled=0;state.cachedHeadScheduled=false;
+        if(m_config.completePrefillFirst)m_prefillQueue.push_front(id);else m_prefillQueue.push_back(id);
+        return true;
+    }
+
     bool ContinuousBatchScheduler::SetPrefillChunkTokens(int tokens)
     {
-        if (tokens < 0 || tokens > m_config.maxPrefillTokensPerTick || !m_requests.empty()) return false;
+        if (tokens < 0 || tokens > m_config.maxPrefillTokensPerTick || !m_requests.empty() || (m_config.completePrefillFirst && !tokens)) return false;
         m_config.prefillChunkTokens = tokens;
         return true;
+    }
+
+    bool ContinuousBatchScheduler::SetPrefillCompletionPriority(bool enabled)
+    {
+        if(!m_requests.empty() || (enabled && (!m_config.prefillChunkTokens || m_groupChunks>1 || m_config.prefillCompletionOwners>m_config.maxPrefillBatch)))return false;
+        m_config.completePrefillFirst=enabled;return true;
+    }
+
+    bool ContinuousBatchScheduler::SetPrefillCompletionOwners(int owners)
+    {
+        if(!m_requests.empty()||!m_config.completePrefillFirst||!m_config.prefillChunkTokens||
+           m_groupChunks>1||owners<1||owners>m_config.maxPrefillBatch)return false;
+        m_config.prefillCompletionOwners=owners;return true;
     }
 
     bool ContinuousBatchScheduler::CompletePrefillChunk(
@@ -249,7 +298,7 @@ namespace Garnet
         if (!kvPool.CommitLength(requestId, length)) return false;
         state.prefillProcessed = length;
         state.prefillScheduled = 0;
-        m_prefillQueue.push_back(requestId);
+        if(m_config.completePrefillFirst)m_prefillQueue.push_front(requestId);else m_prefillQueue.push_back(requestId);
         return true;
     }
 

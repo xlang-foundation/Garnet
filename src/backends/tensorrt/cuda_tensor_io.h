@@ -76,6 +76,7 @@ public:
     X::Value ReadF32(const std::string& path,X::Value shape);
     X::Value Embedding(X::Value tokens);
     X::Value Slice(X::Value source,int64_t start,X::Value shape);
+    X::Value CropPlanes(X::Value source,int64_t top,int64_t left,int64_t height,int64_t width);
     void SliceInto(X::Value source,int64_t start,X::Value destination);
     X::Value VisualToken(X::Value source,int64_t token);
     X::Value Row(X::Value source,int64_t row);
@@ -124,6 +125,7 @@ public:
         APISET().AddFunc<2>("read_f32",&CUDATensorIO::ReadF32);
         APISET().AddFunc<1>("embedding",&CUDATensorIO::Embedding);
         APISET().AddFunc<3>("slice",&CUDATensorIO::Slice);
+        APISET().AddFunc<5>("crop_planes",&CUDATensorIO::CropPlanes);
         APISET().AddFunc<3>("slice_into",&CUDATensorIO::SliceInto);
         APISET().AddFunc<2>("visual_token",&CUDATensorIO::VisualToken);
         APISET().AddFunc<2>("row",&CUDATensorIO::Row);

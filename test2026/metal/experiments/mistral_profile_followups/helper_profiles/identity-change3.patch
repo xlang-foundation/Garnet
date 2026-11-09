@@ -1,0 +1,10 @@
+--- a/b1_worker1.py
++++ b/b1_worker2.py
+@@ -15,0 +16 @@
++helper_prefix_profile_id='B1D'+str(inputs.get('draft_capacity',inputs['capacity']))+'T'+str(helper_prefill_maximum)
+@@ -40 +41 @@
+-   prepared=prepared,records=records,cleanup=cleanup,scope=__doc__,projection_occupancy=occupancy,fused_decode_enabled=fused_enabled,experiment=experiment,split_scores_enabled=split_enabled,gqa_scores_enabled=gqa_enabled,gqa_values_enabled=value_enabled,helper_prefill_maximum=helper_prefill_maximum),stream,indent=2)
++   prepared=prepared,records=records,cleanup=cleanup,scope=__doc__,projection_occupancy=occupancy,fused_decode_enabled=fused_enabled,experiment=experiment,split_scores_enabled=split_enabled,gqa_scores_enabled=gqa_enabled,gqa_values_enabled=value_enabled,helper_prefill_maximum=helper_prefill_maximum,helper_prefix_profile_id=helper_prefix_profile_id),stream,indent=2)
+@@ -135 +136 @@
+-  'text_zero_based_3axis_v1','B1D'+str(inputs.get('draft_capacity',inputs['capacity']))+'T16','text'],2,512*1024*1024)
++  'text_zero_based_3axis_v1',helper_prefix_profile_id,'text'],2,512*1024*1024)

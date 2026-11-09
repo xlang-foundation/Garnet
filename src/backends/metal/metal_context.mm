@@ -1,5 +1,70 @@
+#ifdef GARNET_METAL_PREFIX_DIRECT_CAPTURE
+#include "prefix_shared_blocks.h"
+#endif
 // SPDX-License-Identifier: Apache-2.0
 #include "metal_context.h"
+#ifdef GARNET_METAL_LOOKAHEAD_ATTENTION
+#include "lookahead_attention_shader.h"
+#endif
+#ifdef GARNET_METAL_INDEXED_DECODE_FUSED_CLEAR
+#include "indexed_decode_clear_policy.h"
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_VALUES
+#include "verification_gqa_value_shader.h"
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_SCORES
+#include "verification_gqa_score_shader.h"
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_SPLIT_SCORES
+#include "verification_split_score_shader.h"
+#endif
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+#include "fused_q4_decode_shader.h"
+#endif
+#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+#include "chunk_mps_contiguous_policy.h"
+#endif
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+#include "bulk_silu_half_policy.h"
+#include "bulk_silu_half_shader.h"
+#endif
+#ifdef GARNET_METAL_VALUE_PROFILE32
+#include "value_profile_shader.h"
+#include "value_profile_policy.h"
+#endif
+#ifdef GARNET_METAL_SPLIT_DECODE_SCORES
+#include "split_score_shader.h"
+#include "split_score_policy.h"
+#ifdef GARNET_METAL_SPLIT_SCORE_PROFILE32
+#include "profile32_score_shader.h"
+#endif
+#endif
+#ifdef GARNET_METAL_AFFINE_WEIGHT_RESIDENCY
+#include "bounded_affine_residency.h"
+#endif
+#ifdef GARNET_METAL_MISTRAL_GROUPED_VALUE_CONTEXT
+#include "grouped_value_context_shader.h"
+#endif
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+#include "packed_affine_shader.h"
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+#include "fused_mistral_mlp_shader.h"
+#endif
+#include "streamed_affine_shader.h"
+#endif
+#ifdef GARNET_METAL_SILU_PROFILE32
+#include "silu_profile_shader.h"
+#include "silu_profile_policy.h"
+#endif
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+#include "paired_prefill_shader.h"
+#endif
+#include "packed_affine_layout_guard.h"
+#endif
+#ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+#include "streamed_affine_shader.h"
+#endif
 #ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
 #include "chunk_flash_attention_shader.h"
 #endif
@@ -16,6 +81,13 @@
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
 #include "chunk_attention_mps_shader.h"
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+#include "chunk_half_attention_shader.h"
+#include "half_attention_profile.h"
+#endif
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+#include "chunk_mps_committed_shader.h"
+#endif
 #include "chunk_attention_policy.h"
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
@@ -35,11 +107,18 @@
 #endif
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
 #include "affine_int4_reuse64_shader.h"
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+#include "affine_int4_reuse128_shader.h"
+#include "affine_reuse128_policy.h"
+#endif
 #endif
 #ifdef GARNET_METAL_INDEXED_DECODE
 #include "affine_int4_indexed_decode_shader.h"
 #ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
 #include "affine_int4_blocked_decode_shader.h"
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+#include "affine_int4_wide_decode_shader.h"
+#endif
 #endif
 #endif
 #ifdef GARNET_METAL_MPP_AFFINE
@@ -84,6 +163,9 @@
 #endif
 #ifdef GARNET_METAL_FUSED_HEAD_ARGMAX
 #include "fused_head_argmax_shader.h"
+#endif
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+#include "prediction_confidence_shader.h"
 #endif
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
@@ -290,7 +372,7 @@ bool MetalBF16Weight::InterleavedBodyReady() const {
 }
 #ifdef GARNET_METAL_AFFINE_PROFILE
 namespace {
-enum class AffineProfileRoute:size_t {Decode,MPP,IndexedDecode,Indexed,Reuse64};
+enum class AffineProfileRoute:size_t {Decode,MPP,IndexedDecode,Indexed,Reuse64,Reuse128,WideIndexedDecode,IndexedDecodeClear};
 // Route, K, N, input stride, output stride, decode-row variant. Prefill's actual
 // row count is runtime data. The entry records the largest prepared bound.
 using AffineProfileKey=std::array<size_t,6>;
@@ -298,9 +380,14 @@ struct AffineProfilePipeline {id<MTLComputePipelineState> pipeline=nil;size_t ma
 #ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
 size_t AffineDecodeColumns(size_t inner,size_t columns,size_t rows) {
 #ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
-    // Admit only four-row shapes that improve in both serial operator cohorts.
-    // KV projections, smaller occupancies and all other shapes keep the control.
-    if(rows==4&&((inner==4096&&(columns==4096||columns==14336||columns==32768))||
+    // Profile occupancy is the number of selected rows, not physical capacity.
+    // Narrow KV projections and all other shapes keep the scalar control.
+    const bool reuseRows=rows==4
+#ifdef GARNET_METAL_MISTRAL_THREE_ROW_REUSE
+        ||rows==3
+#endif
+        ;
+    if(reuseRows&&((inner==4096&&(columns==4096||columns==14336||columns==32768))||
                  (inner==14336&&columns==4096)))return 4;
 #endif
 
@@ -310,6 +397,17 @@ size_t AffineDecodeColumns(size_t inner,size_t columns,size_t rows) {
 }
 #endif
 struct MetalPipelines {
+#ifdef GARNET_METAL_LOOKAHEAD_PROJECTIONS
+    id<MTLLibrary> lookaheadProjectionLibrary=nil;
+    std::shared_mutex lookaheadProjectionMutex;
+    std::map<std::array<size_t,5>,id<MTLComputePipelineState>> lookaheadProjections;
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_ATTENTION
+    struct LookaheadProfile {id<MTLComputePipelineState> scores=nil,context=nil;};
+    id<MTLLibrary> lookaheadLibrary=nil;
+    std::shared_mutex lookaheadMutex;
+    std::map<std::array<size_t,5>,LookaheadProfile> lookaheadProfiles;
+#endif
 #ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
     id<MTLComputePipelineState> chunkFlashAttention;
 #endif
@@ -325,7 +423,7 @@ struct MetalPipelines {
 #ifdef GARNET_METAL_AFFINE_PROFILE
     std::shared_mutex affineProfileMutex;
     std::map<AffineProfileKey,AffineProfilePipeline> affineProfiles;
-    std::array<id<MTLLibrary>,5> affineProfileLibraries{};
+    std::array<id<MTLLibrary>,8> affineProfileLibraries{};
 #endif
     std::array<id<MTLComputePipelineState>,4> affineInt4Decode{};
 #ifdef GARNET_METAL_INDEXED_DECODE
@@ -342,6 +440,10 @@ struct MetalPipelines {
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
     id<MTLLibrary> reuse64AffineLibrary;
     id<MTLComputePipelineState> reuse64Affine;
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+    id<MTLLibrary> reuse128AffineLibrary;
+    id<MTLComputePipelineState> reuse128Affine;
+#endif
 #endif
 #endif
 #endif
@@ -365,6 +467,9 @@ struct MetalPipelines {
 #endif
 #endif
     id<MTLComputePipelineState> argmax;
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+    id<MTLComputePipelineState> predictionConfidence;
+#endif
 #ifdef GARNET_METAL_FUSED_HEAD_ARGMAX
     id<MTLComputePipelineState> fusedHead,fusedHeadReduce;
 #endif
@@ -396,6 +501,12 @@ struct MetalPipelines {
     id<MTLComputePipelineState> residualNorm;
     id<MTLComputePipelineState> packedPrefillNorm;
     id<MTLComputePipelineState> silu;
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+    id<MTLComputePipelineState> bulkSiluHalf=nil;
+#endif
+#ifdef GARNET_METAL_SILU_PROFILE32
+    id<MTLComputePipelineState> siluProfile32=nil;
+#endif
 #ifdef GARNET_METAL_JOINED_GLOBAL_MLP
     id<MTLComputePipelineState> joinedGlobalSilu;
 #endif
@@ -407,6 +518,21 @@ struct MetalPipelines {
     id<MTLComputePipelineState> deltaSplitParallel,deltaChunk;
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     id<MTLComputePipelineState> verificationScores,verificationContext;
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_VALUES
+    std::array<id<MTLComputePipelineState>,2> verificationGqaValues{};
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_SCORES
+    std::array<id<MTLComputePipelineState>,2> verificationGqaDots{},verificationGqaSoftmax{};
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_LAYOUT
+    id<MTLComputePipelineState> mistralVerificationScores,mistralVerificationContext;
+#ifdef GARNET_METAL_MISTRAL_VERIFY_SPLIT_SCORES
+    id<MTLComputePipelineState> mistralVerificationScoreDots,mistralVerificationScoreSoftmax;
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_VECTOR4
+    id<MTLComputePipelineState> mistralVerificationContextVector4;
+#endif
+#endif
     id<MTLComputePipelineState> verificationConvCheckpoint,verificationDeltaCheckpoint;
     id<MTLComputePipelineState> verificationKVBackup,verificationKVRestore;
 #endif
@@ -418,6 +544,21 @@ struct MetalPipelines {
     id<MTLComputePipelineState> gatedNorm;
     id<MTLComputePipelineState> concat;
     id<MTLComputePipelineState> normRope,kvUpdate,kvUpdateVector,scores,scoresSerial,attentionContext;
+#ifdef GARNET_METAL_VALUE_PROFILE32
+    id<MTLLibrary> valueProfileLibrary=nil;
+    id<MTLComputePipelineState> valueProfile=nil;
+#endif
+#ifdef GARNET_METAL_SPLIT_DECODE_SCORES
+    id<MTLLibrary> splitScoreLibrary=nil;
+    id<MTLComputePipelineState> splitScoreDots=nil,splitScoreSoftmax=nil;
+#ifdef GARNET_METAL_SPLIT_SCORE_PROFILE32
+    id<MTLLibrary> profile32ScoreLibrary=nil;
+    id<MTLComputePipelineState> profile32ScoreDots=nil,profile32ScoreSoftmax=nil;
+#endif
+#endif
+#ifdef GARNET_METAL_MISTRAL_GROUPED_VALUE_CONTEXT
+    id<MTLComputePipelineState> groupedValueContext;
+#endif
     id<MTLComputePipelineState> vision,visionNorm,visionScores,layout,kvChunk,kvChunkVector,attentionChunk;
 #ifdef GARNET_METAL_LAYOUT_VECTOR4
     id<MTLComputePipelineState> layoutVector;
@@ -427,6 +568,9 @@ struct MetalPipelines {
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     id<MTLComputePipelineState> chunkMPSPack,chunkMPSSoftmax,chunkMPSUnpack;
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+    id<MTLComputePipelineState> chunkCommittedPack,chunkCommittedUnpack;
+#endif
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     struct ChunkMPSPlan {
@@ -441,6 +585,9 @@ struct MetalPipelines {
             MPSMatrixDescriptor* cache;
             MPSMatrixMultiplication *qk,*pv;
             id<MTLComputePipelineState> softmax;
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+            id<MTLComputePipelineState> committedSoftmax=nil;
+#endif
         };
         std::map<size_t,Bucket> buckets;
 #endif
@@ -455,6 +602,17 @@ struct MetalPipelines {
         std::map<std::array<size_t,3>,RequestProducts> requestProducts;
 #endif
     };
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+    id<MTLLibrary> halfLibrary;
+    id<MTLComputePipelineState> halfAttention,halfPackQ,halfPackKV;
+    id<MTLBuffer> halfRangeStatus; // Shares the half scratch lease, never a graph-local owner.
+    bool halfLayoutQualified=false;
+    std::array<MetalMatrix,3> halfScratch;
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+    // An entry is a half execution profile, never an empty usable MPS plan.
+    std::map<std::array<size_t,6>,bool> halfOnlyProfiles;
+#endif
+#endif
     std::mutex chunkMPSMutex;
     std::map<std::array<size_t,6>,ChunkMPSPlan> chunkMPSPlans;
 #endif
@@ -467,12 +625,15 @@ static std::map<uint64_t,std::weak_ptr<MetalPipelines>> pipelineCache;
 namespace {
 id<MTLComputePipelineState> SelectAffineProfile(MetalPipelines& kernels,AffineProfileRoute route,
     size_t rows,size_t inner,size_t columns,size_t aStride,size_t oStride,size_t decodeRows,
-    id<MTLComputePipelineState> fallback,size_t& dispatches,size_t& misses,size_t& maxThreads,size_t* decodeColumns=nullptr) {
+    id<MTLComputePipelineState> fallback,size_t& dispatches,size_t& misses,size_t& maxThreads,size_t* decodeColumns=nullptr,bool requirePrepared=false) {
     if(decodeColumns)*decodeColumns=1;
     const AffineProfileKey key{size_t(route),inner,columns,aStride,oStride,decodeRows};
     std::shared_lock<std::shared_mutex> lock(kernels.affineProfileMutex);
     auto found=kernels.affineProfiles.find(key);
-    if(found==kernels.affineProfiles.end()||rows>found->second.maximumRows) {++misses;maxThreads=fallback.maxTotalThreadsPerThreadgroup;return fallback;}
+    if(found==kernels.affineProfiles.end()||rows>found->second.maximumRows) {
+        ++misses;if(requirePrepared)throw std::logic_error("Prepare the cooperative128 affine profile before execution");
+        maxThreads=fallback.maxTotalThreadsPerThreadgroup;return fallback;
+    }
     ++dispatches;maxThreads=found->second.pipeline.maxTotalThreadsPerThreadgroup;
     if(decodeColumns)*decodeColumns=found->second.decodeColumns;
     return found->second.pipeline;
@@ -480,6 +641,83 @@ id<MTLComputePipelineState> SelectAffineProfile(MetalPipelines& kernels,AffinePr
 }
 #endif
 struct MetalContext::Impl {
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+    size_t lookaheadKVCommitDispatches=0;
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_PROJECTIONS
+    size_t lookaheadProjectionDispatches=0;
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_ATTENTION
+    size_t lookaheadAttentionDispatches=0;
+#endif
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+    id<MTLLibrary> fusedDecodeLibrary=nil;
+    std::map<std::array<size_t,2>,id<MTLComputePipelineState>> fusedDecodePlans;
+    MetalMatrix fusedDecodeInput;size_t fusedDecodeBlocks=0,fusedDecodeInputCopies=0;
+#ifdef GARNET_METAL_FUSED_Q4_WIDE_SELECTION
+    MetalMatrix fusedWideDecodeInput;size_t fusedWideDecodeBlocks=0;bool fusedWideDecodeEnabled=true;
+#endif
+#endif
+
+#ifdef GARNET_METAL_VALUE_PROFILE32
+    bool valueProfileEnabled=false;
+    size_t valueProfileDispatches=0;
+#endif
+#ifdef GARNET_METAL_SPLIT_DECODE_SCORES
+    bool splitScoresEnabled=true;
+    size_t splitScoreDispatches=0;
+#ifdef GARNET_METAL_SPLIT_SCORE_PROFILE32
+    bool profile32ScoresEnabled=false;
+    size_t profile32ScoreDispatches=0;
+#endif
+#endif
+#ifdef GARNET_METAL_AFFINE_WEIGHT_RESIDENCY
+    BoundedAffineResidency affineResidency;
+#endif
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+    struct PackedPlan {std::array<id<MTLComputePipelineState>,2> pipelines{};
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+        std::array<id<MTLComputePipelineState>,2> fused{};
+#endif
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+        std::array<id<MTLComputePipelineState>,2> paired{};
+#endif
+        size_t maximumRows=0;};
+    std::map<std::array<size_t,4>,PackedPlan> packedPlans;
+    MetalMatrix packedInput;
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+    MetalMatrix fusedMlpHalf;id<MTLLibrary> fusedMlpLibrary=nil;size_t fusedMlpBlocks=0;
+#endif
+    id<MTLLibrary> packedLibrary=nil;
+    id<MTLComputePipelineState> packedGather=nil;
+    bool packedEnabled=true;
+    struct DiagnosticBulkPlan {MPSMatrix* a=nil;MPSMatrix* w=nil;MPSMatrixMultiplication* product=nil;
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+        MetalMatrix halfCarrier;
+#endif
+    };
+    std::map<std::array<size_t,3>,DiagnosticBulkPlan> diagnosticBulkPlans;
+    std::array<MetalMatrix,2> diagnosticBulkScratch;
+    id<MTLComputePipelineState> diagnosticBulkUnpack=nil,diagnosticBulkCast=nil;
+    size_t diagnosticBulkDispatches=0;
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+    size_t diagnosticSiluHalfDispatches=0;
+#endif
+
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+    bool pairedPackedEnabled=false;
+    size_t pairedPackedDispatches=0;
+#endif
+    size_t packedDispatches=0;
+#endif
+#ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+    struct StreamedPlan {MPSMatrix* a=nil;MPSMatrix* w=nil;MPSMatrix* o=nil;MPSMatrixMultiplication* product=nil;};
+    std::map<std::array<size_t,2>,StreamedPlan> streamedPlans;
+    std::array<MetalMatrix,3> streamedScratch; // half W, half A, float C
+    id<MTLComputePipelineState> streamedUnpack=nil,streamedGather=nil,streamedScatter=nil;
+    bool streamedEnabled=true;
+    size_t streamedDispatches=0;
+#endif
     size_t screenedHeadDispatches=0;
     size_t screenedHeadSeedRows=0;
     size_t interleavedScreenDispatches=0;
@@ -493,6 +731,9 @@ struct MetalContext::Impl {
     id<MTLDevice> device;
     id<MTLCommandQueue> queue;
     id<MTLCommandBuffer> command;
+#if defined(GARNET_METAL_MPP_AFFINE_REUSE128)&&defined(GARNET_METAL_VERIFY_ATTENTION)
+    bool verificationAffineReuse128=true;
+#endif
     NSMutableArray<id<MTLCommandBuffer>>* submitted=nil;
     size_t partialSubmissions=0;
     size_t deferredZeroBytes=0,deferredZeroStates=0;
@@ -504,12 +745,35 @@ struct MetalContext::Impl {
     size_t chunkProbabilityReuseDispatches=0,chunkAttentionIndex32Dispatches=0;
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     size_t verificationAttentionDispatches=0;
+    size_t verificationLayoutDispatches=0;
+    size_t verificationSplitScoreDispatches=0;
+    size_t verificationGqaScoreDispatches=0;
+    size_t verificationGqaValueDispatches=0;
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_VALUES
+    bool verificationGqaValuesEnabled=true;
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_SCORES
+    bool verificationGqaScoresEnabled=true;
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_SPLIT_SCORES
+    bool verificationSplitScoresEnabled=true;
+#endif
+    size_t verificationValueVectorDispatches=0;
+#ifdef GARNET_METAL_MISTRAL_VERIFY_VECTOR4
+    bool verificationValueVector4=true;
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_LAYOUT
+    bool verificationMistralLayout=true;
+#endif
     size_t verificationConvCheckpoints=0,verificationDeltaCheckpoints=0;
     size_t verificationKVBackups=0,verificationKVRestores=0;
 #endif
     size_t chunkAttentionMPSDispatches=0,chunkFlashAttentionDispatches=0;
     size_t chunkAttentionMPSMatrices=0,chunkAttentionMPSSkippedMatrices=0;
-    size_t chunkKVScatterDispatches=0;
+    size_t chunkKVScatterDispatches=0,chunkKVHoistedCommits=0,committedAttentionDispatches=0;
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+    size_t halfAttentionDispatches=0;bool halfBatchStarted=false;
+#endif
     size_t layoutVectorDispatches=0;
     size_t chunkAttentionBucketDispatches=0,chunkAttentionTailDispatches=0,chunkAttentionBucketCapacity=0,chunkAttentionUnknownControls=0;
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
@@ -521,6 +785,29 @@ struct MetalContext::Impl {
 #endif
 #ifdef GARNET_METAL_FUSED_HEAD_ARGMAX
     std::map<std::array<size_t,2>,MetalMatrix> fusedHeadScratch;
+#endif
+    struct CounterRegion {const char* kind="session";size_t op=SIZE_MAX,rows=0,columns=0;};
+    struct CounterEncoder {CounterRegion region;const char* site;size_t command;};
+    id<MTLCounterSampleBuffer> gpuCounters=nil;
+    std::vector<CounterEncoder> counterEncoders;
+    CounterRegion counterRegion;
+    MTLTimestamp counterCpu0=0,counterGpu0=0;
+    id<MTLComputeCommandEncoder> ComputeEncoder(const char* site) {
+        if(!gpuCounters)return [command computeCommandEncoder];
+        if(counterEncoders.size()>=2048)throw std::runtime_error("GPU counter sample capacity exhausted; diagnostic rejected");
+        const auto index=counterEncoders.size()*2;
+        auto pass=[MTLComputePassDescriptor computePassDescriptor];
+        pass.sampleBufferAttachments[0].sampleBuffer=gpuCounters;
+        pass.sampleBufferAttachments[0].startOfEncoderSampleIndex=index;
+        pass.sampleBufferAttachments[0].endOfEncoderSampleIndex=index+1;
+        auto encoder=[command computeCommandEncoderWithDescriptor:pass];
+        if(!encoder)throw std::runtime_error("Cannot create sampled compute encoder");
+        counterEncoders.push_back({counterRegion,site,partialSubmissions});
+        return encoder;
+    }
+#ifdef GARNET_METAL_SILU_PROFILE32
+    bool siluProfile32Enabled=false;
+    size_t siluProfile32Dispatches=0;
 #endif
     double gpuMs=0;
     std::vector<std::shared_ptr<MetalMatrix::Impl>> outputs;
@@ -534,6 +821,10 @@ struct MetalContext::Impl {
     size_t joinedPrefillPairs=0;
 #ifdef GARNET_METAL_INDEXED_DECODE
     size_t indexedDecodeAffineDispatches=0;
+    size_t indexedDecodeFusedClearDispatches=0,indexedDecodeBlitClears=0;
+#ifdef GARNET_METAL_INDEXED_DECODE_FUSED_CLEAR
+    bool indexedDecodeFusedClearEnabled=true;
+#endif
 #endif
 #ifdef GARNET_METAL_MPP_AFFINE
     size_t mppAffineDispatches=0;
@@ -541,6 +832,9 @@ struct MetalContext::Impl {
     size_t indexedAffineDispatches=0;
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
     size_t reuse64AffineDispatches=0;
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+    size_t reuse128AffineDispatches=0;
+#endif
 #endif
 #endif
 #endif
@@ -1603,6 +1897,12 @@ kernel void vision_softmax_context(device const float* a [[buffer(0)]],device co
 #ifdef GARNET_METAL_JOINED_PREFILL
         source=[source stringByAppendingString:@"\nkernel void joined_split_rescale(device const float* input [[buffer(0)]],device const int* scales [[buffer(1)]],device float* first [[buffer(2)]],device float* second [[buffer(3)]],constant HalfRescaleParams& p [[buffer(4)]],uint id [[thread_position_in_grid]]) {if(id>=p.rows*p.columns*2)return;ulong row=id/(p.columns*2),col=id%(p.columns*2);float v=ldexp(input[row*p.iStride+col],-scales[col]);if(col<p.columns)first[row*p.oStride+col]=v;else second[row*p.oStride+col-p.columns]=v;}\n"];
 #endif
+#ifdef GARNET_METAL_SILU_PROFILE32
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kSiluProfile32Shader]];
+#endif
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kBulkSiluHalfShader]];
+#endif
         MTLCompileOptions* compileOptions=nil;
 #ifdef GARNET_METAL_NATIVE_BFLOAT_BODY
         source=[source stringByAppendingString:[NSString stringWithUTF8String:R"METAL(
@@ -1717,6 +2017,9 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkAttentionMPSShader]];
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkMPSCommittedShader]];
+#endif
 #endif
 #ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkFlashAttentionShader]];
@@ -1737,6 +2040,12 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
 #ifdef GARNET_METAL_LINEAR_CHUNK_ACTIVE_ONLY
         source=[@"#define GARNET_LINEAR_CHUNK_ACTIVE_ONLY 1\n" stringByAppendingString:source];
 #endif
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kPredictionConfidenceShader]];
+#endif
+#ifdef GARNET_METAL_MISTRAL_GROUPED_VALUE_CONTEXT
+        source=[source stringByAppendingString:[NSString stringWithUTF8String:kGroupedValueContextShader]];
+#endif
         auto library=[impl_->device newLibraryWithSource:source options:compileOptions error:&error];
         if(!library)throw std::runtime_error(std::string(error.localizedDescription.UTF8String));
         impl_->kernels->library=library;
@@ -1747,7 +2056,32 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
                 throw std::runtime_error("Cannot compile bounded MPS chunk attention kernels");
             return pipeline;
         };
+
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+        @autoreleasepool {
+        if(![impl_->device supportsFamily:MTLGPUFamilyApple10])throw std::runtime_error("Half attention profile requires Apple10 hardware");
+        auto options=[MTLCompileOptions new];options.languageVersion=MTLLanguageVersion4_0;options.mathMode=MTLMathModeSafe;
+        NSError* error=nil;auto library=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kNativeHalfChunkShader] options:options error:&error];
+        if(!library)throw std::runtime_error(error.localizedDescription.UTF8String);
+        impl_->kernels->halfLibrary=library;
+        auto pipeline=[&](NSString* name){auto function=[library newFunctionWithName:name];if(!function)throw std::runtime_error("Missing native half attention function");auto result=[impl_->device newComputePipelineStateWithFunction:function error:&error];if(!result||result.threadExecutionWidth!=32||result.maxTotalThreadsPerThreadgroup<128)throw std::runtime_error("Unsupported native half pipeline geometry");return result;};
+        impl_->kernels->halfAttention=pipeline(@"half_policy_p16");impl_->kernels->halfPackQ=pipeline(@"half_policy_pack_q");impl_->kernels->halfPackKV=pipeline(@"half_policy_pack_kv");
+        auto command=[impl_->queue commandBuffer];if(!command)throw std::runtime_error("Cannot create half-layout guard command");
+        std::array<id<MTLBuffer>,3> buffers;const size_t sizes[]={192,32,2561};const char* names[]={"half_policy_capacities","half_policy_layout","half_policy_coordinates"};
+        for(size_t kind=0;kind<3;++kind){std::vector<uint32_t> words(sizes[kind]+32,0x7fc12345);if(kind==2)std::fill(words.begin()+16,words.end()-16,0);buffers[kind]=[impl_->device newBufferWithBytes:words.data() length:words.size()*4 options:MTLResourceStorageModeShared];if(!buffers[kind])throw std::runtime_error("Cannot allocate half-layout guard");auto encoder=[command computeCommandEncoder];[encoder setComputePipelineState:pipeline([NSString stringWithUTF8String:names[kind]])];[encoder setBuffer:buffers[kind] offset:64 atIndex:0];[encoder dispatchThreads:MTLSizeMake(32,1,1) threadsPerThreadgroup:MTLSizeMake(32,1,1)];[encoder endEncoding];}
+        [command commit];[command waitUntilCompleted];if(command.status!=MTLCommandBufferStatusCompleted)throw std::runtime_error("Half-layout guard execution failed");
+        for(size_t kind=0;kind<3;++kind){const auto* words=(const uint32_t*)buffers[kind].contents;for(size_t i=0;i<16;++i)if(words[i]!=0x7fc12345||words[16+sizes[kind]+i]!=0x7fc12345)throw std::runtime_error("Half-layout guard parent changed");for(size_t i=0;i<sizes[kind];++i){uint32_t expected=kind==0?std::array<uint32_t,6>{8,16,16,8,16,16}[i%6]:kind==1?0:uint32_t(i<2560);if(words[16+i]!=expected)throw std::runtime_error("Native half cooperative layout is unqualified");}}
+        impl_->kernels->halfRangeStatus=[impl_->device newBufferWithLength:sizeof(uint32_t) options:MTLResourceStorageModeShared];
+        if(!impl_->kernels->halfRangeStatus||!impl_->kernels->halfRangeStatus.contents)throw std::runtime_error("Cannot allocate shared half range status");
+        *(uint32_t*)impl_->kernels->halfRangeStatus.contents=0;
+        impl_->kernels->halfLayoutQualified=true;
+        }
+#endif
         impl_->kernels->chunkMPSPack=mpsChunkPipeline(@"chunk_mps_pack");
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+        impl_->kernels->chunkCommittedPack=mpsChunkPipeline(@"chunk_mps_committed_pack");
+        impl_->kernels->chunkCommittedUnpack=mpsChunkPipeline(@"chunk_mps_committed_unpack");
+#endif
 #ifndef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
         impl_->kernels->chunkMPSSoftmax=mpsChunkPipeline(@"chunk_mps_softmax");
 #endif
@@ -1823,6 +2157,18 @@ constexpr unsigned decodeColumns=4;
         {auto library=[impl_->device newLibraryWithSource:[affineProfileDefines stringByAppendingString:indexedDecodeSource] options:affineOptions error:&error];
          if(!library)throw std::runtime_error("Cannot compile affine profile IndexedDecode library: "+std::string(error.localizedDescription.UTF8String));
          impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::IndexedDecode)]=library;}
+#ifdef GARNET_METAL_INDEXED_DECODE_FUSED_CLEAR
+        {auto source=[@"#define GARNET_INDEXED_DECODE_FUSED_CLEAR 1\n" stringByAppendingString:indexedDecodeSource];
+         auto library=[impl_->device newLibraryWithSource:[affineProfileDefines stringByAppendingString:source] options:affineOptions error:&error];
+         if(!library)throw std::runtime_error("Cannot compile prepared fused inactive decode clear: "+std::string(error.localizedDescription.UTF8String));
+         impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::IndexedDecodeClear)]=library;}
+#endif
+#endif
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+        {auto source=affineSourceWithProfile([NSString stringWithUTF8String:kAffineInt4WideDecodeShader]);
+         auto library=[impl_->device newLibraryWithSource:[affineProfileDefines stringByAppendingString:source] options:affineOptions error:&error];
+         if(!library)throw std::runtime_error("Cannot compile strict FP32 wide verification library: "+std::string(error.localizedDescription.UTF8String));
+         impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::WideIndexedDecode)]=library;}
 #endif
         for(uint32_t rows=1;rows<=4;++rows) {
             auto constants=[MTLFunctionConstantValues new];
@@ -1888,6 +2234,21 @@ constexpr unsigned decodeColumns=4;
          if(!library)throw std::runtime_error("Cannot compile affine profile Reuse64 library: "+std::string(error.localizedDescription.UTF8String));
          impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::Reuse64)]=library;}
 #endif
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+            NSString* reuse128Source=[[NSString stringWithFormat:@"#define GARNET_REUSE64_RELAXED %u\n",unsigned(GARNET_METAL_REUSE64_RELAXED_VALUE)]
+                stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4Reuse128Shader]];
+            reuse128Source=affineSourceWithProfile(reuse128Source);
+            auto reuse128Library=[impl_->device newLibraryWithSource:reuse128Source options:mppOptions error:&error];
+            if(!reuse128Library)throw std::runtime_error("Cannot compile cooperative128 affine candidate: "+std::string(error.localizedDescription.UTF8String));
+            auto reuse128Pipeline=[impl_->device newComputePipelineStateWithFunction:[reuse128Library newFunctionWithName:@"affine_q4_reuse128"] error:&error];
+            if(!reuse128Pipeline||reuse128Pipeline.threadExecutionWidth!=32||reuse128Pipeline.maxTotalThreadsPerThreadgroup<256||
+               reuse128Pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
+                throw std::runtime_error("Cooperative128 affine candidate exceeds device limits");
+            impl_->kernels->reuse128AffineLibrary=reuse128Library;impl_->kernels->reuse128Affine=reuse128Pipeline;
+            auto specialized=[impl_->device newLibraryWithSource:[affineProfileDefines stringByAppendingString:reuse128Source] options:mppOptions error:&error];
+            if(!specialized)throw std::runtime_error("Cannot compile affine profile Reuse128 library: "+std::string(error.localizedDescription.UTF8String));
+            impl_->kernels->affineProfileLibraries[size_t(AffineProfileRoute::Reuse128)]=specialized;
+#endif
 #endif
 #endif
         }
@@ -1908,6 +2269,10 @@ constexpr unsigned decodeColumns=4;
 #endif
 #endif
         impl_->kernels->argmax=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"argmax_rows"] error:&error];
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+        impl_->kernels->predictionConfidence=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"prediction_confidence_rows"] error:&error];
+        if(!impl_->kernels->predictionConfidence)throw std::runtime_error("Cannot prepare prediction confidence reduction");
+#endif
 #ifdef GARNET_METAL_SERIAL_VISION_PREFETCH
         auto prefetchOptions=[MTLCompileOptions new];prefetchOptions.fastMathEnabled=NO;
         auto prefetchLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kSerialVisionPrefetchShader] options:prefetchOptions error:&error];
@@ -2001,6 +2366,16 @@ constexpr unsigned decodeColumns=4;
         if(!impl_->kernels->residualNorm)throw std::runtime_error("Cannot create residual normalization pipeline");
 #endif
         impl_->kernels->silu=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"silu_mul"] error:&error];
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+        impl_->kernels->bulkSiluHalf=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"bulk_silu_half"] error:&error];
+        if(!impl_->kernels->bulkSiluHalf||impl_->kernels->bulkSiluHalf.threadExecutionWidth!=32||impl_->kernels->bulkSiluHalf.maxTotalThreadsPerThreadgroup<128)throw std::runtime_error("Cannot prepare bounded fused SiLU-half pipeline");
+#endif
+#ifdef GARNET_METAL_SILU_PROFILE32
+        auto siluProfile=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"silu_profile32"] error:&error];
+        if(!siluProfile||siluProfile.threadExecutionWidth!=32||siluProfile.maxTotalThreadsPerThreadgroup<128)
+            throw std::runtime_error("Native SiLU32 profile requires 128 threads and32-lane SIMD");
+        impl_->kernels->siluProfile32=siluProfile;
+#endif
 #ifdef GARNET_METAL_JOINED_GLOBAL_MLP
         impl_->kernels->joinedGlobalSilu=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"joined_global_silu"] error:&error];
         if(!impl_->kernels->joinedGlobalSilu)throw std::runtime_error("Cannot create joined global split-SiLU pipeline");
@@ -2032,13 +2407,137 @@ constexpr unsigned decodeColumns=4;
         impl_->kernels->kvUpdateVector=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"kv_update_vector4"] error:&error];
         impl_->kernels->scores=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"attention_scores"] error:&error];
         impl_->kernels->scoresSerial=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"attention_scores_serial"] error:&error];
+#ifdef GARNET_METAL_SPLIT_DECODE_SCORES
+        // Preserve the original attention library's nil/default options.
+        // Compile once with the shared immutable pipeline set, never in Run.
+        auto splitLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kSplitScoreShader] options:compileOptions error:&error];
+        if(!splitLibrary)throw std::runtime_error("Cannot compile split-score source");
+        auto constants=[MTLFunctionConstantValues new];uint32_t scoreChunk=128;
+        [constants setConstantValue:&scoreChunk type:MTLDataTypeUInt atIndex:1];
+        auto prepareSplit=[&](NSString* name){
+            auto function=[splitLibrary newFunctionWithName:name constantValues:constants error:&error];
+            auto pipeline=function?[impl_->device newComputePipelineStateWithFunction:function error:&error]:nil;
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128||
+               pipeline.staticThreadgroupMemoryLength+4096*sizeof(float)>impl_->device.maxThreadgroupMemoryLength)
+                throw std::runtime_error("Split-score pipeline exceeds prepared device limits");
+            return pipeline;
+        };
+        impl_->kernels->splitScoreLibrary=splitLibrary;
+        impl_->kernels->splitScoreDots=prepareSplit(@"split_score_dots");
+        impl_->kernels->splitScoreSoftmax=prepareSplit(@"split_score_softmax");
+#ifdef GARNET_METAL_SPLIT_SCORE_PROFILE32
+        auto profileLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kProfile32ScoreShader] options:compileOptions error:&error];
+        if(!profileLibrary)throw std::runtime_error("Cannot compile profile32-score source");
+        auto prepareProfile32=[&](NSString* name){
+            auto function=[profileLibrary newFunctionWithName:name constantValues:constants error:&error];
+            auto pipeline=function?[impl_->device newComputePipelineStateWithFunction:function error:&error]:nil;
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128||
+               pipeline.staticThreadgroupMemoryLength+4096*sizeof(float)>impl_->device.maxThreadgroupMemoryLength)
+                throw std::runtime_error("Profile32-score pipeline exceeds prepared device limits");
+            return pipeline;
+        };
+        impl_->kernels->profile32ScoreLibrary=profileLibrary;
+        impl_->kernels->profile32ScoreDots=prepareProfile32(@"score_dots_profile32");
+        impl_->kernels->profile32ScoreSoftmax=prepareProfile32(@"score_softmax_profile32");
+#endif
+#endif
         impl_->kernels->attentionContext=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"attention_context"] error:&error];
+#ifdef GARNET_METAL_VALUE_PROFILE32
+        // Same compiler policy as original attention; prepare once, not in Run.
+        auto valueLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kValueProfileShader] options:compileOptions error:&error];
+        if(!valueLibrary)throw std::runtime_error("Cannot compile bounded value-profile source");
+        auto valueFunction=[valueLibrary newFunctionWithName:@"value_profile32"];
+        auto valuePipeline=valueFunction?[impl_->device newComputePipelineStateWithFunction:valueFunction error:&error]:nil;
+        if(!valuePipeline||valuePipeline.threadExecutionWidth!=32||valuePipeline.maxTotalThreadsPerThreadgroup<128||
+           valuePipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
+            throw std::runtime_error("Value-profile pipeline exceeds prepared device limits");
+        impl_->kernels->valueProfileLibrary=valueLibrary;impl_->kernels->valueProfile=valuePipeline;
+#endif
+#ifdef GARNET_METAL_MISTRAL_GROUPED_VALUE_CONTEXT
+        impl_->kernels->groupedValueContext=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"grouped_context2"] error:&error];
+        if(!impl_->kernels->groupedValueContext)throw std::runtime_error("Grouped value context pipeline unavailable");
+#endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
         impl_->kernels->verificationScores=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"verification_attention_scores"] error:&error];
         impl_->kernels->verificationContext=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"verification_attention_context"] error:&error];
         if(!impl_->kernels->verificationScores||!impl_->kernels->verificationContext||
            impl_->kernels->verificationScores.threadExecutionWidth!=32||impl_->kernels->verificationScores.maxTotalThreadsPerThreadgroup<128)
             throw std::runtime_error("Cannot compile FP32 verification attention kernels");
+#ifdef GARNET_METAL_MISTRAL_VERIFY_LAYOUT
+        NSString* layoutSource=[@"#define GARNET_VERIFY_MISTRAL_LAYOUT 1\n" stringByAppendingString:[NSString stringWithUTF8String:kVerificationAttentionShader]];
+#ifdef GARNET_METAL_MISTRAL_VERIFY_VECTOR4
+        layoutSource=[@"#define GARNET_VERIFY_VALUE_VECTOR4 1\n" stringByAppendingString:layoutSource];
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_SPLIT_SCORES
+        layoutSource=[layoutSource stringByAppendingString:[NSString stringWithUTF8String:kVerificationSplitScoreShader]];
+#endif
+        auto layoutLibrary=[impl_->device newLibraryWithSource:layoutSource options:compileOptions error:&error];
+        if(!layoutLibrary)throw std::runtime_error("Cannot compile prepared Mistral verification layout: "+std::string(error.localizedDescription.UTF8String));
+        auto layoutPipeline=[&](NSString* name){
+            auto pipeline=[impl_->device newComputePipelineStateWithFunction:[layoutLibrary newFunctionWithName:name] error:&error];
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128||pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
+                throw std::runtime_error("Prepared Mistral verification pipeline exceeds execution limits");
+            return pipeline;
+        };
+        impl_->kernels->mistralVerificationScores=layoutPipeline(@"verification_attention_scores");
+        impl_->kernels->mistralVerificationContext=layoutPipeline(@"verification_attention_context");
+#ifdef GARNET_METAL_MISTRAL_VERIFY_SPLIT_SCORES
+        auto scoreConstants=[MTLFunctionConstantValues new];uint32_t scoreTile=128;
+        [scoreConstants setConstantValue:&scoreTile type:MTLDataTypeUInt atIndex:1];
+        auto scoreDots=[layoutLibrary newFunctionWithName:@"verification_split_score_dots" constantValues:scoreConstants error:&error];
+        auto scoreDotsPipeline=scoreDots?[impl_->device newComputePipelineStateWithFunction:scoreDots error:&error]:nil;
+        auto scoreSoftmaxPipeline=layoutPipeline(@"verification_split_score_softmax");
+        if(!scoreDotsPipeline||scoreDotsPipeline.threadExecutionWidth!=32||scoreDotsPipeline.maxTotalThreadsPerThreadgroup<128||
+           scoreDotsPipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength||
+           scoreSoftmaxPipeline.staticThreadgroupMemoryLength+4096*sizeof(float)>impl_->device.maxThreadgroupMemoryLength)
+            throw std::runtime_error("Split verification score pipelines exceed prepared device limits");
+        impl_->kernels->mistralVerificationScoreDots=scoreDotsPipeline;
+        impl_->kernels->mistralVerificationScoreSoftmax=scoreSoftmaxPipeline;
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_VECTOR4
+        impl_->kernels->mistralVerificationContextVector4=layoutPipeline(@"verification_attention_context_vector4");
+#endif
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_SCORES
+        for(size_t layout=0;layout<2;++layout) {
+            NSString* gqaSource=[[NSString stringWithUTF8String:kVerificationAttentionShader]
+                stringByAppendingString:[NSString stringWithUTF8String:kVerificationGqaScoreShader]];
+            if(layout)gqaSource=[@"#define GARNET_VERIFY_MISTRAL_LAYOUT 1\n" stringByAppendingString:gqaSource];
+            auto library=[impl_->device newLibraryWithSource:gqaSource options:compileOptions error:&error];
+            if(!library)throw std::runtime_error("Cannot compile prepared GQA16 verification scores: "+std::string(error.localizedDescription.UTF8String));
+            auto make=[&](NSString* name,size_t dynamicBytes) {
+                auto function=[library newFunctionWithName:name];
+                auto pipeline=function?[impl_->device newComputePipelineStateWithFunction:function error:&error]:nil;
+                if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128||
+                   pipeline.staticThreadgroupMemoryLength+dynamicBytes>impl_->device.maxThreadgroupMemoryLength)
+                    throw std::runtime_error("GQA16 verification pipeline exceeds prepared device limits");
+                return pipeline;
+            };
+            impl_->kernels->verificationGqaDots[layout]=make(@"verification_gqa16_dots",0);
+            impl_->kernels->verificationGqaSoftmax[layout]=make(@"verification_gqa16_softmax",4096*sizeof(float));
+        }
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_VALUES
+        for(size_t index=0;index<2;++index) {
+            NSString* source=[[NSString stringWithUTF8String:kVerificationAttentionShader]
+                stringByAppendingString:[NSString stringWithUTF8String:kVerificationGqaValueShader]];
+            // The screened B1 library uses the existing layout constant policy.
+            // B4 retains runtime batch; only the tile is a function constant.
+            if(index==0)source=[@"#define GARNET_VERIFY_MISTRAL_LAYOUT 1\n" stringByAppendingString:source];
+            auto valueLibrary=[impl_->device newLibraryWithSource:source options:compileOptions error:&error];
+            if(!valueLibrary)throw std::runtime_error("Cannot compile prepared GQA16 verification values: "+std::string(error.localizedDescription.UTF8String));
+            MTLFunctionConstantValues* constants=[[MTLFunctionConstantValues alloc] init];
+            const unsigned tile=index==0?64:32;
+            [constants setConstantValue:&tile type:MTLDataTypeUInt atIndex:2];
+            auto function=[valueLibrary newFunctionWithName:@"verification_gqa16_context" constantValues:constants error:&error];
+            auto pipeline=function?[impl_->device newComputePipelineStateWithFunction:function error:&error]:nil;
+            const size_t dynamicBytes=tile*48*sizeof(float);
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128||
+               pipeline.staticThreadgroupMemoryLength+dynamicBytes>impl_->device.maxThreadgroupMemoryLength)
+                throw std::runtime_error("GQA16 verification value pipeline exceeds prepared device limits");
+            impl_->kernels->verificationGqaValues[index]=pipeline;
+        }
+#endif
         impl_->kernels->verificationConvCheckpoint=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"verification_conv_checkpoint"] error:&error];
         impl_->kernels->verificationDeltaCheckpoint=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"verification_delta_checkpoint"] error:&error];
         if(!impl_->kernels->verificationConvCheckpoint||!impl_->kernels->verificationDeltaCheckpoint||
@@ -2104,7 +2603,12 @@ constexpr unsigned decodeColumns=4;
         cached=impl_->kernels;
     }
 }
-MetalContext::~MetalContext() { Abort(); }
+MetalContext::~MetalContext() {
+    Abort();
+#ifdef GARNET_METAL_AFFINE_WEIGHT_RESIDENCY
+    impl_->affineResidency.CloseNoThrow();
+#endif
+}
 std::string MetalContext::DeviceName() const {
     return std::string([impl_->device.name UTF8String]);
 }
@@ -2183,9 +2687,12 @@ bool MetalContext::PrepareAffineInt4Profile(const MetalMatrix& input,const Metal
             uint32_t rows=uint32_t(decodeRows);
             if(rows)[constants setConstantValue:&rows type:MTLDataTypeUInt atIndex:0];
             size_t decodeColumns=1;
-            std::array<NSString*,5> names{@"affine_q4_decode",@"affine_q4_mpp",@"affine_q4_indexed_decode",@"affine_q4_indexed",@"affine_q4_reuse64"};
+            std::array<NSString*,8> names{@"affine_q4_decode",@"affine_q4_mpp",@"affine_q4_indexed_decode",@"affine_q4_indexed",@"affine_q4_reuse64",@"affine_q4_reuse128",@"affine_q4_wide",@"affine_q4_indexed_decode"};
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+            if(route==AffineProfileRoute::WideIndexedDecode)decodeColumns=4;
+#endif
 #ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
-            if(route==AffineProfileRoute::Decode||route==AffineProfileRoute::IndexedDecode) {
+            if(route==AffineProfileRoute::Decode||route==AffineProfileRoute::IndexedDecode||route==AffineProfileRoute::IndexedDecodeClear) {
                 decodeColumns=AffineDecodeColumns(a.columns,o.columns,decodeRows);
                 if(decodeColumns>1)names[size_t(route)]=@"affine_q4_blocked";
             }
@@ -2204,7 +2711,8 @@ bool MetalContext::PrepareAffineInt4Profile(const MetalMatrix& input,const Metal
 #ifdef GARNET_METAL_AFFINE_PROFILE_TGP128
             if(pipeline&&pipeline.maxTotalThreadsPerThreadgroup!=128)throw std::runtime_error("Affine profile compiler thread bound differs from128");
 #endif
-            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128||
+            const size_t requiredThreads=route==AffineProfileRoute::Reuse128?256:128;
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<requiredThreads||
                pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
                 throw std::runtime_error("Affine profile pipeline exceeds its execution limits");
             cache.emplace(key,AffineProfilePipeline{pipeline,maximumRows,decodeColumns});
@@ -2214,10 +2722,23 @@ bool MetalContext::PrepareAffineInt4Profile(const MetalMatrix& input,const Metal
         for(size_t rows=1;rows<=std::min(size_t(4),maximumRows);++rows) {
             prepare(AffineProfileRoute::Decode,rows);prepare(AffineProfileRoute::IndexedDecode,rows);
         }
+#ifdef GARNET_METAL_INDEXED_DECODE_FUSED_CLEAR
+        // This distinct cache route prevents collision with B1/B2 and generic
+        // indexed profiles having identical model dimensions/storage strides.
+        if(IndexedDecodeClearSupported(a.rows,o.rows,1,o.columns,o.rowBytes/sizeof(float)))
+            for(size_t rows=1;rows<4;++rows)prepare(AffineProfileRoute::IndexedDecodeClear,rows);
+#endif
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+        if(a.rows>4&&a.rows<=16)for(size_t rows=5;rows<=std::min(size_t(16),maximumRows);++rows)
+            prepare(AffineProfileRoute::WideIndexedDecode,rows);
+#endif
         if(maximumRows>4)prepare(AffineProfileRoute::MPP,0);
         prepare(AffineProfileRoute::Indexed,0);
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
         if(maximumRows>=64&&o.columns>=GARNET_METAL_REUSE64_MIN_OUTPUTS&&HasReuse64Affine())prepare(AffineProfileRoute::Reuse64,0);
+#endif
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+        if(maximumRows>=128&&o.columns>=GARNET_METAL_REUSE64_MIN_OUTPUTS&&HasReuse128Affine())prepare(AffineProfileRoute::Reuse128,0);
 #endif
         return true;
     }
@@ -2225,6 +2746,12 @@ bool MetalContext::PrepareAffineInt4Profile(const MetalMatrix& input,const Metal
     (void)input;(void)weight;(void)output;(void)maximumRows;return false;
 #endif
 }
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+#include "fused_q4_decode_context.inc"
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_PROJECTIONS
+#include "lookahead_projection_context.inc"
+#endif
 size_t MetalContext::AffineProfilePipelineCount() const {
 #ifdef GARNET_METAL_AFFINE_PROFILE
     std::shared_lock<std::shared_mutex> lock(impl_->kernels->affineProfileMutex);return impl_->kernels->affineProfiles.size();
@@ -2297,6 +2824,507 @@ MetalAffineInt4Weight MetalContext::UploadAffineInt4(const void* packed,size_t p
         return MetalAffineInt4Weight(std::move(value));
     }
 }
+#ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+namespace {
+bool StreamedShape(size_t n,size_t k) {
+    return (k==4096&&(n==4096||n==14336))||(k==14336&&n==4096);
+}
+}
+size_t MetalContext::LastStreamedAffineDispatches() const {return impl_->streamedDispatches;}
+size_t MetalContext::StreamedAffinePlanCount() const {return impl_->streamedPlans.size();}
+std::array<MetalMatrix,3> MetalContext::StreamedAffineScratch() const {return impl_->streamedScratch;}
+void MetalContext::SetStreamedAffineEnabled(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Select streamed prefill between drained command batches");
+    impl_->streamedEnabled=enabled;
+}
+bool MetalContext::PrepareStreamedAffineProfile(const MetalMatrix& input,const MetalAffineInt4Weight& weight,
+    const MetalMatrix& output,size_t maximumRows) {
+    @autoreleasepool {
+        if(impl_->command||impl_->submitted.count)throw std::logic_error("Prepare streamed prefill before inference");
+        if(!input.impl_||!weight.impl_||!output.impl_||!maximumRows||maximumRows>512)
+            throw std::invalid_argument("Invalid streamed prefill profile");
+        auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
+        if(a.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||
+           w->scales.device!=impl_->device||w->biases.device!=impl_->device||a.rows!=maximumRows||
+           o.rows!=a.rows||a.columns!=w->columns||o.columns!=w->rows||a.data==o.data||
+           a.rowBytes%4||o.rowBytes%4||a.rowBytes/4>UINT32_MAX/512||o.rowBytes/4>UINT32_MAX/512)
+            throw std::invalid_argument("Streamed prefill profile shape/device mismatch");
+        if(maximumRows<512||!StreamedShape(o.columns,a.columns))return false;
+        const std::array<size_t,2> key{o.columns,a.columns};
+        if(impl_->streamedPlans.count(key))return true;
+        if(!impl_->streamedUnpack) {
+            NSError* error=nil;auto opts=[MTLCompileOptions new];opts.fastMathEnabled=NO;
+            auto lib=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:kStreamedAffineShader] options:opts error:&error];
+            if(!lib)throw std::runtime_error("Cannot compile streamed prefill helpers");
+            auto pipeline=[&](NSString* name){auto p=[impl_->device newComputePipelineStateWithFunction:[lib newFunctionWithName:name] error:&error];
+                if(!p||p.maxTotalThreadsPerThreadgroup<256)throw std::runtime_error("Invalid streamed prefill helper");return p;};
+            auto unpack=pipeline(@"streamed_affine_unpack"),gather=pipeline(@"streamed_affine_gather"),scatter=pipeline(@"streamed_affine_scatter");
+            // Float storage owners provide the existing allocation/lifetime
+            // accounting; MPS half views share these buffers without copies.
+            std::array<MetalMatrix,3> scratch{Allocate(14336,2048),Allocate(512,7168),Allocate(512,14336)};
+            impl_->streamedScratch=std::move(scratch);impl_->streamedUnpack=unpack;impl_->streamedGather=gather;impl_->streamedScatter=scatter;
+        }
+        auto halfA=impl_->streamedScratch[1].impl_->matrix,halfW=impl_->streamedScratch[0].impl_->matrix,floatC=impl_->streamedScratch[2].impl_->matrix;
+        Impl::StreamedPlan plan;
+        plan.a=[[MPSMatrix alloc] initWithBuffer:halfA.data descriptor:[MPSMatrixDescriptor matrixDescriptorWithRows:512 columns:a.columns rowBytes:a.columns*2 dataType:MPSDataTypeFloat16]];
+        plan.w=[[MPSMatrix alloc] initWithBuffer:halfW.data descriptor:[MPSMatrixDescriptor matrixDescriptorWithRows:o.columns columns:a.columns rowBytes:a.columns*2 dataType:MPSDataTypeFloat16]];
+        plan.o=[[MPSMatrix alloc] initWithBuffer:floatC.data descriptor:[MPSMatrixDescriptor matrixDescriptorWithRows:512 columns:o.columns rowBytes:o.columns*4 dataType:MPSDataTypeFloat32]];
+        plan.product=[[MPSMatrixMultiplication alloc] initWithDevice:impl_->device transposeLeft:NO transposeRight:YES resultRows:512 resultColumns:o.columns interiorColumns:a.columns alpha:1 beta:0];
+        if(!plan.a||!plan.w||!plan.o||!plan.product)throw std::runtime_error("Cannot prepare streamed MPS projection");
+        // Warm the exact descriptor during readiness, before measured serving.
+        // No weights are retained or read from this preparation-only command.
+        auto cmd=[impl_->queue commandBuffer];auto blit=[cmd blitCommandEncoder];
+        if(!cmd||!blit)throw std::runtime_error("Cannot warm streamed MPS projection");
+        for(const auto& scratch:impl_->streamedScratch){auto m=scratch.impl_->matrix;[blit fillBuffer:m.data range:NSMakeRange(0,m.data.length) value:0];}
+        [blit endEncoding];[plan.product encodeToCommandBuffer:cmd leftMatrix:plan.a rightMatrix:plan.w resultMatrix:plan.o];
+        [cmd commit];[cmd waitUntilCompleted];
+        if(cmd.status!=MTLCommandBufferStatusCompleted)throw std::runtime_error("Cannot finish streamed prefill preparation");
+        impl_->streamedPlans.emplace(key,std::move(plan));return true;
+    }
+}
+bool MetalContext::TryEncodeStreamedAffine(const MetalMatrix& input,const MetalAffineInt4Weight& weight,
+    const MetalMatrix& output,const std::vector<uint32_t>& indices,bool reportIndexed) {
+    if(!impl_->streamedEnabled||indices.size()!=512)return false;
+    if(input.impl_->matrix.rows!=512||input.impl_->matrix.rowBytes/4>UINT32_MAX/512||output.impl_->matrix.rowBytes/4>UINT32_MAX/512)return false;
+    auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
+    auto found=impl_->streamedPlans.find({o.columns,a.columns});
+    if(found==impl_->streamedPlans.end())return false;
+    for(const auto& scratch:impl_->streamedScratch) {
+        auto data=scratch.impl_->matrix.data;
+        if(a.data==data||o.data==data)throw std::invalid_argument("Streamed prefill operands alias private workspace");
+    }
+    // Caller already validated readiness, devices, non-aliasing, complete row
+    // permutation and output span. All buffers and MPS objects exist already.
+    output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
+    const auto& p=found->second;uint32_t dims[]{uint32_t(o.columns),uint32_t(a.columns)};
+    auto encoder=impl_->ComputeEncoder(__func__);
+    if(!encoder)throw std::runtime_error("Cannot encode streamed unpack");
+    [encoder setComputePipelineState:impl_->streamedUnpack];[encoder setBuffer:w->packed offset:0 atIndex:0];
+    [encoder setBuffer:w->scales offset:0 atIndex:1];[encoder setBuffer:w->biases offset:0 atIndex:2];
+    [encoder setBuffer:p.w.data offset:0 atIndex:3];[encoder setBytes:dims length:sizeof(dims) atIndex:4];
+    [encoder dispatchThreads:MTLSizeMake(o.columns*a.columns,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];
+    [encoder setComputePipelineState:impl_->streamedGather];[encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:p.a.data offset:0 atIndex:1];
+    [encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:2];uint32_t gather[]{uint32_t(a.columns),uint32_t(a.rowBytes/4)};
+    [encoder setBytes:gather length:sizeof(gather) atIndex:3];[encoder dispatchThreads:MTLSizeMake(512*a.columns,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
+    [p.product encodeToCommandBuffer:impl_->command leftMatrix:p.a rightMatrix:p.w resultMatrix:p.o];
+    encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode streamed scatter");
+    [encoder setComputePipelineState:impl_->streamedScatter];[encoder setBuffer:p.o.data offset:0 atIndex:0];[encoder setBuffer:o.data offset:o.offset atIndex:1];
+    [encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:2];uint32_t scatter[]{uint32_t(o.columns),uint32_t(o.rowBytes/4)};
+    [encoder setBytes:scatter length:sizeof(scatter) atIndex:3];[encoder dispatchThreads:MTLSizeMake(512*o.columns,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
+    ++impl_->streamedDispatches;++impl_->affineProfileDispatches;
+    if(reportIndexed)++impl_->indexedAffineDispatches;
+    output.impl_->ready=false;output.impl_->pending=true;
+    if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+    return true;
+}
+#endif
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+namespace {
+bool PackedAffineShape(size_t n,size_t k) {
+    return (k==4096&&(n==4096||n==14336))||(k==14336&&n==4096);
+}
+}
+size_t MetalContext::LastPackedAffineDispatches() const {return impl_->packedDispatches;}
+size_t MetalContext::LastDiagnosticBulkDispatches() const {return impl_->diagnosticBulkDispatches;}
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+MetalMatrix MetalContext::PrepareDiagnosticDenseView(const MetalMatrix& owner,size_t first,size_t rows,size_t columns) const {
+ @autoreleasepool {
+ if(impl_->command||impl_->submitted.count)throw std::logic_error("Prepare dense spans before inference");
+ if(!owner.impl_||!owner.impl_->ready||owner.impl_->pending||owner.impl_->matrix.device!=impl_->device)throw std::invalid_argument("Dense span needs an initialized owner");
+ auto a=owner.impl_->matrix;
+ if(a.dataType!=MPSDataTypeFloat32||a.rowBytes!=a.columns*4||!rows||!columns||rows>8192||columns>524288||first%4||columns%4||first>a.rows*a.columns||rows>(a.rows*a.columns-first)/columns)throw std::invalid_argument("Dense span exceeds initialized backing storage");
+ auto storage=std::make_shared<MetalMatrix::Impl>(owner.impl_);auto desc=[MPSMatrixDescriptor matrixDescriptorWithRows:rows columns:columns rowBytes:columns*4 dataType:MPSDataTypeFloat32];
+ storage->matrix=[[MPSMatrix alloc] initWithBuffer:a.data offset:a.offset+first*4 descriptor:desc];if(!storage->matrix)throw std::runtime_error("Cannot prepare dense span");
+#ifdef GARNET_METAL_CACHED_MATRIX_METADATA
+ auto v=storage->matrix;storage->bufferIdentity=reinterpret_cast<uintptr_t>((__bridge void*)v.data);storage->deviceIdentity=reinterpret_cast<uintptr_t>((__bridge void*)v.device);storage->rows=v.rows;storage->columns=v.columns;storage->rowBytes=v.rowBytes;storage->offset=v.offset;storage->allocatedBytes=v.data.allocatedSize;storage->lengthBytes=v.data.length;
+#endif
+ return MetalMatrix(storage);
+ }
+}
+#endif
+
+std::array<MetalMatrix,2> MetalContext::DiagnosticBulkScratch() const {return impl_->diagnosticBulkScratch;}
+bool MetalContext::PrepareDiagnosticBulkAffine(const MetalMatrix& input,const MetalAffineInt4Weight& weight,const MetalMatrix& output) {
+    @autoreleasepool {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Prepare bulk projection before inference");
+    if(!input.impl_||!weight.impl_||!output.impl_)throw std::invalid_argument("Missing bulk operands");
+    auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
+    if(a.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||a.data==o.data||
+       !a.rows||a.rows>8192||a.rows!=o.rows||a.columns!=w->columns||o.columns!=w->rows||
+       a.dataType!=MPSDataTypeFloat32||o.dataType!=MPSDataTypeFloat32||a.rowBytes!=a.columns*4||o.rowBytes!=o.columns*4)
+        throw std::invalid_argument("Invalid dense bulk projection profile");
+    // Diagnostic-only K/V product. Original packed selection and its kernels
+    // remain unchanged, so the control still uses the existing indexed path.
+    const bool kvShape=o.columns==1024&&a.columns==4096;
+    if(!PackedAffineShape(o.columns,a.columns)&&!kvShape)return false;
+    const std::array<size_t,3> key{a.rows,a.columns,o.columns};if(impl_->diagnosticBulkPlans.count(key))return true;
+    if(impl_->diagnosticBulkPlans.size()>=64)throw std::logic_error("Bulk preparation profile bound");
+    if(!impl_->diagnosticBulkUnpack) {
+        NSError* error=nil;auto opts=[MTLCompileOptions new];opts.fastMathEnabled=NO;
+        NSString* source=[NSString stringWithUTF8String:kStreamedAffineShader];
+        source=[source stringByAppendingString:@"\nkernel void diagnostic_bulk_cast(device const float* a [[buffer(0)]],device half* h [[buffer(1)]],constant uint& count [[buffer(2)]],uint i [[thread_position_in_grid]]){if(i<count)h[i]=half(a[i]);}\n"];
+        auto library=[impl_->device newLibraryWithSource:source options:opts error:&error];
+        if(!library)throw std::runtime_error("Cannot compile bulk projection helpers");
+        auto make=[&](NSString* name){auto p=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:name] error:&error];if(!p||p.maxTotalThreadsPerThreadgroup<256)throw std::runtime_error("Cannot create bulk helper");return p;};
+        auto unpack=make(@"streamed_affine_unpack"),cast=make(@"diagnostic_bulk_cast");
+        // Existing owned float buffers hold bounded half weight/input storage.
+        std::array<MetalMatrix,2> scratch{Allocate(14336,2048),Allocate(8192,7168)};
+        impl_->diagnosticBulkScratch=std::move(scratch);impl_->diagnosticBulkUnpack=unpack;impl_->diagnosticBulkCast=cast;
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+        // Partial half-carrier views inherit initialized parent readiness.
+        for(const auto& owner:impl_->diagnosticBulkScratch)Zero(owner);
+#endif
+    }
+    auto halfW=impl_->diagnosticBulkScratch[0].impl_->matrix,halfA=impl_->diagnosticBulkScratch[1].impl_->matrix;
+    Impl::DiagnosticBulkPlan plan;
+    plan.a=[[MPSMatrix alloc] initWithBuffer:halfA.data descriptor:[MPSMatrixDescriptor matrixDescriptorWithRows:a.rows columns:a.columns rowBytes:a.columns*2 dataType:MPSDataTypeFloat16]];
+    plan.w=[[MPSMatrix alloc] initWithBuffer:halfW.data descriptor:[MPSMatrixDescriptor matrixDescriptorWithRows:o.columns columns:a.columns rowBytes:a.columns*2 dataType:MPSDataTypeFloat16]];
+    plan.product=[[MPSMatrixMultiplication alloc] initWithDevice:impl_->device transposeLeft:NO transposeRight:YES resultRows:a.rows resultColumns:o.columns interiorColumns:a.columns alpha:1 beta:0];
+    if(!plan.a||!plan.w||!plan.product)throw std::runtime_error("Cannot prepare bulk MPS plan");
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+    plan.halfCarrier=PrepareDiagnosticDenseView(impl_->diagnosticBulkScratch[1],0,a.rows,a.columns/2);
+#endif
+    impl_->diagnosticBulkPlans.emplace(key,std::move(plan));return true;
+    }
+}
+void MetalContext::EncodeDiagnosticBulkAffine(const MetalMatrix& input,const MetalAffineInt4Weight& weight,const MetalMatrix& output) {
+    @autoreleasepool {
+    if(!impl_->command||!input.impl_||!weight.impl_||!output.impl_)throw std::logic_error("Bulk projection needs an open batch and operands");
+    auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
+    if(a.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||a.data==o.data||(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))||
+       !a.rows||a.rows>8192||a.rows!=o.rows||a.columns!=w->columns||o.columns!=w->rows||a.rowBytes!=a.columns*4||o.rowBytes!=o.columns*4||
+       a.dataType!=MPSDataTypeFloat32||o.dataType!=MPSDataTypeFloat32)
+        throw std::invalid_argument("Bulk projection operand layout/readiness mismatch");
+    auto found=impl_->diagnosticBulkPlans.find({a.rows,a.columns,o.columns});if(found==impl_->diagnosticBulkPlans.end())throw std::logic_error("Bulk profile not prepared");
+    for(const auto& scratch:impl_->diagnosticBulkScratch)if(a.data==scratch.impl_->matrix.data||o.data==scratch.impl_->matrix.data)throw std::invalid_argument("Bulk private workspace alias");
+    output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
+    const auto& plan=found->second;auto e=impl_->ComputeEncoder(__func__);if(!e)throw std::runtime_error("Cannot encode bulk unpack/cast");
+    [e setComputePipelineState:impl_->diagnosticBulkUnpack];[e setBuffer:w->packed offset:0 atIndex:0];[e setBuffer:w->scales offset:0 atIndex:1];[e setBuffer:w->biases offset:0 atIndex:2];[e setBuffer:plan.w.data offset:0 atIndex:3];
+    uint32_t dims[]{uint32_t(o.columns),uint32_t(a.columns)};[e setBytes:dims length:sizeof(dims) atIndex:4];[e dispatchThreads:MTLSizeMake(o.columns*a.columns,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];
+    [e setComputePipelineState:impl_->diagnosticBulkCast];[e setBuffer:a.data offset:a.offset atIndex:0];[e setBuffer:plan.a.data offset:0 atIndex:1];uint32_t count=uint32_t(a.rows*a.columns);[e setBytes:&count length:sizeof(count) atIndex:2];[e dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[e endEncoding];
+    [plan.product encodeToCommandBuffer:impl_->command leftMatrix:plan.a rightMatrix:plan.w resultMatrix:o];
+    ++impl_->diagnosticBulkDispatches;output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+    }
+}
+
+size_t MetalContext::PackedAffinePlanCount() const {return impl_->packedPlans.size();}
+MetalMatrix MetalContext::PackedAffineScratch() const {return impl_->packedInput;}
+void MetalContext::SetPackedAffineEnabled(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Select packed prefill between drained command batches");
+    impl_->packedEnabled=enabled;
+}
+bool MetalContext::PreparePackedAffineProfile(const MetalMatrix& input,const MetalAffineInt4Weight& weight,
+    const MetalMatrix& output,size_t maximumRows) {
+    @autoreleasepool {
+        if(impl_->command||impl_->submitted.count)throw std::logic_error("Prepare packed prefill before inference");
+        if(!input.impl_||!weight.impl_||!output.impl_||!maximumRows||maximumRows>512)
+            throw std::invalid_argument("Invalid packed prefill profile");
+        auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
+        if(a.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||
+           w->scales.device!=impl_->device||w->biases.device!=impl_->device||
+           !a.rows||a.rows>maximumRows||a.rows!=o.rows||a.columns!=w->columns||o.columns!=w->rows||
+           a.data==o.data||a.rowBytes%4||o.rowBytes%16||o.offset%16||
+           !AffineProfileIndex32Fits(maximumRows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4))
+            throw std::invalid_argument("Packed prefill profile shape/device mismatch");
+        if(maximumRows<128||!PackedAffineShape(o.columns,a.columns))return false;
+        const std::array<size_t,4> key{a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+        auto found=impl_->packedPlans.find(key);
+        if(found!=impl_->packedPlans.end()){found->second.maximumRows=std::max(found->second.maximumRows,maximumRows);return true;}
+        if(impl_->packedPlans.size()>=32)throw std::runtime_error("Packed prefill profile bound exceeded");
+        NSError* error=nil;
+        if(!impl_->packedLibrary) {
+            auto opts=[MTLCompileOptions new];opts.languageVersion=MTLLanguageVersion4_0;opts.mathMode=MTLMathModeSafe;
+            NSString* source=[@"#define GARNET_AFFINE_PROFILE 1\n#define GARNET_AFFINE_INDEX32 1\n#define GARNET_AFFINE_FP16_COEFFICIENTS 1\n" stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4ProfilePrelude]];
+            source=[source stringByAppendingString:[NSString stringWithUTF8String:kPackedAffineShader]];
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+            source=[source stringByAppendingString:[NSString stringWithUTF8String:kPairedPrefillShader]];
+#endif
+            source=[source stringByAppendingString:[NSString stringWithUTF8String:kPackedAffineLayoutGuardShader]];
+            auto library=[impl_->device newLibraryWithSource:source options:opts error:&error];
+            if(!library)throw std::runtime_error("Cannot compile packed prefill library: "+std::string(error.localizedDescription.UTF8String));
+            auto gather=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"packed_affine_gather"] error:&error];
+            if(!gather||gather.maxTotalThreadsPerThreadgroup<256)throw std::runtime_error("Invalid packed gather pipeline");
+            // Validate this compiler's cooperative ABI before publishing any
+            // packed library/workspace/plan. Never run raw-index kernels with
+            // an unqualified register layout, even when compilation succeeds.
+            auto guard=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"packed_affine_layout_guard"] error:&error];
+            if(!guard||guard.threadExecutionWidth!=32||guard.maxTotalThreadsPerThreadgroup<32)
+                throw std::runtime_error("Cannot validate packed affine cooperative layout");
+            auto status=[impl_->device newBufferWithLength:32*sizeof(uint32_t) options:MTLResourceStorageModeShared];
+            if(!status)throw std::runtime_error("Cannot allocate packed layout validation status");
+            std::fill_n(static_cast<uint32_t*>(status.contents),32,UINT32_MAX);
+            auto command=[impl_->queue commandBuffer];auto encoder=[command computeCommandEncoder];
+            if(!command||!encoder)throw std::runtime_error("Cannot encode packed affine layout validation");
+            [encoder setComputePipelineState:guard];[encoder setBuffer:status offset:0 atIndex:0];
+            [encoder dispatchThreadgroups:MTLSizeMake(1,1,1) threadsPerThreadgroup:MTLSizeMake(32,1,1)];
+            [encoder endEncoding];[command commit];[command waitUntilCompleted];
+            if(command.status!=MTLCommandBufferStatusCompleted||
+               !PackedAffineLayoutMatches(static_cast<const uint32_t*>(status.contents),32))
+                throw std::runtime_error("Packed affine cooperative layout differs from the qualified M16/N32/K16 ABI");
+            // A float storage owner supplies existing allocation/lifetime
+            // accounting. Its bytes store at most512x14336 half operands.
+            auto scratch=Allocate(512,7168);
+            impl_->packedLibrary=library;impl_->packedGather=gather;impl_->packedInput=std::move(scratch);
+        }
+        const uint32_t dimensions[]{uint32_t(a.columns),uint32_t(o.columns),uint32_t(a.rowBytes/4),uint32_t(o.rowBytes/4)};
+        auto constants=[MTLFunctionConstantValues new];
+        for(NSUInteger i=0;i<4;++i)[constants setConstantValue:dimensions+i type:MTLDataTypeUInt atIndex:10+i];
+        Impl::PackedPlan plan;plan.maximumRows=maximumRows;
+        const std::array<NSString*,2> names{@"half_m128k128",@"half_m256k128"};
+        for(size_t i=0;i<names.size();++i) {
+            auto function=[impl_->packedLibrary newFunctionWithName:names[i] constantValues:constants error:&error];
+            if(!function)throw std::runtime_error("Cannot specialize packed prefill: "+std::string(error.localizedDescription.UTF8String));
+            auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<256||
+               pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
+                throw std::runtime_error("Packed prefill pipeline exceeds device limits");
+            plan.pipelines[i]=pipeline;
+        }
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+        if(a.columns==4096&&o.columns==14336) {
+            const std::array<NSString*,2> pairedNames{@"pair_m128k128",@"pair_m256k128"};
+            for(size_t i=0;i<pairedNames.size();++i) {
+                auto function=[impl_->packedLibrary newFunctionWithName:pairedNames[i] constantValues:constants error:&error];
+                if(!function)throw std::runtime_error("Cannot specialize paired prefill: "+std::string(error.localizedDescription.UTF8String));
+                auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+                if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<256||
+                   pipeline.staticThreadgroupMemoryLength!=17408||pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
+                    throw std::runtime_error("Paired prefill pipeline exceeds device limits");
+                plan.paired[i]=pipeline;
+            }
+        }
+#endif
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+        if(a.columns==4096&&o.columns==14336) {
+            if(!impl_->fusedMlpLibrary) {
+                if(![impl_->device supportsFamily:MTLGPUFamilyApple10])throw std::runtime_error("Fused MLP requires Apple10");
+                auto options=[MTLCompileOptions new];options.languageVersion=MTLLanguageVersion4_0;options.mathMode=MTLMathModeFast;
+                NSString* text=[@"#define GARNET_AFFINE_PROFILE 1\n#define GARNET_AFFINE_INDEX32 1\n#define GARNET_AFFINE_FP16_COEFFICIENTS 1\n" stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4ProfilePrelude]];
+                for(const auto* code:{kPackedAffineShader,kFusedMistralMlpShader,kPackedAffineLayoutGuardShader})text=[text stringByAppendingString:[NSString stringWithUTF8String:code]];
+                auto library=[impl_->device newLibraryWithSource:text options:options error:&error];if(!library)throw std::runtime_error("Cannot compile fused MLP: "+std::string(error.localizedDescription.UTF8String));
+                auto function=[library newFunctionWithName:@"packed_affine_layout_guard"];auto probe=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+                if(!probe||probe.threadExecutionWidth!=32)throw std::runtime_error("Cannot prepare fused MLP ABI probe");
+                auto status=[impl_->device newBufferWithLength:128 options:MTLResourceStorageModeShared];if(!status)throw std::runtime_error("Cannot allocate fused ABI status");std::fill_n((uint32_t*)status.contents,32,UINT32_MAX);
+                auto command=[impl_->queue commandBuffer];auto encoder=[command computeCommandEncoder];[encoder setComputePipelineState:probe];[encoder setBuffer:status offset:0 atIndex:0];[encoder dispatchThreadgroups:MTLSizeMake(1,1,1) threadsPerThreadgroup:MTLSizeMake(32,1,1)];[encoder endEncoding];[command commit];[command waitUntilCompleted];
+                if(command.status!=MTLCommandBufferStatusCompleted||!PackedAffineLayoutMatches((uint32_t*)status.contents,32))throw std::runtime_error("Fused MLP cooperative ABI mismatch");
+                auto memory=MemoryStats();if(memory.recommended<=14680064+256*1024*1024||memory.allocated>memory.recommended-14680064-256*1024*1024)throw std::runtime_error("Fused half arena exceeds native device budget");
+                auto scratch=Allocate(512,7168);Zero(scratch);impl_->fusedMlpHalf=std::move(scratch);impl_->fusedMlpLibrary=library;
+            }
+            bool disabled=false;[constants setConstantValue:&disabled type:MTLDataTypeBool atIndex:20];[constants setConstantValue:&disabled type:MTLDataTypeBool atIndex:21];
+            for(size_t i=0;i<2;++i){auto name=i?@"fused_m256k128":@"fused_m128k128";auto function=[impl_->fusedMlpLibrary newFunctionWithName:name constantValues:constants error:&error];if(!function)throw std::runtime_error("Cannot specialize fused MLP");auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<256||pipeline.staticThreadgroupMemoryLength!=17408)throw std::runtime_error("Fused MLP pipeline resource mismatch");plan.fused[i]=pipeline;}
+        }
+#endif
+
+        impl_->packedPlans.emplace(key,std::move(plan));return true;
+    }
+}
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+size_t MetalContext::LastFusedMistralMlpBlocks() const {return impl_->fusedMlpBlocks;}
+MetalMatrix MetalContext::FusedMistralMlpScratch() const {return impl_->fusedMlpHalf;}
+bool MetalContext::TryEncodeFusedMistralMlp(const MetalMatrix& input,const MetalAffineInt4Weight& gate,
+ const MetalAffineInt4Weight& up,const MetalAffineInt4Weight& down,const MetalMatrix& gateLayout,
+ const MetalMatrix& upLayout,const MetalMatrix& activatedLayout,const MetalMatrix& output,
+ const std::vector<size_t>* selectedRows) {
+ @autoreleasepool {
+  if(!impl_->packedEnabled)return false;
+  if(!impl_->command||!input.impl_||!gate.impl_||!up.impl_||!down.impl_||!gateLayout.impl_||!upLayout.impl_||!activatedLayout.impl_||!output.impl_)
+   throw std::invalid_argument("Fused MLP requires an open command and complete operands");
+  auto a=input.impl_->matrix,o=output.impl_->matrix,g=gateLayout.impl_->matrix,u=upLayout.impl_->matrix,s=activatedLayout.impl_->matrix;
+  const auto& gw=gate.impl_;const auto& uw=up.impl_;const auto& dw=down.impl_;
+  for(auto matrix:{a,o,g,u,s})if(matrix.device!=impl_->device||matrix.dataType!=MPSDataTypeFloat32)throw std::invalid_argument("Fused MLP device/type mismatch");
+  for(const auto& w:{gw,uw,dw})if(w->packed.device!=impl_->device||w->scales.device!=impl_->device||w->biases.device!=impl_->device)throw std::invalid_argument("Fused MLP weight device mismatch");
+  if(!a.rows||a.rows>512||a.columns!=4096||o.rows!=a.rows||o.columns!=4096||
+   g.rows!=a.rows||u.rows!=a.rows||s.rows!=a.rows||g.columns!=14336||u.columns!=14336||s.columns!=14336||
+   gw->rows!=14336||gw->columns!=4096||uw->rows!=14336||uw->columns!=4096||dw->rows!=4096||dw->columns!=14336)return false;
+  std::vector<uint32_t> indices;std::array<bool,512> seen{};
+  if(selectedRows){if(selectedRows->size()>a.rows)throw std::invalid_argument("Fused MLP selection exceeds rows");for(auto row:*selectedRows){if(row>=a.rows||seen[row])throw std::invalid_argument("Fused MLP selection must be unique/in bounds");seen[row]=true;indices.push_back(uint32_t(row));}}
+  else for(size_t row=0;row<a.rows;++row)indices.push_back(uint32_t(row));
+  if(indices.size()<128)return false;
+  auto gp=impl_->packedPlans.find({4096,14336,a.rowBytes/4,g.rowBytes/4});
+  auto dp=impl_->packedPlans.find({14336,4096,s.rowBytes/4,o.rowBytes/4});
+  if(gp==impl_->packedPlans.end()||dp==impl_->packedPlans.end()||!impl_->fusedMlpHalf.Valid())return false;
+  if(a.rows>gp->second.maximumRows||a.rows>dp->second.maximumRows)throw std::logic_error("Fused MLP exceeds prepared upper bound");
+  size_t gateTile=indices.size()>=256?256:128,downTile=indices.size()>=384?256:128;
+  auto gatePipeline=gp->second.fused[gateTile==256],downPipeline=dp->second.pipelines[downTile==256];
+  if(!gatePipeline||!downPipeline)return false;
+  if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))throw std::logic_error("Fused MLP input not ready in current command");
+  if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_->PendingKey()))throw std::logic_error("Fused MLP output belongs to another command");
+  output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
+  auto compact=impl_->packedInput.impl_->matrix,half=impl_->fusedMlpHalf.impl_->matrix;
+  for(const auto& scratch:{impl_->packedInput,impl_->fusedMlpHalf})if(scratch.impl_->pending&&!impl_->pendingOutputs.count(scratch.impl_->PendingKey()))throw std::logic_error("Fused MLP private scratch belongs to another command");
+  impl_->fusedMlpHalf.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(impl_->fusedMlpHalf.impl_->PendingKey()));
+  auto span=[](MPSMatrix* m){if(m.rowBytes<m.columns*4||m.offset%4||(m.rows-1)>(SIZE_MAX-m.columns*4)/m.rowBytes)throw std::invalid_argument("Invalid fused MLP span");size_t bytes=(m.rows-1)*m.rowBytes+m.columns*4;if(m.offset>m.data.length||bytes>m.data.length-m.offset)throw std::invalid_argument("Fused MLP span exceeds allocation");return bytes;};
+  size_t outBytes=0;for(auto m:{a,o,g,u,s}){auto bytes=span(m);if(m==o)outBytes=bytes;if(m.data==compact.data||m.data==half.data)throw std::invalid_argument("Fused MLP operand aliases private scratch");}
+  for(const auto& w:{gw,uw,dw})for(auto m:{a,o,g,u,s})if(m.data==w->packed||m.data==w->scales||m.data==w->biases)throw std::invalid_argument("Fused MLP matrix aliases checkpoint bytes");
+  if(a.rowBytes%4||g.rowBytes%16||s.rowBytes%4||o.rowBytes%16||o.offset%16||
+    !AffineProfileIndex32Fits(a.rows,4096,14336,a.rowBytes/4,g.rowBytes/4)||!AffineProfileIndex32Fits(a.rows,14336,4096,s.rowBytes/4,o.rowBytes/4))throw std::invalid_argument("Fused MLP index profile mismatch");
+  for(const auto& value:{output,impl_->fusedMlpHalf}){value.impl_->ready=false;value.impl_->pending=true;if(impl_->pendingOutputs.insert(value.impl_->PendingKey()).second)impl_->outputs.push_back(value.impl_);}
+  // All validation is complete. Initialize the full private arena so Abort
+  // recovery and inactive tails never expose uninitialized carrier bytes.
+  auto blit=[impl_->command blitCommandEncoder];if(!blit)throw std::runtime_error("Cannot initialize fused half arena");
+  [blit fillBuffer:half.data range:NSMakeRange(half.offset,512*14336*2) value:0];
+  [blit endEncoding];
+  auto encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot gather fused MLP input");
+  uint32_t shape[]={uint32_t(indices.size()),4096,uint32_t(a.rowBytes/4),0};
+  [encoder setComputePipelineState:impl_->packedGather];[encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:compact.data offset:0 atIndex:1];[encoder setBytes:indices.data() length:indices.size()*4 atIndex:2];[encoder setBytes:shape length:sizeof(shape) atIndex:3];[encoder dispatchThreads:MTLSizeMake(indices.size()*4096,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
+  // Input may share its original arena with the final down output.
+  // Gather first; clearing inactive output rows must not erase that input.
+  if(indices.size()<a.rows){auto clear=[impl_->command blitCommandEncoder];if(!clear)throw std::runtime_error("Cannot clear fused inactive rows");[clear fillBuffer:o.data range:NSMakeRange(o.offset,outBytes) value:0];[clear endEncoding];}
+  struct Params{uint64_t rows,inner,columns,aStride,oStride;};Params gateParams{indices.size(),4096,14336,a.rowBytes/4,g.rowBytes/4};
+  encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode fused gate/up SiLU");
+  [encoder setComputePipelineState:gatePipeline];[encoder setBuffer:compact.data offset:0 atIndex:0];[encoder setBuffer:gw->packed offset:0 atIndex:1];[encoder setBuffer:gw->scales offset:0 atIndex:2];[encoder setBuffer:gw->biases offset:0 atIndex:3];[encoder setBuffer:g.data offset:g.offset atIndex:4];[encoder setBytes:&gateParams length:sizeof(gateParams) atIndex:5];[encoder setBytes:indices.data() length:indices.size()*4 atIndex:6];[encoder setBuffer:uw->packed offset:0 atIndex:8];[encoder setBuffer:uw->scales offset:0 atIndex:9];[encoder setBuffer:uw->biases offset:0 atIndex:10];[encoder setBuffer:u.data offset:u.offset atIndex:11];[encoder setBuffer:half.data offset:half.offset atIndex:13];[encoder setBuffer:g.data offset:g.offset atIndex:14];[encoder dispatchThreadgroups:MTLSizeMake(448,(indices.size()+gateTile-1)/gateTile,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
+  Params downParams{indices.size(),14336,4096,s.rowBytes/4,o.rowBytes/4};
+  encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode fused MLP down projection");
+  [encoder setComputePipelineState:downPipeline];[encoder setBuffer:half.data offset:half.offset atIndex:0];[encoder setBuffer:dw->packed offset:0 atIndex:1];[encoder setBuffer:dw->scales offset:0 atIndex:2];[encoder setBuffer:dw->biases offset:0 atIndex:3];[encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&downParams length:sizeof(downParams) atIndex:5];[encoder setBytes:indices.data() length:indices.size()*4 atIndex:6];[encoder dispatchThreadgroups:MTLSizeMake(64,(indices.size()+downTile-1)/downTile,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
+  ++impl_->fusedMlpBlocks;impl_->packedDispatches+=3;impl_->affineProfileDispatches+=3;if(selectedRows)impl_->indexedAffineDispatches+=3;
+  impl_->affineProfileMaxThreads=std::max(gatePipeline.maxTotalThreadsPerThreadgroup,downPipeline.maxTotalThreadsPerThreadgroup);
+  return true;
+ }
+}
+#endif
+
+bool MetalContext::TryEncodePackedAffine(const MetalMatrix& input,const MetalAffineInt4Weight& weight,
+    const MetalMatrix& output,const std::vector<uint32_t>& indices,bool reportIndexed) {
+    if(!impl_->packedEnabled||indices.size()<128)return false;
+    auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
+    const std::array<size_t,4> key{a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+    auto found=impl_->packedPlans.find(key);
+    if(found==impl_->packedPlans.end())return false;
+    if(a.rows>found->second.maximumRows||indices.size()>found->second.maximumRows)
+        throw std::logic_error("Packed prefill exceeds its prepared row bound");
+    auto compact=impl_->packedInput.impl_->matrix;
+    if(a.data==compact.data||o.data==compact.data)throw std::invalid_argument("Packed prefill operands alias private workspace");
+    if(o.offset%16||o.rowBytes%16||!AffineProfileIndex32Fits(a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4))
+        throw std::invalid_argument("Packed prefill operand layout exceeds prepared bounds");
+    output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
+    // All validation precedes any write. Caller has checked device/readiness,
+    // row uniqueness and output span. Inactive physical rows become zero.
+    if(indices.size()<a.rows) {
+        const size_t bytes=(o.rows-1)*o.rowBytes+o.columns*sizeof(float);
+        auto blit=[impl_->command blitCommandEncoder];
+        if(!blit)throw std::runtime_error("Cannot clear packed prefill output");
+        [blit fillBuffer:o.data range:NSMakeRange(o.offset,bytes) value:0];[blit endEncoding];
+    }
+    auto encoder=impl_->ComputeEncoder(__func__);
+    if(!encoder)throw std::runtime_error("Cannot encode packed input gather");
+    const uint32_t shape[]{uint32_t(indices.size()),uint32_t(a.columns),uint32_t(a.rowBytes/4),0};
+    [encoder setComputePipelineState:impl_->packedGather];[encoder setBuffer:a.data offset:a.offset atIndex:0];
+    [encoder setBuffer:compact.data offset:0 atIndex:1];[encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:2];
+    [encoder setBytes:shape length:sizeof(shape) atIndex:3];
+    [encoder dispatchThreads:MTLSizeMake(indices.size()*a.columns,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
+    // Large gate/up and512-row down projections amortize a256-row tile;
+    // shorter/narrow projections keep the128-row tile. No input padding.
+    const size_t tile=(indices.size()>=256&&(o.columns==14336||(a.columns==14336&&indices.size()>=384)))?256:128;
+    auto pipeline=found->second.pipelines[tile==256?1:0];
+    struct Params {uint64_t rows,inner,columns,aStride,oStride;};
+    const Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+    encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode packed prefill projection");
+    [encoder setComputePipelineState:pipeline];[encoder setBuffer:compact.data offset:0 atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
+    [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];[encoder setBuffer:o.data offset:o.offset atIndex:4];
+    [encoder setBytes:&params length:sizeof(params) atIndex:5];[encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:6];
+    [encoder dispatchThreadgroups:MTLSizeMake(o.columns/64,(indices.size()+tile-1)/tile,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
+    ++impl_->packedDispatches;++impl_->affineProfileDispatches;if(reportIndexed)++impl_->indexedAffineDispatches;
+    impl_->affineProfileMaxThreads=pipeline.maxTotalThreadsPerThreadgroup;
+    output.impl_->ready=false;output.impl_->pending=true;
+    if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+    return true;
+}
+#endif
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+void MetalContext::SetPairedPackedPrefillEnabled(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Select paired prefill between drained command batches");
+    impl_->pairedPackedEnabled=enabled;
+}
+size_t MetalContext::LastPairedPackedPrefillDispatches() const {return impl_->pairedPackedDispatches;}
+bool MetalContext::TryEncodePairedPackedPrefill(const MetalMatrix& input,const MetalAffineInt4Weight& gate,
+    const MetalAffineInt4Weight& up,const MetalMatrix& gateOutput,const MetalMatrix& upOutput,
+    const std::vector<size_t>* selectedRows) {
+    @autoreleasepool {
+        if(!impl_->pairedPackedEnabled||!impl_->packedEnabled)return false;
+        if(!impl_->command||!input.impl_||!gate.impl_||!up.impl_||!gateOutput.impl_||!upOutput.impl_)
+            throw std::invalid_argument("Paired prefill requires both weights, outputs and an open command");
+        auto a=input.impl_->matrix,o=gateOutput.impl_->matrix,u=upOutput.impl_->matrix;
+        const auto& g=gate.impl_;const auto& w=up.impl_;
+        if(a.device!=impl_->device||o.device!=impl_->device||u.device!=impl_->device||
+           g->packed.device!=impl_->device||g->scales.device!=impl_->device||g->biases.device!=impl_->device||
+           w->packed.device!=impl_->device||w->scales.device!=impl_->device||w->biases.device!=impl_->device)
+            throw std::invalid_argument("Paired prefill operands use another device");
+        if(!a.rows||a.rows>512||a.columns!=4096||o.rows!=a.rows||u.rows!=a.rows||
+           o.columns!=14336||u.columns!=o.columns||g->rows!=o.columns||w->rows!=u.columns||
+           g->columns!=a.columns||w->columns!=a.columns||a.rowBytes%4||o.rowBytes!=u.rowBytes||
+           o.rowBytes%16||o.offset%16||u.offset%16)return false;
+        const std::array<size_t,4> key{a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+        auto found=impl_->packedPlans.find(key);
+        if(found==impl_->packedPlans.end())return false;
+        if(a.rows>found->second.maximumRows||!AffineProfileIndex32Fits(a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4))
+            throw std::logic_error("Paired prefill exceeds its compiled row/index envelope");
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))
+            throw std::logic_error("Uninitialized paired prefill input");
+        for(const auto& output:{gateOutput,upOutput}) {
+            if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_->PendingKey()))
+                throw std::logic_error("Paired prefill output belongs to another command");
+            output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
+        }
+        std::vector<uint32_t> indices;std::array<bool,512> unique{};
+        if(selectedRows) {
+            if(selectedRows->size()>a.rows)throw std::invalid_argument("Paired prefill row count exceeds physical rows");
+            for(auto row:*selectedRows) {
+                if(row>=a.rows||unique[row])throw std::invalid_argument("Paired prefill rows must be unique and in bounds");
+                unique[row]=true;indices.push_back(uint32_t(row));
+            }
+        }else for(size_t row=0;row<a.rows;++row)indices.push_back(uint32_t(row));
+        if(indices.size()<128)return false;
+        auto extent=[](MPSMatrix* matrix) {
+            if(matrix.rows-1>(SIZE_MAX-matrix.columns*sizeof(float))/matrix.rowBytes)
+                throw std::overflow_error("Paired prefill span overflows");
+            const size_t bytes=(matrix.rows-1)*matrix.rowBytes+matrix.columns*sizeof(float);
+            if(matrix.offset>matrix.data.length||bytes>matrix.data.length-matrix.offset)
+                throw std::invalid_argument("Paired prefill span exceeds storage");
+            return bytes;
+        };
+        const auto aBytes=extent(a),oBytes=extent(o),uBytes=extent(u);
+        auto overlaps=[](MPSMatrix* x,size_t xb,MPSMatrix* y,size_t yb) {
+            return x.data==y.data&&x.offset<y.offset+yb&&y.offset<x.offset+xb;
+        };
+        // Decline aliases rather than changing the original graph's ordering.
+        if(overlaps(a,aBytes,o,oBytes)||overlaps(a,aBytes,u,uBytes)||overlaps(o,oBytes,u,uBytes))return false;
+        auto compact=impl_->packedInput.impl_->matrix;
+        if(a.data==compact.data||o.data==compact.data||u.data==compact.data)
+            throw std::invalid_argument("Paired prefill operands alias private workspace");
+        const size_t tile=indices.size()>=256?256:128;auto pipeline=found->second.paired[tile==256?1:0];
+        if(!pipeline)return false;
+        // Both outputs and all controls have been validated before any clear.
+        if(indices.size()<a.rows) {
+            auto blit=[impl_->command blitCommandEncoder];if(!blit)throw std::runtime_error("Cannot clear paired outputs");
+            [blit fillBuffer:o.data range:NSMakeRange(o.offset,oBytes) value:0];
+            [blit fillBuffer:u.data range:NSMakeRange(u.offset,uBytes) value:0];[blit endEncoding];
+        }
+        auto encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot gather paired input");
+        const uint32_t shape[]{uint32_t(indices.size()),uint32_t(a.columns),uint32_t(a.rowBytes/4),0};
+        [encoder setComputePipelineState:impl_->packedGather];[encoder setBuffer:a.data offset:a.offset atIndex:0];
+        [encoder setBuffer:compact.data offset:0 atIndex:1];[encoder setBytes:indices.data() length:indices.size()*4 atIndex:2];
+        [encoder setBytes:shape length:sizeof(shape) atIndex:3];
+        [encoder dispatchThreads:MTLSizeMake(indices.size()*a.columns,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
+        struct Params {uint64_t rows,inner,columns,aStride,oStride;};const Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+        encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode paired prefill");
+        [encoder setComputePipelineState:pipeline];[encoder setBuffer:compact.data offset:0 atIndex:0];
+        [encoder setBuffer:g->packed offset:0 atIndex:1];[encoder setBuffer:g->scales offset:0 atIndex:2];
+        [encoder setBuffer:g->biases offset:0 atIndex:3];[encoder setBuffer:o.data offset:o.offset atIndex:4];
+        [encoder setBytes:&params length:sizeof(params) atIndex:5];[encoder setBytes:indices.data() length:indices.size()*4 atIndex:6];
+        [encoder setBuffer:w->packed offset:0 atIndex:8];[encoder setBuffer:w->scales offset:0 atIndex:9];
+        [encoder setBuffer:w->biases offset:0 atIndex:10];[encoder setBuffer:u.data offset:u.offset atIndex:11];
+        [encoder dispatchThreadgroups:MTLSizeMake(o.columns/32,(indices.size()+tile-1)/tile,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[encoder endEncoding];
+        ++impl_->pairedPackedDispatches;impl_->packedDispatches+=2;impl_->affineProfileDispatches+=2;
+        if(selectedRows)impl_->indexedAffineDispatches+=2;
+        impl_->affineProfileMaxThreads=pipeline.maxTotalThreadsPerThreadgroup;
+        for(const auto& output:{gateOutput,upOutput}) {
+            output.impl_->ready=false;output.impl_->pending=true;
+            if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+        }
+        return true;
+    }
+}
+#endif
 void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAffineInt4Weight& weight,const MetalMatrix& output) {
     @autoreleasepool {
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
@@ -2320,7 +3348,7 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
             throw std::logic_error("Affine INT4 output belongs to another command");
         struct Params {uint64_t rows,inner,columns,aStride,oStride;};
         Params params{a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
-        auto encoder=[impl_->command computeCommandEncoder];
+        auto encoder=impl_->ComputeEncoder(__func__);
         if(!encoder)throw std::runtime_error("Cannot encode affine INT4 projection");
         size_t tileRows=16;
         auto pipeline=a.rows<=4?impl_->kernels->affineInt4Decode[a.rows-1]:impl_->kernels->affineInt4Gemm;
@@ -2362,6 +3390,16 @@ bool MetalContext::HasIndexedDecodeAffine() const {
         [](id<MTLComputePipelineState> pipeline){return pipeline!=nil;});
 }
 size_t MetalContext::LastIndexedDecodeAffineDispatches() const {return impl_->indexedDecodeAffineDispatches;}
+size_t MetalContext::LastIndexedDecodeFusedClearDispatches() const {return impl_->indexedDecodeFusedClearDispatches;}
+size_t MetalContext::LastIndexedDecodeBlitClears() const {return impl_->indexedDecodeBlitClears;}
+void MetalContext::SetIndexedDecodeFusedClearEnabled(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Configure fused inactive decode clear outside a drained batch");
+#ifdef GARNET_METAL_INDEXED_DECODE_FUSED_CLEAR
+    impl_->indexedDecodeFusedClearEnabled=enabled;
+#else
+    if(enabled)throw std::logic_error("Fused inactive decode clear is disabled in this build");
+#endif
+}
 void MetalContext::EncodeAffineInt4IndexedDecode(const MetalMatrix& input,const MetalAffineInt4Weight& weight,
     const MetalMatrix& output,const std::vector<size_t>& selectedRows) {
     @autoreleasepool {
@@ -2370,14 +3408,20 @@ void MetalContext::EncodeAffineInt4IndexedDecode(const MetalMatrix& input,const 
         auto a=input.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
         if(a.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||
            w->scales.device!=impl_->device||w->biases.device!=impl_->device||
-           !a.rows||a.rows>4||a.columns!=w->columns||o.rows!=a.rows||o.columns!=w->rows||
+           !a.rows||a.rows>
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+           16
+#else
+           4
+#endif
+           ||a.columns!=w->columns||o.rows!=a.rows||o.columns!=w->rows||
            a.data==o.data||selectedRows.size()>a.rows||a.rowBytes%4||o.rowBytes%4)
             throw std::invalid_argument("Indexed FP32 decode shape/device mismatch");
         if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))
             throw std::logic_error("Uninitialized indexed FP32 decode input");
         if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_->PendingKey()))
             throw std::logic_error("Indexed FP32 decode output belongs to another command");
-        std::vector<uint32_t> indices;indices.reserve(selectedRows.size());std::array<bool,4> unique{};
+        std::vector<uint32_t> indices;indices.reserve(selectedRows.size());std::array<bool,16> unique{};
         for(auto row:selectedRows) {
             if(row>=a.rows||unique[row])throw std::invalid_argument("Indexed FP32 decode rows must be unique and in bounds");
             unique[row]=true;indices.push_back(uint32_t(row));
@@ -2387,20 +3431,43 @@ void MetalContext::EncodeAffineInt4IndexedDecode(const MetalMatrix& input,const 
         const size_t bytes=(o.rows-1)*o.rowBytes+o.columns*sizeof(float);
         if(o.offset>o.data.length||bytes>o.data.length-o.offset)
             throw std::invalid_argument("Indexed FP32 decode zero range exceeds storage");
-        if(indices.size()<a.rows) {
+        id<MTLComputePipelineState> preparedWide=nil;size_t wideColumns=1;
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+        if(indices.size()>4)preparedWide=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::WideIndexedDecode,
+            a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,indices.size(),nil,
+            impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads,&wideColumns,true);
+#endif
+        id<MTLComputePipelineState> preparedClear=nil;size_t clearColumns=1;
+#ifdef GARNET_METAL_INDEXED_DECODE_FUSED_CLEAR
+        if(impl_->indexedDecodeFusedClearEnabled&&
+           IndexedDecodeClearSupported(a.rows,o.rows,indices.size(),o.columns,o.rowBytes/sizeof(float))) {
+            const AffineProfileKey key{size_t(AffineProfileRoute::IndexedDecodeClear),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,indices.size()};
+            bool prepared=false;
+            {std::shared_lock<std::shared_mutex> lock(impl_->kernels->affineProfileMutex);
+             const auto found=impl_->kernels->affineProfiles.find(key);
+             prepared=found!=impl_->kernels->affineProfiles.end()&&found->second.maximumRows>=a.rows&&found->second.pipeline;}
+            if(prepared)preparedClear=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::IndexedDecodeClear,
+                a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,indices.size(),nil,
+                impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads,&clearColumns,true);
+        }
+#endif
+        // Resolve the optional strict profile before touching output. Missing,
+        // padded, wide, empty, full, or disabled cases keep the original clear.
+        if(indices.size()<a.rows&&!preparedClear) {
             auto blit=[impl_->command blitCommandEncoder];
             if(!blit)throw std::runtime_error("Cannot initialize inactive indexed FP32 decode rows");
             [blit fillBuffer:o.data range:NSMakeRange(o.offset,bytes) value:0];[blit endEncoding];
+            ++impl_->indexedDecodeBlitClears;
         }
         if(!indices.empty()) {
             struct Params {uint64_t rows,inner,columns,aStride,oStride;};
             Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
-            auto encoder=[impl_->command computeCommandEncoder];
+            auto encoder=impl_->ComputeEncoder(__func__);
             if(!encoder)throw std::runtime_error("Cannot encode indexed FP32 decode");
-            auto pipeline=impl_->kernels->indexedDecodeAffine[indices.size()-1];
-            size_t decodeColumns=1;
+            auto pipeline=preparedClear?preparedClear:preparedWide?preparedWide:impl_->kernels->indexedDecodeAffine[indices.size()-1];
+            size_t decodeColumns=preparedClear?clearColumns:preparedWide?wideColumns:1;
 #ifdef GARNET_METAL_AFFINE_PROFILE
-            pipeline=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::IndexedDecode,
+            if(!preparedWide&&!preparedClear)pipeline=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::IndexedDecode,
                 a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,indices.size(),
                 pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads,&decodeColumns);
             impl_->affineDecodeBlockDispatches+=size_t(decodeColumns>1);
@@ -2410,9 +3477,11 @@ void MetalContext::EncodeAffineInt4IndexedDecode(const MetalMatrix& input,const 
             [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
             [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
             [encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:6];
-            const size_t decodeOutputs=4*decodeColumns;
-            [encoder dispatchThreadgroups:MTLSizeMake((o.columns+decodeOutputs-1)/decodeOutputs,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+            if(preparedWide){uint32_t count=uint32_t(indices.size());[encoder setBytes:&count length:sizeof(count) atIndex:7];}
+            const size_t decodeOutputs=4*decodeColumns,rowTiles=preparedWide?(indices.size()+3)/4:1;
+            [encoder dispatchThreadgroups:MTLSizeMake(((o.columns+decodeOutputs-1)/decodeOutputs)*rowTiles,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
             [encoder endEncoding];++impl_->indexedDecodeAffineDispatches;
+            if(preparedClear)++impl_->indexedDecodeFusedClearDispatches;
         }
         output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
         if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
@@ -2426,12 +3495,30 @@ size_t MetalContext::LastIndexedAffineDispatches() const {return impl_->indexedA
 bool MetalContext::HasReuse64Affine() const {return impl_->kernels->reuse64Affine!=nil;}
 size_t MetalContext::LastReuse64AffineDispatches() const {return impl_->reuse64AffineDispatches;}
 #endif
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+bool MetalContext::HasReuse128Affine() const {return impl_->kernels->reuse128Affine!=nil;}
+size_t MetalContext::LastReuse128AffineDispatches() const {return impl_->reuse128AffineDispatches;}
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+void MetalContext::VerificationSetAffineReuse128(bool enabled) {
+    if(impl_->command||impl_->submitted.count)
+        throw std::logic_error("Verification affine route selection requires a closed, drained command batch");
+    impl_->verificationAffineReuse128=enabled;
+}
+#endif
+void MetalContext::EncodeAffineInt4IndexedMatMulControl(const MetalMatrix& input,const MetalAffineInt4Weight& weight,
+    const MetalMatrix& output,const std::vector<size_t>& selectedRows) {
+    EncodeAffineInt4IndexedImpl(input,weight,output,selectedRows,true,false);
+}
+#endif
 void MetalContext::EncodeAffineInt4IndexedMatMul(const MetalMatrix& input,const MetalAffineInt4Weight& weight,
     const MetalMatrix& output,const std::vector<size_t>& selectedRows) {
     EncodeAffineInt4IndexedImpl(input,weight,output,selectedRows,true);
 }
 void MetalContext::EncodeAffineInt4IndexedImpl(const MetalMatrix& input,const MetalAffineInt4Weight& weight,
-    const MetalMatrix& output,const std::vector<size_t>& selectedRows,bool reportIndexed) {
+    const MetalMatrix& output,const std::vector<size_t>& selectedRows,bool reportIndexed,bool allowReuse128) {
+#ifndef GARNET_METAL_MPP_AFFINE_REUSE128
+    (void)allowReuse128;
+#endif
     @autoreleasepool {
         if(!impl_->command||!input.impl_||!weight.impl_||!output.impl_||!HasIndexedAffine())
             throw std::invalid_argument("Indexed affine projection requires its native pipeline and command");
@@ -2462,6 +3549,35 @@ void MetalContext::EncodeAffineInt4IndexedImpl(const MetalMatrix& input,const Me
         const size_t bytes=(o.rows-1)*o.rowBytes+o.columns*sizeof(float);
         if(o.offset>o.data.length||bytes>o.data.length-o.offset)
             throw std::invalid_argument("Indexed affine zero range exceeds storage");
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+        if(allowReuse128&&TryEncodePackedAffine(input,weight,output,indices,reportIndexed))return;
+#endif
+#ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+        if(allowReuse128&&TryEncodeStreamedAffine(input,weight,output,indices,reportIndexed))return;
+#endif
+        // Select only previously specialized128-row pipelines, before encoding
+        // any zero fill or projection. Actual counts retain the profile's up-to
+        // semantics, and64-row control remains available for operator studies.
+        auto pipeline=impl_->kernels->indexedAffine;size_t tileColumns=32,tileRows=64,threads=128;
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
+        const bool reuse=HasReuse64Affine()&&indices.size()>=64&&w->rows>=GARNET_METAL_REUSE64_MIN_OUTPUTS;
+        if(reuse){pipeline=impl_->kernels->reuse64Affine;tileColumns=64;}
+#endif
+        bool reuse128=false;
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+        allowReuse128=allowReuse128&&impl_->verificationAffineReuse128;
+#endif
+        reuse128=allowReuse128&&HasReuse128Affine()&&UseAffineReuse128(indices.size(),w->rows,GARNET_METAL_REUSE64_MIN_OUTPUTS);
+        if(reuse128){pipeline=impl_->kernels->reuse128Affine;tileColumns=64;tileRows=128;threads=256;}
+#endif
+#ifdef GARNET_METAL_AFFINE_PROFILE
+        if(!indices.empty()) {
+            const auto route=reuse128?AffineProfileRoute::Reuse128:(tileColumns==64?AffineProfileRoute::Reuse64:AffineProfileRoute::Indexed);
+            pipeline=SelectAffineProfile(*impl_->kernels,route,a.rows,a.columns,o.columns,
+                a.rowBytes/4,o.rowBytes/4,0,pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads,nullptr,reuse128);
+        }
+#endif
         if(indices.size()<a.rows) {
             auto blit=[impl_->command blitCommandEncoder];
             if(!blit)throw std::runtime_error("Cannot encode indexed affine output initialization");
@@ -2470,28 +3586,21 @@ void MetalContext::EncodeAffineInt4IndexedImpl(const MetalMatrix& input,const Me
         if(!indices.empty()) {
             struct Params {uint64_t rows,inner,columns,aStride,oStride;};
             Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
-            auto encoder=[impl_->command computeCommandEncoder];
+            auto encoder=impl_->ComputeEncoder(__func__);
             if(!encoder)throw std::runtime_error("Cannot encode indexed affine projection");
-            auto pipeline=impl_->kernels->indexedAffine;size_t tileColumns=32;
-#ifdef GARNET_METAL_MPP_AFFINE_REUSE64
-            const bool reuse=HasReuse64Affine()&&indices.size()>=64&&w->rows>=GARNET_METAL_REUSE64_MIN_OUTPUTS;
-            if(reuse){pipeline=impl_->kernels->reuse64Affine;tileColumns=64;}
-#endif
-#ifdef GARNET_METAL_AFFINE_PROFILE
-            const auto route=tileColumns==64?AffineProfileRoute::Reuse64:AffineProfileRoute::Indexed;
-            pipeline=SelectAffineProfile(*impl_->kernels,route,a.rows,a.columns,o.columns,
-                a.rowBytes/4,o.rowBytes/4,0,pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads);
-#endif
             [encoder setComputePipelineState:pipeline];
             [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
             [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
             [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
             [encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:6];
-            [encoder dispatchThreadgroups:MTLSizeMake((o.columns+tileColumns-1)/tileColumns,(indices.size()+63)/64,1)
-                threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
+            [encoder dispatchThreadgroups:MTLSizeMake((o.columns+tileColumns-1)/tileColumns,(indices.size()+tileRows-1)/tileRows,1)
+                threadsPerThreadgroup:MTLSizeMake(threads,1,1)];[encoder endEncoding];
             if(reportIndexed)++impl_->indexedAffineDispatches;
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
-            if(reuse)++impl_->reuse64AffineDispatches;
+            if(reuse&&!reuse128)++impl_->reuse64AffineDispatches;
+#endif
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+            if(reuse128)++impl_->reuse128AffineDispatches;
 #endif
             ++impl_->mppAffineDispatches;
         }
@@ -2662,7 +3771,7 @@ void MetalContext::EncodeArgmax(const MetalMatrix& input,const MetalMatrix& outp
         if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
             throw std::runtime_error("GPU argmax requires 32-lane SIMD groups");
         struct Params{uint64_t rows,columns,iStride,oStride;};Params p{a.rows,a.columns,a.rowBytes/4,o.rowBytes/4};
-        auto encoder=[impl_->command computeCommandEncoder];
+        auto encoder=impl_->ComputeEncoder(__func__);
         if(!encoder)throw std::runtime_error("Cannot create GPU argmax encoder");
         [encoder setComputePipelineState:pipeline];[encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:o.data offset:o.offset atIndex:1];
         [encoder setBytes:&p length:sizeof(p) atIndex:2];
@@ -2670,6 +3779,31 @@ void MetalContext::EncodeArgmax(const MetalMatrix& input,const MetalMatrix& outp
         [encoder endEncoding];output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
     }
 }
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+void MetalContext::EncodePredictionConfidence(const MetalMatrix& input,const MetalMatrix& output) {
+    @autoreleasepool {
+        if(!impl_->command||!input.impl_||!output.impl_)throw std::invalid_argument("Missing GPU argmax input/batch");
+        auto a=input.impl_->matrix,o=output.impl_->matrix;
+        if(a.device!=impl_->device||o.device!=impl_->device||o.rows!=a.rows||o.columns!=4||!a.rows||a.rows>4||!a.columns||a.columns>16777216||a.data==o.data)
+            throw std::invalid_argument("GPU argmax shape/device mismatch");
+        if(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())!=0))
+            throw std::logic_error("Uninitialized GPU argmax input");
+        if(output.impl_->pending&&impl_->pendingOutputs.count(output.impl_->PendingKey())==0)
+            throw std::logic_error("GPU argmax output belongs to another command batch");
+        auto pipeline=impl_->kernels->predictionConfidence;
+        if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+            throw std::runtime_error("GPU argmax requires 32-lane SIMD groups");
+        struct Params{uint64_t rows,columns,iStride,oStride;};Params p{a.rows,a.columns,a.rowBytes/4,o.rowBytes/4};
+        auto encoder=impl_->ComputeEncoder(__func__);
+        if(!encoder)throw std::runtime_error("Cannot create GPU argmax encoder");
+        [encoder setComputePipelineState:pipeline];[encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:o.data offset:o.offset atIndex:1];
+        [encoder setBytes:&p length:sizeof(p) atIndex:2];
+        [encoder dispatchThreadgroups:MTLSizeMake(a.rows,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+        [encoder endEncoding];output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+    }
+}
+#endif
+
 #include "screened_head_native_impl.h"
 size_t MetalContext::LastFusedHeadArgmaxDispatches() const {return impl_->fusedHeadArgmaxDispatches;}
 bool MetalContext::EncodeBF16Argmax(const MetalMatrix& input,const MetalBF16Weight& weight,
@@ -2710,7 +3844,7 @@ bool MetalContext::EncodeBF16Argmax(const MetalMatrix& input,const MetalBF16Weig
         struct ProjectionParams{uint64_t rows,inner,columns,aStride,oStride,partialStride;};
         ProjectionParams p{a.rows,a.columns,w->rows,a.rowBytes/4,debugLogits?debugLogits->impl_->matrix.rowBytes/4:0,parts.rowBytes/4};
         const uint32_t debugEnabled=debugLogits?1:0;
-        auto encoder=[impl_->command computeCommandEncoder];
+        auto encoder=impl_->ComputeEncoder(__func__);
         if(!encoder)throw std::runtime_error("Cannot create fused projection encoder");
         [encoder setComputePipelineState:projection];[encoder setBuffer:a.data offset:a.offset atIndex:0];
         [encoder setBuffer:w->buffer offset:0 atIndex:1];[encoder setBuffer:parts.data offset:parts.offset atIndex:2];
@@ -2719,7 +3853,7 @@ bool MetalContext::EncodeBF16Argmax(const MetalMatrix& input,const MetalBF16Weig
         [encoder setBytes:&debugEnabled length:sizeof(debugEnabled) atIndex:5];
         [encoder dispatchThreadgroups:MTLSizeMake(groups,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
         struct ReduceParams{uint64_t rows,columns,iStride,oStride;};ReduceParams rp{a.rows,groups,parts.rowBytes/4,o.rowBytes/4};
-        encoder=[impl_->command computeCommandEncoder];
+        encoder=impl_->ComputeEncoder(__func__);
         if(!encoder)throw std::runtime_error("Cannot create fused argmax reduction encoder");
         [encoder setComputePipelineState:reduction];[encoder setBuffer:parts.data offset:parts.offset atIndex:0];
         [encoder setBuffer:o.data offset:o.offset atIndex:1];[encoder setBytes:&rp length:sizeof(rp) atIndex:2];
@@ -2796,7 +3930,7 @@ bool MetalContext::EncodeJoinedBF16Prefill(const MetalMatrix& input,const MetalB
         auto temporary=scratch->second.impl_->matrix;
         [product->second encodeToCommandBuffer:impl_->command leftMatrix:a rightMatrix:found->second.view resultMatrix:temporary];
         struct Params{uint64_t rows,columns,iStride,oStride;};Params p{a.rows,x.columns,temporary.rowBytes/4,x.rowBytes/4};
-        auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Joined prefill encoder unavailable");
+        auto encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Joined prefill encoder unavailable");
         [encoder setComputePipelineState:impl_->kernels->joinedSplitRescale];[encoder setBuffer:temporary.data offset:temporary.offset atIndex:0];
         [encoder setBuffer:found->second.scales offset:0 atIndex:1];[encoder setBuffer:x.data offset:x.offset atIndex:2];[encoder setBuffer:y.data offset:y.offset atIndex:3];[encoder setBytes:&p length:sizeof(p) atIndex:4];
         [encoder dispatchThreads:MTLSizeMake(a.rows*x.columns*2,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
@@ -2871,7 +4005,7 @@ bool MetalContext::EncodeJoinedGlobalMlp(const MetalMatrix& input,const MetalBF1
         [product->second encodeToCommandBuffer:impl_->command leftMatrix:a rightMatrix:found->second.view resultMatrix:temporary];
         struct Params{uint64_t rows,columns,iStride,gStride,uStride,oStride;};
         Params p{a.rows,w0->rows,temporary.rowBytes/4,g.rowBytes/4,u.rowBytes/4,o.rowBytes/4};
-        auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Joined global split-SiLU encoder unavailable");
+        auto encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Joined global split-SiLU encoder unavailable");
         [encoder setComputePipelineState:impl_->kernels->joinedGlobalSilu];
         [encoder setBuffer:temporary.data offset:temporary.offset atIndex:0];[encoder setBuffer:g.data offset:g.offset atIndex:1];
         [encoder setBuffer:u.data offset:u.offset atIndex:2];[encoder setBuffer:o.data offset:o.offset atIndex:3];
@@ -3067,13 +4201,13 @@ void MetalContext::EncodeBF16MatVec(const MetalMatrix& input,const MetalBF16Weig
             auto partial=scratch->second.impl_->matrix;
             struct Params{uint64_t rows,inner,columns,aStride,oStride,parts;};
             Params p{a.rows,a.columns,o.columns,a.rowBytes/4,partial.rowBytes/4,parts};
-            auto encoder=[impl_->command computeCommandEncoder];
+            auto encoder=impl_->ComputeEncoder(__func__);
             if(!encoder)throw std::runtime_error("Cannot create split key projection encoder");
             [encoder setComputePipelineState:impl_->kernels->bf16Split];[encoder setBuffer:a.data offset:a.offset atIndex:0];
             [encoder setBuffer:w->buffer offset:0 atIndex:1];[encoder setBuffer:partial.data offset:partial.offset atIndex:2];[encoder setBytes:&p length:sizeof(p) atIndex:3];
             [encoder dispatchThreadgroups:MTLSizeMake((o.columns+31)/32,(a.rows+15)/16,parts) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
             struct Reduce{uint64_t rows,columns,iStride,oStride,parts;};Reduce r{a.rows,o.columns,partial.rowBytes/4,o.rowBytes/4,parts};
-            encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Cannot create split key reduction encoder");
+            encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot create split key reduction encoder");
             [encoder setComputePipelineState:impl_->kernels->bf16SplitReduce];[encoder setBuffer:partial.data offset:partial.offset atIndex:0];[encoder setBuffer:o.data offset:o.offset atIndex:1];
             [encoder setBytes:&r length:sizeof(r) atIndex:2];
             const auto total=Elements(o.rows,o.columns);[encoder dispatchThreads:MTLSizeMake(total,1,1) threadsPerThreadgroup:MTLSizeMake(std::min(total,size_t(impl_->kernels->bf16SplitReduce.maxTotalThreadsPerThreadgroup)),1,1)];[encoder endEncoding];
@@ -3111,7 +4245,7 @@ void MetalContext::EncodeBF16MatVec(const MetalMatrix& input,const MetalBF16Weig
             auto temporary=scratch->second.impl_->matrix;
             [found->second encodeToCommandBuffer:impl_->command leftMatrix:a rightMatrix:w->exactHalf resultMatrix:temporary];
             struct Params{uint64_t rows,columns,iStride,oStride;};Params p{a.rows,o.columns,temporary.rowBytes/4,o.rowBytes/4};
-            auto encoder=[impl_->command computeCommandEncoder];
+            auto encoder=impl_->ComputeEncoder(__func__);
             if(!encoder)throw std::runtime_error("Cannot create exact half rescale encoder");
             [encoder setComputePipelineState:impl_->kernels->halfRescale];
             [encoder setBuffer:temporary.data offset:temporary.offset atIndex:0];[encoder setBuffer:w->halfScales offset:w->halfScalesOffset atIndex:1];
@@ -3187,7 +4321,7 @@ void MetalContext::EncodeBF16MatVec(const MetalMatrix& input,const MetalBF16Weig
             throw std::runtime_error("BF16 projection requires 32-lane SIMD groups");
         struct Params{uint64_t rows,inner,columns,aStride,oStride;};
         Params p{a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
-        auto encoder=[impl_->command computeCommandEncoder];
+        auto encoder=impl_->ComputeEncoder(__func__);
         if(!encoder)throw std::runtime_error("Cannot create BF16 projection encoder");
         [encoder setComputePipelineState:pipeline];[encoder setBuffer:a.data offset:a.offset atIndex:0];
 #ifdef GARNET_METAL_INTERLEAVED_BF16_BODY
@@ -3305,6 +4439,49 @@ void MetalContext::ZeroRow(const MetalMatrix& matrix,size_t row) {
                     0,native.columns*sizeof(float));
     }
 }
+size_t MetalContext::ZeroRowRanges(const std::vector<MetalRowClearRange>& ranges) {
+    @autoreleasepool {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Range clear requires a closed, drained command batch");
+    size_t bytes=0;std::vector<std::shared_ptr<MetalMatrix::Impl>> owners;
+    std::unordered_set<const MetalMatrix::Impl*> seen;
+    for(const auto& range:ranges) {
+        ValidateCompletedRow(range.matrix,range.row);
+        const auto native=range.matrix.impl_->matrix;
+        const size_t g=range.groups,c=range.capacity,w=range.width;
+        if(!g||!c||!w||range.begin>range.end||range.end>c||c>SIZE_MAX/w||
+           g>SIZE_MAX/(c*w)||g*c*w!=native.columns)
+            throw std::invalid_argument("Dense KV range clear layout/bounds mismatch");
+        const size_t count=g*(range.end-range.begin)*w;
+        if(count>SIZE_MAX/sizeof(float)||bytes>SIZE_MAX-count*sizeof(float))
+            throw std::overflow_error("Dense KV range clear byte count overflow");
+        bytes+=count*sizeof(float);
+        if(count&&seen.insert(range.matrix.impl_->PendingKey()).second)owners.push_back(range.matrix.impl_);
+    }
+    if(!bytes)return 0;
+    auto command=[impl_->queue commandBuffer];
+    if(!command)throw std::runtime_error("Cannot create KV range clear command");
+    auto encoder=[command blitCommandEncoder];
+    if(!encoder)throw std::runtime_error("Cannot create KV range clear encoder");
+    for(const auto& range:ranges)if(range.begin<range.end) {
+        const auto native=range.matrix.impl_->matrix;
+        const size_t length=(range.end-range.begin)*range.width*sizeof(float);
+        for(size_t group=0;group<range.groups;++group) {
+            const size_t offset=native.offset+range.row*native.rowBytes+
+                (group*range.capacity+range.begin)*range.width*sizeof(float);
+            [encoder fillBuffer:native.data range:NSMakeRange(offset,length) value:0];
+        }
+    }
+    [encoder endEncoding];
+    for(const auto& owner:owners){owner->ready=false;owner->pending=true;}
+    [command commit];[command waitUntilCompleted];
+    const bool success=command.status==MTLCommandBufferStatusCompleted;
+    for(const auto& owner:owners){owner->pending=false;owner->ready=success;}
+    impl_->gpuMs=success&&command.GPUStartTime>0&&command.GPUEndTime>=command.GPUStartTime?
+        (command.GPUEndTime-command.GPUStartTime)*1000.0:0;
+    if(!success)throw std::runtime_error(command.error?std::string(command.error.localizedDescription.UTF8String):"KV range clear failed");
+    return bytes;
+    }
+}
 std::vector<float> MetalContext::ReadRow(const MetalMatrix& matrix,size_t row) const {
     @autoreleasepool {
         ValidateCompletedRow(matrix,row);
@@ -3345,6 +4522,18 @@ std::vector<float> MetalContext::ReadRowPrefixGroups(const MetalMatrix& matrix,s
         return values;
     }
 }
+#ifdef GARNET_METAL_PREFIX_DIRECT_CAPTURE
+DensePrefixCapture MetalContext::ReadRowPrefixBlocks(const MetalMatrix& matrix,size_t row,
+    size_t groups,size_t capacity,size_t width,size_t tokens,size_t commonTokens,
+    const std::vector<std::shared_ptr<const DensePrefixBlock>>& candidates) const {
+    @autoreleasepool {
+        ValidateCompletedRow(matrix,row);
+        const auto native=matrix.impl_->matrix;
+        const auto* source=reinterpret_cast<const float*>(static_cast<const char*>(native.data.contents)+native.offset+row*native.rowBytes);
+        return CapturePrefixBlocks(source,native.columns,groups,capacity,width,tokens,commonTokens,candidates);
+    }
+}
+#endif
 void MetalContext::WriteRowPrefixGroups(const MetalMatrix& matrix,size_t row,
     size_t groups,size_t capacity,size_t width,size_t tokens,const std::vector<float>& values) {
     @autoreleasepool {
@@ -3457,12 +4646,90 @@ void MetalContext::DeferZero(const MetalMatrix& matrix) {
     matrix.impl_->ready=false;matrix.impl_->pending=true;
 #endif
 }
+#ifdef GARNET_METAL_AFFINE_WEIGHT_RESIDENCY
+void MetalContext::PrepareAffineResidency(const std::vector<MetalAffineInt4Weight>& weights,size_t budget) {
+    @autoreleasepool {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Prepare affine residency outside a drained command batch");
+    std::vector<id<MTLBuffer>> buffers;
+    for(const auto& weight:weights){
+        if(!weight.impl_||!weight.impl_->packed||!weight.impl_->scales||!weight.impl_->biases)
+            throw std::invalid_argument("Cannot make empty affine weights resident");
+        buffers.push_back(weight.impl_->packed);buffers.push_back(weight.impl_->scales);buffers.push_back(weight.impl_->biases);
+    }
+    impl_->affineResidency.Prepare(impl_->device,impl_->queue,buffers,budget);
+    }
+}
+std::string MetalContext::AffineResidencyStatsJson() const {
+    const auto& plan=impl_->affineResidency;
+    return std::string("{\"enabled\":")+(plan.Ready()?"true":"false")+
+        ",\"allocation_count\":"+std::to_string(plan.Count())+",\"payload_bytes\":"+std::to_string(plan.PayloadBytes())+
+        ",\"committed_charge_bytes\":"+std::to_string(plan.ChargedBytes())+",\"budget_bytes\":"+std::to_string(plan.BudgetBytes())+
+        ",\"renewals\":"+std::to_string(plan.Renewals())+",\"scope\":\"committed allocation accounting, not proof of physical residency\"}";
+}
+#endif
+void MetalContext::PrepareGpuCounters() {
+    @autoreleasepool {
+    if(impl_->command||impl_->submitted.count||impl_->gpuCounters)
+        throw std::logic_error("Prepare GPU counters once, outside a command batch");
+    if(![impl_->device supportsCounterSampling:MTLCounterSamplingPointAtStageBoundary])
+        throw std::runtime_error("Device does not support GPU stage counters");
+    id<MTLCounterSet> timestamps=nil;
+    for(id<MTLCounterSet> set in impl_->device.counterSets)
+        if([set.name isEqualToString:MTLCommonCounterSetTimestamp])timestamps=set;
+    if(!timestamps)throw std::runtime_error("Device does not expose GPU timestamp counters");
+    auto descriptor=[MTLCounterSampleBufferDescriptor new];
+    descriptor.counterSet=timestamps;descriptor.storageMode=MTLStorageModeShared;
+    descriptor.sampleCount=4096;descriptor.label=@"Garnet diagnostic encoder timestamps";
+    NSError* error=nil;
+    auto buffer=[impl_->device newCounterSampleBufferWithDescriptor:descriptor error:&error];
+    if(!buffer)throw std::runtime_error("Cannot allocate GPU timestamp counters");
+    impl_->counterEncoders.reserve(2048);impl_->gpuCounters=buffer;
+    }
+}
+void MetalContext::SetGpuCounterRegion(const char* kind,size_t op,size_t rows,size_t columns) {
+    if(impl_->gpuCounters)impl_->counterRegion={kind,op,rows,columns};
+}
+void MetalContext::ClearGpuCounterRegion() {impl_->counterRegion={};}
+#if defined(GARNET_METAL_TARGET_JACOBI)||defined(GARNET_METAL_LOOKAHEAD_RUNTIME)
+void MetalContext::RequireDrainedProfileControl() const {
+    if(impl_->command||impl_->submitted.count)
+        throw std::logic_error("Configure target Jacobi proposals outside a drained batch");
+}
+#endif
 void MetalContext::Begin() {
     @autoreleasepool {
     if(impl_->command)throw std::logic_error("Metal command batch already open");
     if(impl_->submitted.count)throw std::logic_error("Undrained Metal partial batches");
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+    impl_->lookaheadKVCommitDispatches=0;
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_PROJECTIONS
+    impl_->lookaheadProjectionDispatches=0;
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_ATTENTION
+    impl_->lookaheadAttentionDispatches=0;
+#endif
+#ifdef GARNET_METAL_AFFINE_WEIGHT_RESIDENCY
+    if(impl_->affineResidency.Ready())impl_->affineResidency.Renew();
+#endif
+#ifdef GARNET_METAL_SPLIT_DECODE_SCORES
+    impl_->splitScoreDispatches=0;
+#ifdef GARNET_METAL_SPLIT_SCORE_PROFILE32
+    impl_->profile32ScoreDispatches=0;
+#endif
+#endif
+#ifdef GARNET_METAL_SILU_PROFILE32
+    impl_->siluProfile32Dispatches=0;
+#endif
+#ifdef GARNET_METAL_VALUE_PROFILE32
+    impl_->valueProfileDispatches=0;
+#endif
+    if(impl_->gpuCounters) {
+        impl_->counterEncoders.clear();impl_->counterRegion={};
+        [impl_->device sampleTimestamps:&impl_->counterCpu0 gpuTimestamp:&impl_->counterGpu0];
+    }
 #ifdef GARNET_METAL_VERIFY_ATTENTION
-    impl_->verificationAttentionDispatches=0;
+    impl_->verificationAttentionDispatches=0;impl_->verificationLayoutDispatches=0;impl_->verificationValueVectorDispatches=0;impl_->verificationSplitScoreDispatches=0;impl_->verificationGqaScoreDispatches=0;impl_->verificationGqaValueDispatches=0;
     impl_->verificationConvCheckpoints=impl_->verificationDeltaCheckpoints=0;
     impl_->verificationKVBackups=impl_->verificationKVRestores=0;
 #endif
@@ -3477,15 +4744,41 @@ void MetalContext::Begin() {
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
-    impl_->chunkKVScatterDispatches=0;
+    impl_->chunkKVScatterDispatches=impl_->chunkKVHoistedCommits=impl_->committedAttentionDispatches=0;
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+    impl_->halfAttentionDispatches=0;impl_->halfBatchStarted=false;
+#endif
+
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+    impl_->fusedDecodeBlocks=impl_->fusedDecodeInputCopies=0;
+#ifdef GARNET_METAL_FUSED_Q4_WIDE_SELECTION
+    impl_->fusedWideDecodeBlocks=0;
+#endif
+#endif
     impl_->layoutVectorDispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
     impl_->affineDecodeBlockDispatches=0;
+#ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+    impl_->streamedDispatches=0;
+#endif
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+    impl_->packedDispatches=0;impl_->diagnosticBulkDispatches=0;
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+    impl_->fusedMlpBlocks=0;
+#endif
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+    impl_->diagnosticSiluHalfDispatches=0;
+#endif
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+    impl_->pairedPackedDispatches=0;
+#endif
+#endif
 #endif
     impl_->joinedPrefillPairs=0;
 #ifdef GARNET_METAL_INDEXED_DECODE
     impl_->indexedDecodeAffineDispatches=0;
+    impl_->indexedDecodeFusedClearDispatches=0;impl_->indexedDecodeBlitClears=0;
 #endif
 #ifdef GARNET_METAL_MPP_AFFINE
     impl_->mppAffineDispatches=0;
@@ -3493,6 +4786,9 @@ void MetalContext::Begin() {
     impl_->indexedAffineDispatches=0;
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
     impl_->reuse64AffineDispatches=0;
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+    impl_->reuse128AffineDispatches=0;
+#endif
 #endif
 #endif
 #endif
@@ -3575,18 +4871,33 @@ void MetalContext::EncodePointwise(const MetalMatrix& left,const MetalMatrix& ri
     struct Params {uint64_t rows,columns,aStride,bStride,cStride;float epsilon,offset;};
     Params p{a.rows,a.columns,a.rowBytes/4,b.rowBytes/4,c.rowBytes/4,epsilon,offset};
     auto pipeline=rms?impl_->kernels->rms:(operation==1?impl_->kernels->silu:((operation==2||bias)?impl_->kernels->add:impl_->kernels->mask));
-    id<MTLComputeCommandEncoder> encoder=[impl_->command computeCommandEncoder];
+    bool useSiluProfile32=false;
+#ifdef GARNET_METAL_SILU_PROFILE32
+    useSiluProfile32=operation==1&&impl_->siluProfile32Enabled&&
+        a.dataType==MPSDataTypeFloat32&&b.dataType==MPSDataTypeFloat32&&c.dataType==MPSDataTypeFloat32&&
+        a.rowBytes%4==0&&b.rowBytes%4==0&&c.rowBytes%4==0&&
+        SiluProfile32Supported(p.rows,p.columns,p.aStride,p.bStride,p.cStride);
+    if(useSiluProfile32) {
+        // Validate the candidate's span before any write is encoded.
+        output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
+        pipeline=impl_->kernels->siluProfile32;
+    }
+#endif
+    id<MTLComputeCommandEncoder> encoder=impl_->ComputeEncoder(__func__);
     if(!encoder)throw std::runtime_error("Cannot create Metal compute encoder");
     [encoder setComputePipelineState:pipeline];
     [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:b.data offset:b.offset atIndex:1];
     [encoder setBuffer:c.data offset:c.offset atIndex:2];[encoder setBytes:&p length:sizeof(p) atIndex:3];
     const size_t count=rms?a.rows:Elements(a.rows,a.columns);
-    const size_t width=std::min(size_t(pipeline.maxTotalThreadsPerThreadgroup),count);
+    const size_t width=std::min(useSiluProfile32?size_t(128):size_t(pipeline.maxTotalThreadsPerThreadgroup),count);
     if(rms) {
         if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
             throw std::runtime_error("Parallel RMS requires 32-lane SIMD groups");
         [encoder dispatchThreadgroups:MTLSizeMake(a.rows,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
     }else [encoder dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(width,1,1)];
+#ifdef GARNET_METAL_SILU_PROFILE32
+    if(useSiluProfile32)++impl_->siluProfile32Dispatches;
+#endif
     [encoder endEncoding];output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
     if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
     }
@@ -3621,7 +4932,7 @@ void MetalContext::EncodeResidualRMSNorm(const MetalMatrix& left,const MetalMatr
         throw std::runtime_error("Residual normalization requires 32-lane SIMD groups");
     struct Params {uint64_t rows,columns,aStride,bStride,cStride;float epsilon,offset;};
     Params p{a.rows,a.columns,a.rowBytes/4,w.rowBytes/4,a.rowBytes/4,epsilon,offset};
-    auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Cannot create residual normalization encoder");
+    auto encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot create residual normalization encoder");
     [encoder setComputePipelineState:pipeline];
     for(size_t i=0;i<5;++i)[encoder setBuffer:matrices[i].impl_->matrix.data offset:matrices[i].impl_->matrix.offset atIndex:i];
     [encoder setBytes:&p length:sizeof(p) atIndex:5];
@@ -3645,7 +4956,7 @@ void MetalContext::EncodePackedPrefillNorm(const MetalMatrix& left,const MetalMa
         throw std::invalid_argument("Invalid packed prefill normalization matrix/device");
     const auto a=left.impl_->matrix,w=weight.impl_->matrix,n=reshaped.impl_->matrix;
     if(!left.CompatibleLayout(right)||!left.CompatibleLayout(packed)||!reshaped.CompatibleLayout(normalized)||
-        a.rows>2||!n.columns||a.columns%n.columns||w.rows!=1||w.columns!=n.columns||
+        a.rows>4||!n.columns||a.columns%n.columns||w.rows!=1||w.columns!=n.columns||
         !(epsilon>0)||!std::isfinite(epsilon)||!std::isfinite(offset))
         throw std::invalid_argument("Packed prefill normalization shape/layout/parameters mismatch");
     const size_t chunk=a.columns/n.columns;
@@ -3665,7 +4976,7 @@ void MetalContext::EncodePackedPrefillNorm(const MetalMatrix& left,const MetalMa
         throw std::runtime_error("Packed prefill normalization requires 32-lane SIMD groups");
     struct Params {uint64_t rows,columns,packedStride,normStride,chunk;float epsilon,offset;};
     Params p{n.rows,n.columns,a.rowBytes/4,n.rowBytes/4,chunk,epsilon,offset};
-    auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Cannot create packed prefill normalization encoder");
+    auto encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot create packed prefill normalization encoder");
     [encoder setComputePipelineState:pipeline];
     for(size_t i=0;i<6;++i)[encoder setBuffer:matrices[i].impl_->matrix.data offset:matrices[i].impl_->matrix.offset atIndex:i];
     [encoder setBytes:&p length:sizeof(p) atIndex:6];
@@ -3678,6 +4989,13 @@ void MetalContext::EncodePackedPrefillNorm(const MetalMatrix& left,const MetalMa
     throw std::logic_error("Packed prefill normalization experiment is disabled");
 #endif
 }
+#ifdef GARNET_METAL_SILU_PROFILE32
+void MetalContext::SetSiluProfile32Enabled(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Configure SiLU32 between drained command batches");
+    impl_->siluProfile32Enabled=enabled;
+}
+size_t MetalContext::LastSiluProfile32Dispatches() const {return impl_->siluProfile32Dispatches;}
+#endif
 void MetalContext::EncodeSiluMul(const MetalMatrix& gate,const MetalMatrix& up,const MetalMatrix& output) {
     EncodePointwise(gate,up,output,1,0,0);
 }
@@ -3780,6 +5098,45 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
 #endif
     };
     auto pipeline=pipelines[operation];
+#ifdef GARNET_METAL_MISTRAL_GROUPED_VALUE_CONTEXT
+    bool useGroupedValueContext=false;
+    if(operation==9&&parameterBytes==11*sizeof(uint64_t)) {
+        const auto* p=static_cast<const uint64_t*>(parameters);
+        // Four physical rows, 32 Q / 8 KV heads, D128. Other profiles use the
+        // established dispatch. This changes no KV ownership or softmax order.
+        if(p[0]==4&&p[1]==32&&p[2]==8&&p[3]==128&&p[4]>=1&&p[4]<=4096&&p[10]==0) {
+            pipeline=impl_->kernels->groupedValueContext;useGroupedValueContext=true;
+            static const bool trace=std::getenv("GARNET_METAL_GROUPED_CONTEXT_TRACE")!=nullptr;
+            if(trace)std::fprintf(stderr,"grouped_value_context {\"batch\":4,\"heads\":32,\"kv_heads\":8,\"dim\":128,\"capacity\":%llu,\"group\":2}\n",static_cast<unsigned long long>(p[4]));
+        }
+    }
+#endif
+#ifdef GARNET_METAL_VALUE_PROFILE32
+    bool useValueProfile32=false;
+    // Preserve an explicitly compiled grouped-value alternative. This profile
+    // replaces only the established ordinary context pipeline.
+    if(operation==9&&pipeline==impl_->kernels->attentionContext&&impl_->valueProfileEnabled&&
+       parameters&&parameterBytes==11*sizeof(uint64_t)&&ValueProfile32Supported(static_cast<const uint64_t*>(parameters))) {
+        pipeline=impl_->kernels->valueProfile;useValueProfile32=true;
+    }
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_VECTOR4
+    bool useValueVector4=false;
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_LAYOUT
+    if(operation==22||operation==23) {
+        const auto* p=static_cast<const uint64_t*>(parameters);
+        if(impl_->verificationMistralLayout&&parameterBytes==17*sizeof(uint64_t)&&p[0]==1&&p[1]==4&&p[2]==32&&p[3]==8&&p[4]==128&&p[5]==4096&&p[16]==0) {
+            pipeline=operation==22?impl_->kernels->mistralVerificationScores:impl_->kernels->mistralVerificationContext;
+            if(operation==22)++impl_->verificationLayoutDispatches;
+#ifdef GARNET_METAL_MISTRAL_VERIFY_VECTOR4
+            if(operation==23&&impl_->verificationValueVector4) {
+                pipeline=impl_->kernels->mistralVerificationContextVector4;useValueVector4=true;
+            }
+#endif
+        }
+    }
+#endif
 #ifdef GARNET_METAL_LAYOUT_VECTOR4
     if(operation==11) {
         const auto* p=static_cast<const uint64_t*>(parameters);
@@ -3882,7 +5239,7 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
         auto& item=found->second;
         std::copy_n(visionFields,13,mpsFields.begin());
         mpsFields[5]=item.query.impl_->matrix.rowBytes/4;mpsFields[6]=item.key.impl_->matrix.rowBytes/4;
-        auto pack=[impl_->command computeCommandEncoder];
+        auto pack=impl_->ComputeEncoder(__func__);
         if(!pack)throw std::runtime_error("Cannot create vision Q/K packing encoder");
         [pack setComputePipelineState:impl_->kernels->visionPackQK];
         [pack setBuffer:inputs[0].impl_->matrix.data offset:inputs[0].impl_->matrix.offset atIndex:0];
@@ -3906,7 +5263,188 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
 #endif
     }
 #endif
-    auto encoder=[impl_->command computeCommandEncoder];
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_VALUES
+    bool useGqaValue=false;size_t gqaValueScratchBytes=0;
+    if(operation==23&&impl_->verificationGqaValuesEnabled&&inputs.size()==6&&
+       parameters&&parameterBytes==17*sizeof(uint64_t)) {
+        const auto* p=static_cast<const uint64_t*>(parameters);
+        bool known=(p[0]==1||p[0]==4)&&p[1]==4&&p[2]==32&&p[3]==8&&p[4]==128&&p[5]==4096&&p[16]==0;
+        auto bounded=[](const MPSMatrix* matrix){
+            const size_t stride=matrix.rowBytes/sizeof(float);
+            return matrix.rowBytes%sizeof(float)==0&&matrix.rows>0&&stride>0&&stride<=UINT32_MAX/matrix.rows;
+        };
+        if(known){known=bounded(c);for(const auto& input:inputs)known=known&&bounded(input.impl_->matrix);}
+        const auto slots=inputs[4].impl_->matrix,active=inputs[5].impl_->matrix;
+        known=known&&inputs[4].impl_->ready&&!inputs[4].impl_->pending&&inputs[5].impl_->ready&&!inputs[5].impl_->pending&&
+            slots.data.storageMode==MTLStorageModeShared&&active.data.storageMode==MTLStorageModeShared&&slots.data.contents&&active.data.contents;
+        size_t visible=0;
+        if(known)for(size_t row=0;row<p[0];++row) {
+            bool ended=false;size_t first=0;
+            for(size_t token=0;token<4;++token) {
+                const float flag=reinterpret_cast<const float*>(static_cast<const char*>(active.data.contents)+active.offset)[row*(active.rowBytes/4)+token];
+                if(flag!=0.0f&&flag!=1.0f){known=false;break;}
+                if(flag==0.0f){ended=true;continue;}
+                const float slot=reinterpret_cast<const float*>(static_cast<const char*>(slots.data.contents)+slots.offset)[row*(slots.rowBytes/4)+token];
+                if(ended||!std::isfinite(slot)||slot<0||slot>=4096||slot!=std::floor(slot)){known=false;break;}
+                if(!token)first=size_t(slot);
+                if(size_t(slot)!=first+token){known=false;break;}
+                visible=std::max(visible,size_t(slot)+1);
+            }
+            if(!known)break;
+        }
+        if(known&&visible>=512&&visible<=4096) {
+            pipeline=impl_->kernels->verificationGqaValues[p[0]==1?0:1];
+            if(!pipeline)throw std::logic_error("Prepared GQA16 verification value pipeline unavailable");
+            useGqaValue=true;gqaValueScratchBytes=(p[0]==1?64:32)*48*sizeof(float);
+#ifdef GARNET_METAL_MISTRAL_VERIFY_VECTOR4
+            useValueVector4=false;
+#endif
+        }
+    }
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_SCORES
+    // Only the typed attention entry reaches operation22 after validating the
+    // full layout and contiguous immutable controls. Prove uint32 spans again
+    // before selecting the fixed-layout shared-key kernel. Other shapes and
+    // short prefixes retain their existing dispatch.
+    if(operation==22&&impl_->verificationGqaScoresEnabled&&inputs.size()==5&&
+       parameters&&parameterBytes==17*sizeof(uint64_t)) {
+        const auto* p=static_cast<const uint64_t*>(parameters);
+        bool known=(p[0]==1||p[0]==4)&&p[1]==4&&p[2]==32&&p[3]==8&&p[4]==128&&p[5]==4096&&p[16]==0;
+        auto bounded=[](const MPSMatrix* matrix){
+            const size_t stride=matrix.rowBytes/sizeof(float);
+            return matrix.rowBytes%sizeof(float)==0&&matrix.rows>0&&stride>0&&stride<=UINT32_MAX/matrix.rows;
+        };
+        if(known){known=bounded(c);for(const auto& input:inputs)known=known&&bounded(input.impl_->matrix);}
+        const auto slots=inputs[3].impl_->matrix,active=inputs[4].impl_->matrix;
+        known=known&&inputs[3].impl_->ready&&!inputs[3].impl_->pending&&inputs[4].impl_->ready&&!inputs[4].impl_->pending&&
+            slots.data.storageMode==MTLStorageModeShared&&active.data.storageMode==MTLStorageModeShared&&slots.data.contents&&active.data.contents;
+        size_t visible=0;
+        if(known)for(size_t row=0;row<p[0];++row) {
+            bool ended=false;size_t first=0;
+            for(size_t token=0;token<4;++token) {
+                const float flag=reinterpret_cast<const float*>(static_cast<const char*>(active.data.contents)+active.offset)[row*(active.rowBytes/4)+token];
+                if(flag!=0.0f&&flag!=1.0f){known=false;break;}
+                if(flag==0.0f){ended=true;continue;}
+                const float slot=reinterpret_cast<const float*>(static_cast<const char*>(slots.data.contents)+slots.offset)[row*(slots.rowBytes/4)+token];
+                if(ended||!std::isfinite(slot)||slot<0||slot>=4096||slot!=std::floor(slot)){known=false;break;}
+                if(!token)first=size_t(slot);
+                if(size_t(slot)!=first+token){known=false;break;}
+                visible=std::max(visible,size_t(slot)+1);
+            }
+            if(!known)break;
+        }
+        if(known&&visible>=512&&visible<=4096) {
+            const size_t layout=pipeline==impl_->kernels->mistralVerificationScores?1:0;
+            auto dotsPipeline=impl_->kernels->verificationGqaDots[layout],softmaxPipeline=impl_->kernels->verificationGqaSoftmax[layout];
+            if(!dotsPipeline||!softmaxPipeline)throw std::logic_error("Prepared GQA16 verification pipelines unavailable");
+            // Register before either encoder: partial Flush/Abort must invalidate
+            // the shared probability output just like the existing split route.
+            output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
+            output.impl_->ready=false;output.impl_->pending=true;
+            if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+            auto bind=[&](id<MTLComputeCommandEncoder> encoder){
+                for(size_t i=0;i<inputs.size();++i){const auto m=inputs[i].impl_->matrix;[encoder setBuffer:m.data offset:m.offset atIndex:i];}
+                [encoder setBuffer:c.data offset:c.offset atIndex:5];[encoder setBytes:parameters length:parameterBytes atIndex:6];
+            };
+            auto dots=impl_->ComputeEncoder(__func__);if(!dots)throw std::runtime_error("Cannot encode GQA16 verification dots");
+            bind(dots);[dots setComputePipelineState:dotsPipeline];
+            [dots dispatchThreadgroups:MTLSizeMake(p[0]*8,(visible+31)/32,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[dots endEncoding];
+            auto softmax=impl_->ComputeEncoder(__func__);if(!softmax)throw std::runtime_error("Cannot encode GQA16 verification softmax");
+            bind(softmax);[softmax setComputePipelineState:softmaxPipeline];[softmax setThreadgroupMemoryLength:4096*sizeof(float) atIndex:0];
+            [softmax dispatchThreadgroups:MTLSizeMake(p[0]*4*32,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[softmax endEncoding];
+            ++impl_->verificationGqaScoreDispatches;return;
+        }
+    }
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_SPLIT_SCORES
+    // EncodeVerificationAttention has validated dimensions, nonpending shared
+    // controls and contiguous active slots. Keep the profile selection tied to
+    // the prepared layout pipeline so all other shapes use the original path.
+    if(operation==22&&impl_->verificationSplitScoresEnabled&&
+       pipeline==impl_->kernels->mistralVerificationScores&&inputs.size()==5&&
+       parameters&&parameterBytes==17*sizeof(uint64_t)) {
+        const auto* p=static_cast<const uint64_t*>(parameters);
+        const auto& slotOwner=inputs[3].impl_;const auto& activeOwner=inputs[4].impl_;
+        const auto slots=slotOwner->matrix,active=activeOwner->matrix;
+        bool known=slotOwner->ready&&!slotOwner->pending&&activeOwner->ready&&!activeOwner->pending&&
+            slots.data.storageMode==MTLStorageModeShared&&active.data.storageMode==MTLStorageModeShared&&slots.data.contents&&active.data.contents;
+        size_t visible=0;
+        if(known)for(size_t token=0;token<4;++token) {
+            const float flag=reinterpret_cast<const float*>(static_cast<const char*>(active.data.contents)+active.offset)[token];
+            if(flag!=0.0f&&flag!=1.0f){known=false;break;}
+            if(flag==0.0f)continue;
+            const float slot=reinterpret_cast<const float*>(static_cast<const char*>(slots.data.contents)+slots.offset)[token];
+            if(!std::isfinite(slot)||slot<0.0f||slot>=4096.0f||slot!=std::floor(slot)){known=false;break;}
+            visible=std::max(visible,size_t(slot)+1);
+        }
+        if(known&&visible>=512&&visible<=4096) {
+            // Reuse the explicit FP32 probability allocation for raw dots.
+            // Register ownership before encoding so Abort invalidates it even
+            // if creating the second encoder fails. No workspace allocation.
+            output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
+            output.impl_->ready=false;output.impl_->pending=true;
+            if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+            auto bind=[&](id<MTLComputeCommandEncoder> encoder){
+                for(size_t i=0;i<inputs.size();++i){const auto m=inputs[i].impl_->matrix;[encoder setBuffer:m.data offset:m.offset atIndex:i];}
+                [encoder setBuffer:c.data offset:c.offset atIndex:5];[encoder setBytes:parameters length:parameterBytes atIndex:6];
+            };
+            auto dots=impl_->ComputeEncoder(__func__);if(!dots)throw std::runtime_error("Cannot encode verification split score dots");
+            bind(dots);[dots setComputePipelineState:impl_->kernels->mistralVerificationScoreDots];
+            [dots dispatchThreadgroups:MTLSizeMake(128,(visible+127)/128,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[dots endEncoding];
+            // Tracked same-buffer encoder hazard orders dots before softmax.
+            auto softmax=impl_->ComputeEncoder(__func__);if(!softmax)throw std::runtime_error("Cannot encode verification split score softmax");
+            bind(softmax);[softmax setComputePipelineState:impl_->kernels->mistralVerificationScoreSoftmax];
+            [softmax setThreadgroupMemoryLength:4096*sizeof(float) atIndex:0];
+            [softmax dispatchThreadgroups:MTLSizeMake(128,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[softmax endEncoding];
+            ++impl_->verificationSplitScoreDispatches;return;
+        }
+    }
+#endif
+#ifdef GARNET_METAL_SPLIT_DECODE_SCORES
+    if(operation==8&&impl_->splitScoresEnabled&&parameters&&parameterBytes==10*sizeof(uint64_t)&&inputs.size()==4) {
+        const auto* p=static_cast<const uint64_t*>(parameters);size_t visible=0;
+        const auto& slotOwner=inputs[2].impl_;const auto& activeOwner=inputs[3].impl_;
+        const auto slots=slotOwner->matrix,active=activeOwner->matrix;
+        bool known=slotOwner->ready&&!slotOwner->pending&&activeOwner->ready&&!activeOwner->pending&&
+            slots.data.storageMode==MTLStorageModeShared&&active.data.storageMode==MTLStorageModeShared&&slots.data.contents&&active.data.contents;
+        if(known)for(size_t row=0;row<p[0];++row){
+            const float flag=*(reinterpret_cast<const float*>(static_cast<const char*>(active.data.contents)+active.offset)+row*p[8]);
+            if(flag!=0.0f&&flag!=1.0f){known=false;break;}
+            if(flag==0.0f)continue;
+            const float slot=*(reinterpret_cast<const float*>(static_cast<const char*>(slots.data.contents)+slots.offset)+row*p[7]);
+            if(!std::isfinite(slot)||slot<0.0f||slot>=float(p[4])||std::floor(slot)!=slot){known=false;break;}
+            visible=std::max(visible,size_t(slot)+1);
+        }
+        if(known&&SplitScoreProfileSupported(p[0],p[1],p[2],p[3],p[4],visible)) {
+            auto dotPipeline=impl_->kernels->splitScoreDots,softmaxPipeline=impl_->kernels->splitScoreSoftmax;
+#ifdef GARNET_METAL_SPLIT_SCORE_PROFILE32
+            const bool profile32=impl_->profile32ScoresEnabled&&Profile32ScoreSupported(p,visible);
+            if(profile32){dotPipeline=impl_->kernels->profile32ScoreDots;softmaxPipeline=impl_->kernels->profile32ScoreSoftmax;}
+#endif
+            auto bind=[&](id<MTLComputeCommandEncoder> e){
+                for(size_t i=0;i<inputs.size();++i){auto input=inputs[i].impl_->matrix;[e setBuffer:input.data offset:input.offset atIndex:i];}
+                [e setBuffer:c.data offset:c.offset atIndex:4];[e setBytes:parameters length:parameterBytes atIndex:5];
+            };
+            auto dots=impl_->ComputeEncoder(__func__);if(!dots)throw std::runtime_error("Cannot encode split score dots");
+            bind(dots);[dots setComputePipelineState:dotPipeline];
+            [dots dispatchThreadgroups:MTLSizeMake(p[0]*p[1],(visible+127)/128,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[dots endEncoding];
+            // The tracked buffer hazard between encoders orders every raw dot
+            // store before this in-place full-row softmax reads that version.
+            auto softmax=impl_->ComputeEncoder(__func__);if(!softmax)throw std::runtime_error("Cannot encode split score softmax");
+            bind(softmax);[softmax setComputePipelineState:softmaxPipeline];
+            [softmax setThreadgroupMemoryLength:((p[4]*sizeof(float)+15)&~size_t(15)) atIndex:0];
+            [softmax dispatchThreadgroups:MTLSizeMake(p[0]*p[1],1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[softmax endEncoding];
+            output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
+            if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+#ifdef GARNET_METAL_SPLIT_SCORE_PROFILE32
+            if(profile32)++impl_->profile32ScoreDispatches;
+#endif
+            ++impl_->splitScoreDispatches;return;
+        }
+    }
+#endif
+    auto encoder=impl_->ComputeEncoder(__func__);
     if(!encoder)throw std::runtime_error("Cannot create Metal state kernel encoder");
     [encoder setComputePipelineState:pipeline];
     for(size_t i=0;i<inputs.size();++i)[encoder setBuffer:inputs[i].impl_->matrix.data offset:inputs[i].impl_->matrix.offset atIndex:i];
@@ -3938,6 +5476,31 @@ void MetalContext::EncodeStateKernel(unsigned operation,const std::vector<MetalM
             throw std::runtime_error("Verification scores require four SIMD groups");
         [encoder setThreadgroupMemoryLength:((capacity*sizeof(float)+15)&~size_t(15)) atIndex:0];
         [encoder dispatchThreadgroups:MTLSizeMake(threads,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_VALUES
+    } else if(useGqaValue) {
+        const auto* p=static_cast<const uint64_t*>(parameters);
+        [encoder setThreadgroupMemoryLength:gqaValueScratchBytes atIndex:0];
+        [encoder dispatchThreadgroups:MTLSizeMake(p[0]*8,4,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+        ++impl_->verificationGqaValueDispatches;
+#endif
+#ifdef GARNET_METAL_MISTRAL_VERIFY_VECTOR4
+    } else if(useValueVector4) {
+        if(threads%4||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<64)
+            throw std::runtime_error("Vector verification context requires four columns and two SIMD groups");
+        [encoder dispatchThreads:MTLSizeMake(threads/4,1,1) threadsPerThreadgroup:MTLSizeMake(64,1,1)];
+        ++impl_->verificationValueVectorDispatches;
+#endif
+#ifdef GARNET_METAL_VALUE_PROFILE32
+    } else if(useValueProfile32) {
+        [encoder dispatchThreads:MTLSizeMake(threads,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+        ++impl_->valueProfileDispatches;
+#endif
+#ifdef GARNET_METAL_MISTRAL_GROUPED_VALUE_CONTEXT
+    } else if(useGroupedValueContext) {
+        if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+            throw std::runtime_error("Grouped value context requires four SIMD groups");
+        [encoder dispatchThreadgroups:MTLSizeMake(threads/256,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
 #endif
     } else if(operation==19||operation==25) {
         if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)throw std::runtime_error("Recurrent chunk requires 32-lane SIMD groups");
@@ -4213,7 +5776,13 @@ MetalContext::VerificationKVSpanParams MetalContext::ValidateVerificationKVSpan(
         throw std::invalid_argument("Invalid bounded verification KV-span profile");
     const auto c=cache.impl_->matrix,s=slots.impl_->matrix,m=submitted.impl_->matrix,b=backup.impl_->matrix;
     const size_t batch=c.rows,rows=Elements(batch,chunk),width=Elements(heads,dim);
-    if(!batch||batch>4||rows>4||c.columns!=Elements(width,capacity)||b.rows!=rows||b.columns!=width||
+    if(!batch||batch>4||
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+       (rows>4&&!(batch==4&&chunk==4))
+#else
+       rows>4
+#endif
+       ||c.columns!=Elements(width,capacity)||b.rows!=rows||b.columns!=width||
        s.rows!=batch||s.columns!=chunk||m.rows!=batch||m.columns!=chunk||
        (accepted&&(accepted->impl_->matrix.rows!=batch||accepted->impl_->matrix.columns!=chunk)))
         throw std::invalid_argument("Verification KV-span shape mismatch");
@@ -4375,7 +5944,10 @@ void MetalContext::EncodeKVChunk(const MetalMatrix& token,const MetalMatrix& cac
     EncodeStateKernel(vector?17:12,{token,cache,slots,active},output,&p,sizeof(p),threads,nullptr,false,nullptr,scatter);
 }
 void MetalContext::PrepareAttentionChunk(const std::vector<MetalMatrix>& inputs,size_t heads,size_t kvHeads,
-    size_t dim,size_t capacity,size_t chunk) {
+    size_t dim,size_t capacity,size_t chunk,bool halfOnly) {
+#ifndef GARNET_METAL_HALF_ONLY_PREPARATION
+    if(halfOnly)throw std::invalid_argument("Half-only attention preparation is not compiled");
+#endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     @autoreleasepool {
     if(impl_->command)throw std::logic_error("Prepare chunk attention outside command encoding");
@@ -4395,6 +5967,33 @@ void MetalContext::PrepareAttentionChunk(const std::vector<MetalMatrix>& inputs,
        g.rows!=q.rows||g.columns!=q.columns)
         throw std::invalid_argument("MPS chunk attention requires its proved contiguous-cache profile");
     const std::array<size_t,6> key{batch,heads,kvHeads,dim,capacity,chunk};
+
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+    if(halfOnly&&(!batch||batch>4||heads!=32||kvHeads!=8||dim!=128||capacity>4096||
+       chunk<2||chunk>kMetalHalfAttentionMaximumChunk||q.rows>512))
+        throw std::invalid_argument("Half-only preparation exceeds the qualified native geometry");
+#endif
+
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+    if(batch<=4&&heads==32&&kvHeads==8&&dim==128&&capacity<=4096&&chunk<=kMetalHalfAttentionMaximumChunk&&q.rows<=512) {
+        if(!impl_->kernels->halfLayoutQualified)throw std::logic_error("Half layout was not qualified");
+        if(!impl_->kernels->halfScratch[0].Valid()) {
+            const size_t bytes[]={512*4096*2,4*8*4096*128*2,4*8*4096*128*2};
+            std::array<MetalMatrix,3> prepared;
+            for(size_t i=0;i<3;++i){prepared[i]=Allocate(1,bytes[i]/4+32);auto matrix=prepared[i].impl_->matrix;std::fill_n((uint32_t*)((char*)matrix.data.contents+matrix.offset),matrix.columns,uint32_t(0x7e097e09));}
+            impl_->kernels->halfScratch=std::move(prepared);
+        }
+    }
+#endif
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+    if(halfOnly) {
+        auto& profiles=impl_->kernels->halfOnlyProfiles;
+        if(!profiles.count(key)&&profiles.size()>=32)
+            throw std::invalid_argument("Half-only prepared attention family bound exceeded");
+        profiles.emplace(key,true);
+        return;
+    }
+#endif
     if(impl_->kernels->chunkMPSPlans.count(key))return;
     const size_t queries=Elements(Elements(batch,heads),chunk),live=Elements(Elements(batch,kvHeads),chunk);
     const size_t packedPitch=[MPSMatrixDescriptor rowBytesFromColumns:dim dataType:MPSDataTypeFloat32];
@@ -4447,6 +6046,15 @@ void MetalContext::PrepareAttentionChunk(const std::vector<MetalMatrix>& inputs,
         bucket.softmax=[impl_->device newComputePipelineStateWithFunction:function error:&error];
         if(!bucket.scores||!bucket.cache||!bucket.qk||!bucket.pv||!bucket.softmax||bucket.softmax.threadExecutionWidth!=32||bucket.softmax.maxTotalThreadsPerThreadgroup<128)
             throw std::runtime_error("Cannot prepare MPS attention context bucket");
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+        if(batch<=4&&heads==32&&kvHeads==8&&dim==128&&capacity<=4096&&chunk<=128) {
+            NSError* error=nil;auto function=[impl_->kernels->library newFunctionWithName:@"chunk_mps_committed_softmax" constantValues:constants error:&error];
+            if(!function)throw std::runtime_error("Cannot specialize committed MPS softmax");
+            bucket.committedSoftmax=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+            if(!bucket.committedSoftmax||bucket.committedSoftmax.threadExecutionWidth!=32||bucket.committedSoftmax.maxTotalThreadsPerThreadgroup<128)
+                throw std::runtime_error("Cannot prepare committed MPS softmax");
+        }
+#endif
         plan.buckets.emplace(bound,std::move(bucket));
     }
 #endif
@@ -4491,10 +6099,30 @@ void MetalContext::PrepareAttentionChunk(const std::vector<MetalMatrix>& inputs,
     }
 #else
     (void)inputs;(void)heads;(void)kvHeads;(void)dim;(void)capacity;(void)chunk;
+    (void)halfOnly;
 #endif
 }
 void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
     size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated,bool reference,bool fullRequestRows) {
+    EncodeAttentionChunkInternal(inputs,output,heads,kvHeads,dim,capacity,chunk,gated,reference,fullRequestRows,false);
+}
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+void MetalContext::EncodeCommittedAttentionChunk(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
+    size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated) {
+    if(inputs.size()!=8||!inputs[3].impl_||heads!=32||kvHeads!=8||dim!=128||capacity>4096||chunk<2||chunk>128||
+       !CanHoistKVControls(inputs[5],inputs[6],inputs[3].impl_->matrix.rows,chunk,capacity))
+        throw std::invalid_argument("Committed attention requires proved bounded contiguous controls");
+    EncodeAttentionChunkInternal(inputs,output,heads,kvHeads,dim,capacity,chunk,gated,false,false,true);
+}
+#endif
+void MetalContext::EncodeAttentionChunkInternal(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,
+    size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated,bool reference,bool fullRequestRows,bool committedKV,bool halfKV) {
+#ifndef GARNET_METAL_CHUNK_HALF_ATTENTION
+    (void)halfKV;
+#endif
+#ifndef GARNET_METAL_COMMITTED_KV_MPS
+    (void)committedKV;
+#endif
 #ifndef GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS
     (void)fullRequestRows;
 #endif
@@ -4524,6 +6152,15 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
     if(!reference) {
         @autoreleasepool {
         if(!impl_->command)throw std::logic_error("Begin a Metal command batch first");
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+        if(!halfKV) {
+            const std::array<size_t,6> key{size_t(p.batch),heads,kvHeads,dim,capacity,chunk};
+            std::unique_lock<std::mutex> lock(impl_->kernels->chunkMPSMutex,std::defer_lock);
+            if(!impl_->chunkMPSLock.owns_lock())lock.lock();
+            if(impl_->kernels->halfOnlyProfiles.count(key)&&!impl_->kernels->chunkMPSPlans.count(key))
+                throw std::logic_error("Explicitly prepare an MPS fallback before FP32 execution of a half-only profile");
+        }
+#endif
         if(o.device!=impl_->device||o.dataType!=MPSDataTypeFloat32)throw std::invalid_argument("Invalid MPS chunk attention output/device");
         if(output.impl_->pending&&!impl_->pendingOutputs.count(output.impl_->PendingKey()))throw std::logic_error("Output is pending in another command batch");
         for(const auto& input:inputs) {
@@ -4540,13 +6177,50 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
         const auto policy=SelectChunkAttentionPolicy(capacity,size_t(p.batch),chunk,
             controlsReady?reinterpret_cast<const float*>(static_cast<const char*>(s.data.contents)+s.offset):nullptr,size_t(p.sStride),
             controlsReady?reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset):nullptr,size_t(p.aStride),kMetalPrefillChunkLimit);
-        if(policy.scalar) {
+        // A half-prefill producer must not change arithmetic when other owners
+        // arrive or leave. Keep the original tiny-token fallback only for the
+        // original FP32 path; opt-in half tails use the same qualified kernel.
+        if(policy.scalar&&!halfKV) {
             // Tail inputs retain the same fixed layouts. Avoid packing and
             // dense matrix products when there are at most eight real tokens.
             EncodeStateKernel(13,inputs,output,&p,sizeof(p),Elements(q.rows,heads),nullptr,false);
             ++impl_->chunkAttentionBucketDispatches;++impl_->chunkAttentionTailDispatches;
             return;
         }
+
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+        if(halfKV) {
+            if(!committedKV||!policy.known||fullRequestRows||p.batch>4||heads!=32||kvHeads!=8||dim!=128||chunk>kMetalHalfAttentionMaximumChunk||q.rows>512)
+                throw std::invalid_argument("Half attention does not match its proved profile");
+            if(!impl_->chunkMPSLock.owns_lock())impl_->chunkMPSLock=std::unique_lock<std::mutex>(impl_->kernels->chunkMPSMutex);
+            bool prepared=impl_->kernels->chunkMPSPlans.count({size_t(p.batch),heads,kvHeads,dim,capacity,chunk})!=0;
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+            prepared=prepared||impl_->kernels->halfOnlyProfiles.count({size_t(p.batch),heads,kvHeads,dim,capacity,chunk})!=0;
+#endif
+            if(!prepared||!impl_->kernels->halfRangeStatus||!impl_->kernels->halfScratch[0].Valid())
+                throw std::logic_error("Half attention must be prepared before encoding");
+            output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));
+            struct Controls {uint32_t first[4]{},count[4]{};} controls;
+            const auto* positions=(const float*)((const char*)s.data.contents+s.offset);const auto* flags=(const float*)((const char*)a.data.contents+a.offset);
+            for(size_t b=0;b<p.batch;++b){while(controls.count[b]<chunk&&flags[b*p.aStride+controls.count[b]]!=0)++controls.count[b];if(controls.count[b])controls.first[b]=uint32_t(positions[b*p.sStride]);}
+            // CPU reset is safe only while holding the shared scratch lease and
+            // before this batch's first pack. Flush and later layers retain failures.
+            if(!impl_->halfBatchStarted){*(uint32_t*)impl_->kernels->halfRangeStatus.contents=0;impl_->halfBatchStarted=true;}
+            auto encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode half attention packing");
+            auto bind=[&](const MetalMatrix& m,size_t index,size_t extra=0){auto view=m.impl_->matrix;[encoder setBuffer:view.data offset:view.offset+extra atIndex:index];};
+            const auto& scratch=impl_->kernels->halfScratch;
+            [encoder setComputePipelineState:impl_->kernels->halfPackQ];bind(inputs[0],0);bind(scratch[0],1,64);[encoder setBytes:&p length:sizeof(p) atIndex:2];[encoder setBytes:&controls length:sizeof(controls) atIndex:3];[encoder setBuffer:impl_->kernels->halfRangeStatus offset:0 atIndex:4];bind(inputs[7],5);
+            [encoder dispatchThreads:MTLSizeMake(q.rows*4096,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];
+            [encoder setComputePipelineState:impl_->kernels->halfPackKV];bind(inputs[3],0);bind(inputs[4],1);bind(scratch[1],2,64);bind(scratch[2],3,64);[encoder setBytes:&p length:sizeof(p) atIndex:4];[encoder setBytes:&controls length:sizeof(controls) atIndex:5];uint32_t extent=uint32_t(policy.capacity);[encoder setBytes:&extent length:sizeof(extent) atIndex:6];[encoder setBuffer:impl_->kernels->halfRangeStatus offset:0 atIndex:7];
+            [encoder dispatchThreads:MTLSizeMake(p.batch*8*extent*128,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
+            encoder=impl_->ComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot encode native half attention");
+            [encoder setComputePipelineState:impl_->kernels->halfAttention];bind(scratch[0],0,64);bind(scratch[1],1,64);bind(scratch[2],2,64);bind(inputs[7],3);bind(output,4);auto packed=p;packed.qStride=4096;
+            [encoder setBytes:&packed length:sizeof(packed) atIndex:5];[encoder setBytes:&controls length:sizeof(controls) atIndex:6];
+            [encoder dispatchThreadgroups:MTLSizeMake(32,(chunk+63)/64,p.batch) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
+            output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+            ++impl_->halfAttentionDispatches;++impl_->chunkAttentionBucketDispatches;impl_->chunkAttentionBucketCapacity=std::max(impl_->chunkAttentionBucketCapacity,policy.capacity);return;
+        }
+#endif
 #ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
         // Only completed controls can establish the contiguous active-prefix
         // overlay. Unknown, ragged and overwrite inputs retain the old path.
@@ -4569,7 +6243,7 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
             if(!impl_->chunkMPSLock.owns_lock())impl_->chunkMPSLock=std::unique_lock<std::mutex>(impl_->kernels->chunkMPSMutex);
             if(!impl_->kernels->chunkMPSPlans.count({size_t(p.batch),heads,kvHeads,dim,capacity,chunk}))
                 throw std::logic_error("Flash attention fallback profile must be prepared before encoding");
-            auto encoder=[impl_->command computeCommandEncoder];
+            auto encoder=impl_->ComputeEncoder(__func__);
             if(!encoder)throw std::runtime_error("Cannot encode tiled flash attention");
             [encoder setComputePipelineState:impl_->kernels->chunkFlashAttention];
             const size_t binding[]={0,1,2,3,4,7};
@@ -4597,17 +6271,27 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
 #ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
         const auto& bucket=plan.buckets.at(policy.capacity);extent=policy.capacity;
         cacheDescriptor=bucket.cache;cacheScoreView=bucket.scores;qkCache=bucket.qk;pvCache=bucket.pv;softmaxPipeline=bucket.softmax;
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+        if(committedKV){if(!bucket.committedSoftmax)throw std::logic_error("Committed softmax not prepared");softmaxPipeline=bucket.committedSoftmax;}
+#endif
 #endif
         auto bind=[](id<MTLComputeCommandEncoder> encoder,const MetalMatrix& owner,size_t index) {
             auto matrix=owner.impl_->matrix;[encoder setBuffer:matrix.data offset:matrix.offset atIndex:index];
         };
         const size_t count=Elements(Elements(q.rows,heads),dim);
-        auto pack=[impl_->command computeCommandEncoder];
+        auto pack=impl_->ComputeEncoder(__func__);
         if(!pack)throw std::runtime_error("Cannot encode MPS attention pack");
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+        if(committedKV){[pack setComputePipelineState:impl_->kernels->chunkCommittedPack];bind(pack,inputs[0],0);bind(pack,inputs[6],1);bind(pack,plan.query,2);
+            [pack setBytes:&p length:sizeof(p) atIndex:3];[pack setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:4];}
+        else
+#endif
+        {
         [pack setComputePipelineState:impl_->kernels->chunkMPSPack];
         bind(pack,inputs[0],0);bind(pack,inputs[1],1);bind(pack,inputs[2],2);bind(pack,inputs[6],3);
         bind(pack,plan.query,4);bind(pack,plan.key,5);bind(pack,plan.value,6);
         [pack setBytes:&p length:sizeof(p) atIndex:7];[pack setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:8];
+        }
         [pack dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[pack endEncoding];
         auto keyView=[[MPSMatrix alloc] initWithBuffer:kc.data offset:kc.offset descriptor:cacheDescriptor];
         auto valueView=[[MPSMatrix alloc] initWithBuffer:vc.data offset:vc.offset descriptor:cacheDescriptor];
@@ -4625,21 +6309,29 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
                 if(!key||!value)throw std::runtime_error("Cannot bind bounded request cache views");
                 requestBindings.push_back({&products,key,value});
                 [products.qkCache encodeToCommandBuffer:impl_->command leftMatrix:products.query rightMatrix:key resultMatrix:products.cacheScores];
-                [products.qkLive encodeToCommandBuffer:impl_->command leftMatrix:products.query rightMatrix:products.key resultMatrix:products.liveScores];
+                if(!committedKV)[products.qkLive encodeToCommandBuffer:impl_->command leftMatrix:products.query rightMatrix:products.key resultMatrix:products.liveScores];
             }
         }else
 #endif
         {
             [qkCache encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:keyView resultMatrix:cacheScoreView];
-            [plan.qkLive encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:plan.keyView resultMatrix:plan.liveScoreView];
+            if(!committedKV)[plan.qkLive encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:plan.keyView resultMatrix:plan.liveScoreView];
         }
-        auto softmax=[impl_->command computeCommandEncoder];
+        auto softmax=impl_->ComputeEncoder(__func__);
         if(!softmax)throw std::runtime_error("Cannot encode MPS attention selection/softmax");
         [softmax setComputePipelineState:softmaxPipeline];
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+        if(committedKV){bind(softmax,plan.cacheScores,0);bind(softmax,inputs[5],1);bind(softmax,inputs[6],2);
+            [softmax setBytes:&p length:sizeof(p) atIndex:3];[softmax setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:4];}
+        else
+#endif
+        {
         bind(softmax,plan.cacheScores,0);bind(softmax,plan.liveScores,1);bind(softmax,plan.liveProb,2);
         bind(softmax,inputs[5],3);bind(softmax,inputs[6],4);
         [softmax setBytes:&p length:sizeof(p) atIndex:5];[softmax setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:6];
-        [softmax setThreadgroupMemoryLength:(extent*4+15)&~size_t(15) atIndex:0];[softmax setThreadgroupMemoryLength:(extent*2+15)&~size_t(15) atIndex:1];
+        [softmax setThreadgroupMemoryLength:(extent*2+15)&~size_t(15) atIndex:1];
+        }
+        [softmax setThreadgroupMemoryLength:(extent*4+15)&~size_t(15) atIndex:0];
         [softmax dispatchThreadgroups:MTLSizeMake(q.rows*heads,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[softmax endEncoding];
         // Both QK products have consumed packed queries. Reuse their storage
         // for the old-cache contribution, keeping scratch fixed per profile.
@@ -4650,30 +6342,37 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
             for(const auto& binding:requestBindings) {
                 const auto& products=*binding.products;
                 [products.pvCache encodeToCommandBuffer:impl_->command leftMatrix:products.cacheScores rightMatrix:binding.value resultMatrix:products.query];
-                [products.pvLive encodeToCommandBuffer:impl_->command leftMatrix:products.liveProb rightMatrix:products.value resultMatrix:products.livePart];
+                if(!committedKV)[products.pvLive encodeToCommandBuffer:impl_->command leftMatrix:products.liveProb rightMatrix:products.value resultMatrix:products.livePart];
                 scheduledRequests+=products.cache.matrices/kvHeads;
             }
         }else
 #endif
         {
             [pvCache encodeToCommandBuffer:impl_->command leftMatrix:cacheScoreView rightMatrix:valueView resultMatrix:plan.queryView];
-            [plan.pvLive encodeToCommandBuffer:impl_->command leftMatrix:plan.liveProbView rightMatrix:plan.valueView resultMatrix:plan.livePartView];
+            if(!committedKV)[plan.pvLive encodeToCommandBuffer:impl_->command leftMatrix:plan.liveProbView rightMatrix:plan.valueView resultMatrix:plan.livePartView];
         }
 #ifdef GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS
-        impl_->chunkAttentionMPSMatrices+=scheduledRequests*kvHeads*4;
-        impl_->chunkAttentionMPSSkippedMatrices+=(p.batch-scheduledRequests)*kvHeads*4;
+        impl_->chunkAttentionMPSMatrices+=scheduledRequests*kvHeads*(committedKV?2:4);
+        impl_->chunkAttentionMPSSkippedMatrices+=(p.batch-scheduledRequests)*kvHeads*(committedKV?2:4);
 #else
-        impl_->chunkAttentionMPSMatrices+=p.batch*kvHeads*4;
+        impl_->chunkAttentionMPSMatrices+=p.batch*kvHeads*(committedKV?2:4);
 #endif
-        auto unpack=[impl_->command computeCommandEncoder];
+        auto unpack=impl_->ComputeEncoder(__func__);
         if(!unpack)throw std::runtime_error("Cannot encode MPS attention merge");
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+        if(committedKV){[unpack setComputePipelineState:impl_->kernels->chunkCommittedUnpack];bind(unpack,plan.query,0);bind(unpack,inputs[7],1);bind(unpack,inputs[6],2);bind(unpack,output,3);
+            [unpack setBytes:&p length:sizeof(p) atIndex:4];[unpack setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:5];}
+        else
+#endif
+        {
         [unpack setComputePipelineState:impl_->kernels->chunkMPSUnpack];
         bind(unpack,plan.query,0);bind(unpack,plan.livePart,1);bind(unpack,inputs[7],2);bind(unpack,inputs[6],3);bind(unpack,output,4);
         [unpack setBytes:&p length:sizeof(p) atIndex:5];[unpack setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:6];
+        }
         [unpack dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[unpack endEncoding];
         output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
         if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
-        ++impl_->chunkAttentionMPSDispatches;
+        ++impl_->chunkAttentionMPSDispatches;if(committedKV)++impl_->committedAttentionDispatches;
 #ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
         ++impl_->chunkAttentionBucketDispatches;
         impl_->chunkAttentionBucketCapacity=std::max(impl_->chunkAttentionBucketCapacity,extent);
@@ -4688,6 +6387,12 @@ void MetalContext::EncodeAttentionChunk(const std::vector<MetalMatrix>& inputs,c
 #endif
     EncodeStateKernel(13,inputs,output,&p,sizeof(p),Elements(q.rows,heads),nullptr,reference);
 }
+#ifdef GARNET_METAL_LOOKAHEAD_ATTENTION
+#include "lookahead_attention_context.inc"
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+#include "lookahead_commit_context.inc"
+#endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
 void MetalContext::EncodeVerificationAttention(const std::vector<MetalMatrix>& inputs,
     const MetalMatrix& probabilities,const MetalMatrix& output,size_t heads,size_t kvHeads,
@@ -4751,10 +6456,104 @@ void MetalContext::EncodeVerificationAttention(const std::vector<MetalMatrix>& i
     }
 }
 size_t MetalContext::LastVerificationAttentionDispatches() const {return impl_->verificationAttentionDispatches;}
+size_t MetalContext::LastVerificationLayoutDispatches() const {return impl_->verificationLayoutDispatches;}
+size_t MetalContext::LastVerificationGqaValueDispatches() const {return impl_->verificationGqaValueDispatches;}
+void MetalContext::VerificationSetGqaValuesEnabled(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("GQA16 verification values require a closed, drained command batch");
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_VALUES
+    impl_->verificationGqaValuesEnabled=enabled;
+#else
+    throw std::logic_error("GQA16 verification values are disabled in this build");
+#endif
+}
+size_t MetalContext::LastVerificationGqaScoreDispatches() const {return impl_->verificationGqaScoreDispatches;}
+void MetalContext::VerificationSetGqaScoresEnabled(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("GQA16 verification scores require a closed, drained command batch");
+#ifdef GARNET_METAL_MISTRAL_VERIFY_GQA16_SCORES
+    impl_->verificationGqaScoresEnabled=enabled;
+#else
+    throw std::logic_error("GQA16 verification scores are disabled in this build");
+#endif
+}
+size_t MetalContext::LastVerificationSplitScoreDispatches() const {return impl_->verificationSplitScoreDispatches;}
+void MetalContext::VerificationSetSplitScoresEnabled(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Verification split scores require a closed, drained command batch");
+#ifdef GARNET_METAL_MISTRAL_VERIFY_SPLIT_SCORES
+    impl_->verificationSplitScoresEnabled=enabled;
+#else
+    throw std::logic_error("Split verification scores are disabled in this build");
+#endif
+}
+size_t MetalContext::LastVerificationValueVectorDispatches() const {return impl_->verificationValueVectorDispatches;}
+void MetalContext::VerificationSetValueVector4(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Value vector selection requires a closed, drained command batch");
+#ifdef GARNET_METAL_MISTRAL_VERIFY_VECTOR4
+    impl_->verificationValueVector4=enabled;
+#else
+    throw std::logic_error("Verification value vectorization is disabled in this build");
+#endif
+}
+void MetalContext::VerificationSetMistralLayout(bool enabled) {
+    if(impl_->command||impl_->submitted.count)
+        throw std::logic_error("Verification layout selection requires a closed, drained command batch");
+#ifdef GARNET_METAL_MISTRAL_VERIFY_LAYOUT
+    impl_->verificationMistralLayout=enabled;
+#else
+    throw std::logic_error("Mistral verification layout is disabled in this build");
+#endif
+}
 #endif
 size_t MetalContext::LastChunkProbabilityReuseDispatches() const {return impl_->chunkProbabilityReuseDispatches;}
 size_t MetalContext::LastChunkAttentionIndex32Dispatches() const {return impl_->chunkAttentionIndex32Dispatches;}
 size_t MetalContext::LastChunkKVScatterDispatches() const {return impl_->chunkKVScatterDispatches;}
+size_t MetalContext::LastChunkKVHoistedCommits() const {return impl_->chunkKVHoistedCommits;}
+
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+void MetalContext::EncodeHalfAttentionChunk(const std::vector<MetalMatrix>& inputs,const MetalMatrix& output,size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated) {
+    if(inputs.size()!=8||!inputs[3].impl_||heads!=32||kvHeads!=8||dim!=128||capacity>4096||chunk<2||chunk>kMetalHalfAttentionMaximumChunk||!CanHoistKVControls(inputs[5],inputs[6],inputs[3].impl_->matrix.rows,chunk,capacity))throw std::invalid_argument("Half attention requires compiler-proved committed KV and completed contiguous controls");
+    EncodeAttentionChunkInternal(inputs,output,heads,kvHeads,dim,capacity,chunk,gated,false,false,true,true);
+}
+std::array<MetalMatrix,3> MetalContext::HalfAttentionScratchForTest() const {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Inspect half scratch only after drain");
+    std::lock_guard<std::mutex> lock(impl_->kernels->chunkMPSMutex);
+    return impl_->kernels->halfScratch;
+}
+uint32_t MetalContext::HalfAttentionPartialStatusForTest() const {
+    if(!impl_->command||!impl_->submitted.count||!impl_->chunkMPSLock.owns_lock()||!impl_->halfBatchStarted)
+        throw std::logic_error("Partial status requires this context's flushed half scratch lease");
+    for(id<MTLCommandBuffer> prior in impl_->submitted){[prior waitUntilCompleted];if(prior.status!=MTLCommandBufferStatusCompleted)throw std::runtime_error("Partial half command failed");}
+    return *(const uint32_t*)impl_->kernels->halfRangeStatus.contents;
+}
+#endif
+size_t MetalContext::LastHalfAttentionDispatches() const {
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+    return impl_->halfAttentionDispatches;
+#else
+    return 0;
+#endif
+}
+size_t MetalContext::HalfAttentionScratchBytes() const {
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+    std::unique_lock<std::mutex> lock(impl_->kernels->chunkMPSMutex,std::defer_lock);
+    if(!impl_->chunkMPSLock.owns_lock())lock.lock();
+    size_t bytes=0;for(const auto& owner:impl_->kernels->halfScratch)if(owner.Valid())bytes+=owner.impl_->matrix.rows*owner.impl_->matrix.rowBytes;return bytes;
+#else
+    return 0;
+#endif
+}
+size_t MetalContext::LastCommittedKVAttentionDispatches() const {return impl_->committedAttentionDispatches;}
+#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+void MetalContext::NoteChunkKVCommitHoist(){impl_->chunkKVHoistedCommits+=2;}
+bool MetalContext::CanHoistKVControls(const MetalMatrix& slots,const MetalMatrix& active,size_t batch,size_t chunk,size_t capacity) const {
+    if(!slots.impl_||!active.impl_||!slots.impl_->ready||!active.impl_->ready||slots.impl_->pending||active.impl_->pending)return false;
+    const auto s=slots.impl_->matrix,a=active.impl_->matrix;
+    if(s.device!=impl_->device||a.device!=impl_->device||s.dataType!=MPSDataTypeFloat32||a.dataType!=MPSDataTypeFloat32||
+       s.rows!=batch||a.rows!=batch||s.columns!=chunk||a.columns!=chunk||s.rowBytes%4||a.rowBytes%4||
+       s.data.storageMode!=MTLStorageModeShared||a.data.storageMode!=MTLStorageModeShared||!s.data.contents||!a.data.contents)return false;
+    return ChunkMPSContiguousPrefix(batch,chunk,capacity,reinterpret_cast<const float*>(static_cast<const char*>(s.data.contents)+s.offset),s.rowBytes/4,
+        reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset),a.rowBytes/4);
+}
+#endif
 size_t MetalContext::LastLayoutVectorDispatches() const {return impl_->layoutVectorDispatches;}
 size_t MetalContext::LastChunkAttentionMPSDispatches() const {return impl_->chunkAttentionMPSDispatches;}
 size_t MetalContext::LastChunkFlashAttentionDispatches() const {return impl_->chunkFlashAttentionDispatches;}
@@ -4786,6 +6585,15 @@ size_t MetalContext::ChunkAttentionMPSPlanCount() const {
     return 0;
 #endif
 }
+size_t MetalContext::HalfOnlyAttentionPlanCount() const {
+#ifdef GARNET_METAL_HALF_ONLY_PREPARATION
+    std::unique_lock<std::mutex> lock(impl_->kernels->chunkMPSMutex,std::defer_lock);
+    if(!impl_->chunkMPSLock.owns_lock())lock.lock();
+    return impl_->kernels->halfOnlyProfiles.size();
+#else
+    return 0;
+#endif
+}
 size_t MetalContext::ChunkAttentionMPSScratchBytes() const {
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
     std::unique_lock<std::mutex> lock(impl_->kernels->chunkMPSMutex,std::defer_lock);
@@ -4810,6 +6618,20 @@ size_t MetalContext::LastChunkAttentionOptimizedDispatches() const {
     return impl_->chunkProbabilityReuseDispatches+impl_->chunkAttentionIndex32Dispatches;
 #endif
 }
+#ifdef GARNET_METAL_SPLIT_DECODE_SCORES
+void MetalContext::SetSplitScoresEnabled(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Configure split scores outside a drained batch");
+    impl_->splitScoresEnabled=enabled;
+}
+size_t MetalContext::LastSplitScoreDispatches() const {return impl_->splitScoreDispatches;}
+#ifdef GARNET_METAL_SPLIT_SCORE_PROFILE32
+void MetalContext::SetProfile32ScoresEnabled(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Configure profile32 scores outside a drained batch");
+    impl_->profile32ScoresEnabled=enabled;
+}
+size_t MetalContext::LastProfile32ScoreDispatches() const {return impl_->profile32ScoreDispatches;}
+#endif
+#endif
 void MetalContext::EncodeAttentionScores(const MetalMatrix& query,const MetalMatrix& key,const MetalMatrix& slots,
     const MetalMatrix& active,const MetalMatrix& output,size_t heads,size_t kvHeads,size_t dim,size_t capacity) {
     if(!query.impl_||!key.impl_||!slots.impl_||!active.impl_||!output.impl_||!kvHeads||!heads||heads%kvHeads)
@@ -4822,6 +6644,13 @@ void MetalContext::EncodeAttentionScores(const MetalMatrix& query,const MetalMat
     Params p{q.rows,heads,kvHeads,dim,capacity,q.rowBytes/4,k.rowBytes/4,s.rowBytes/4,a.rowBytes/4,o.rowBytes/4};
     EncodeStateKernel(8,{query,key,slots,active},output,&p,sizeof(p),Elements(q.rows,heads));
 }
+#ifdef GARNET_METAL_VALUE_PROFILE32
+void MetalContext::SetValueProfile32Enabled(bool enabled) {
+    if(impl_->command||impl_->submitted.count)throw std::logic_error("Configure value profile outside a drained batch");
+    impl_->valueProfileEnabled=enabled;
+}
+size_t MetalContext::LastValueProfile32Dispatches() const {return impl_->valueProfileDispatches;}
+#endif
 void MetalContext::EncodeAttentionContext(const MetalMatrix& probabilities,const MetalMatrix& value,const MetalMatrix& gate,
     const MetalMatrix& slots,const MetalMatrix& output,size_t heads,size_t kvHeads,size_t dim,size_t capacity,bool gated) {
     if(!probabilities.impl_||!value.impl_||!gate.impl_||!slots.impl_||!output.impl_||!kvHeads||!heads||heads%kvHeads)
@@ -4863,6 +6692,12 @@ void MetalContext::SubmitAndWait() {
         [prior waitUntilCompleted];observe(prior);
         if(prior.status!=MTLCommandBufferStatusCompleted){success=false;if(!failure)failure=prior.error.localizedDescription;}
     }
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+    // Other contexts may currently hold this shared flag. Only the lease
+    // owner that encoded half work may inspect it or fail its pending outputs.
+    if(impl_->halfBatchStarted){if(!impl_->chunkMPSLock.owns_lock()||*(const uint32_t*)impl_->kernels->halfRangeStatus.contents!=0){success=false;failure=@"Half attention input outside finite bounded numerical domain";}}
+    impl_->halfBatchStarted=false;
+#endif
     // One observed GPU span, including inter-command gaps; never sum overlaps.
     impl_->gpuMs=success&&std::isfinite(first)?(last-first)*1000.0:0;
     for(auto& output:impl_->outputs){output->pending=false;output->ready=success;}
@@ -4871,12 +6706,48 @@ void MetalContext::SubmitAndWait() {
     if(impl_->chunkMPSLock.owns_lock())impl_->chunkMPSLock.unlock();
 #endif
     if(!success)throw std::runtime_error(failure?std::string(failure.UTF8String):"Metal execution did not complete");
+    if(impl_->gpuCounters&&!impl_->counterEncoders.empty()) {
+        MTLTimestamp cpu1=0,gpu1=0;[impl_->device sampleTimestamps:&cpu1 gpuTimestamp:&gpu1];
+        const auto count=impl_->counterEncoders.size();
+        NSData* data=[impl_->gpuCounters resolveCounterRange:NSMakeRange(0,count*2)];
+        if(data.length!=count*2*sizeof(MTLCounterResultTimestamp)||cpu1<=impl_->counterCpu0||gpu1<=impl_->counterGpu0)
+            throw std::runtime_error("Invalid GPU timestamp counter resolution/calibration");
+        const auto* values=static_cast<const MTLCounterResultTimestamp*>(data.bytes);
+        for(size_t i=0;i<count;++i) {
+            const auto begin=values[i*2].timestamp,end=values[i*2+1].timestamp;
+            if(!begin||begin==MTLCounterErrorValue||end==MTLCounterErrorValue||end<begin||begin<impl_->counterGpu0||end>gpu1)
+                throw std::runtime_error("Invalid GPU encoder timestamp interval");
+        }
+        // Raw intervals can overlap: never sum them as elapsed GPU time.
+        // CPU timestamps are nanoseconds, calibrated to GPU clock samples.
+        const double scale=double(cpu1-impl_->counterCpu0)/double(gpu1-impl_->counterGpu0)/1e6;
+        std::fprintf(stderr,"metal_gpu_counters {\"diagnostic_only\":true,\"mps_encoders_observed\":false,\"cpu0\":%llu,\"gpu0\":%llu,\"cpu1\":%llu,\"gpu1\":%llu,\"gpu_ms\":%.9g,\"partial_submissions\":%zu,\"rows\":[",
+            (unsigned long long)impl_->counterCpu0,(unsigned long long)impl_->counterGpu0,(unsigned long long)cpu1,(unsigned long long)gpu1,impl_->gpuMs,impl_->partialSubmissions);
+        for(size_t i=0;i<count;++i) {
+            const auto& e=impl_->counterEncoders[i];
+            std::fprintf(stderr,"%s{\"site\":\"%s\",\"kind\":\"%s\",\"op\":%zu,\"rows\":%zu,\"columns\":%zu,\"command\":%zu,\"start\":%llu,\"end\":%llu,\"ms\":%.9g}",i?",":"",e.site,e.region.kind,e.region.op,e.region.rows,e.region.columns,e.command,
+                (unsigned long long)values[i*2].timestamp,(unsigned long long)values[i*2+1].timestamp,(values[i*2+1].timestamp-values[i*2].timestamp)*scale);
+        }
+        std::fprintf(stderr,"]}\n");
+    }
     }
 }
 double MetalContext::LastGPUMs() const {return impl_->gpuMs;}
 void MetalContext::Abort() {
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+    impl_->lookaheadKVCommitDispatches=0;
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_PROJECTIONS
+    impl_->lookaheadProjectionDispatches=0;
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_ATTENTION
+    impl_->lookaheadAttentionDispatches=0;
+#endif
+#ifdef GARNET_METAL_SILU_PROFILE32
+    impl_->siluProfile32Dispatches=0;
+#endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
-    impl_->verificationAttentionDispatches=0;
+    impl_->verificationAttentionDispatches=0;impl_->verificationLayoutDispatches=0;impl_->verificationValueVectorDispatches=0;impl_->verificationSplitScoreDispatches=0;impl_->verificationGqaScoreDispatches=0;impl_->verificationGqaValueDispatches=0;
     impl_->verificationConvCheckpoints=impl_->verificationDeltaCheckpoints=0;
     impl_->verificationKVBackups=impl_->verificationKVRestores=0;
 #endif
@@ -4894,15 +6765,41 @@ void MetalContext::Abort() {
     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
-    impl_->chunkKVScatterDispatches=0;
+    impl_->chunkKVScatterDispatches=impl_->chunkKVHoistedCommits=impl_->committedAttentionDispatches=0;
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+    impl_->halfAttentionDispatches=0;impl_->halfBatchStarted=false;
+#endif
+
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+    impl_->fusedDecodeBlocks=impl_->fusedDecodeInputCopies=0;
+#ifdef GARNET_METAL_FUSED_Q4_WIDE_SELECTION
+    impl_->fusedWideDecodeBlocks=0;
+#endif
+#endif
     impl_->layoutVectorDispatches=0;
 #ifdef GARNET_METAL_AFFINE_PROFILE
     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
     impl_->affineDecodeBlockDispatches=0;
+#ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+    impl_->streamedDispatches=0;
+#endif
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+    impl_->packedDispatches=0;impl_->diagnosticBulkDispatches=0;
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+    impl_->fusedMlpBlocks=0;
+#endif
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+    impl_->diagnosticSiluHalfDispatches=0;
+#endif
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+    impl_->pairedPackedDispatches=0;
+#endif
+#endif
 #endif
     impl_->joinedPrefillPairs=0;
 #ifdef GARNET_METAL_INDEXED_DECODE
     impl_->indexedDecodeAffineDispatches=0;
+    impl_->indexedDecodeFusedClearDispatches=0;impl_->indexedDecodeBlitClears=0;
 #endif
 #ifdef GARNET_METAL_MPP_AFFINE
     impl_->mppAffineDispatches=0;
@@ -4910,6 +6807,9 @@ void MetalContext::Abort() {
     impl_->indexedAffineDispatches=0;
 #ifdef GARNET_METAL_MPP_AFFINE_REUSE64
     impl_->reuse64AffineDispatches=0;
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+    impl_->reuse128AffineDispatches=0;
+#endif
 #endif
 #endif
 #endif
@@ -4998,3 +6898,39 @@ std::vector<uint32_t> MetalContext::PrimaryReadWordsInternal(const MetalBF16Weig
 #endif
 }
 }
+
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+namespace Garnet {
+size_t MetalContext::LastDiagnosticSiluHalfDispatches() const {return impl_->diagnosticSiluHalfDispatches;}
+void MetalContext::EncodeDiagnosticSiluHalf(const MetalMatrix& gate,const MetalMatrix& up,const MetalMatrix& carrier) {
+ @autoreleasepool {
+ if(!impl_->command||!gate.impl_||!up.impl_||!carrier.impl_)throw std::logic_error("SiLU-half needs an open batch and operands");
+ auto a=gate.impl_->matrix,b=up.impl_->matrix,h=carrier.impl_->matrix;
+ auto readable=[&](const MetalMatrix& m){return m.impl_->ready||(m.impl_->pending&&impl_->pendingOutputs.count(m.impl_->PendingKey()));};
+ if(a.device!=impl_->device||b.device!=impl_->device||h.device!=impl_->device||!readable(gate)||!readable(up)||a.rows!=b.rows||a.columns!=b.columns||h.rows!=a.rows||h.columns*2!=a.columns||a.dataType!=MPSDataTypeFloat32||b.dataType!=MPSDataTypeFloat32||h.dataType!=MPSDataTypeFloat32||a.data==h.data||b.data==h.data||a.rowBytes%4||b.rowBytes%4||h.rowBytes%2||!BulkSiluHalfSupported(a.rows,a.columns,a.rowBytes/4,b.rowBytes/4,h.rowBytes/2))throw std::invalid_argument("SiLU-half profile/readiness/alias mismatch");
+ carrier.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(carrier.impl_->PendingKey()));
+ struct Params {uint32_t rows,columns,aStride,bStride,hStride;};Params q{uint32_t(a.rows),uint32_t(a.columns),uint32_t(a.rowBytes/4),uint32_t(b.rowBytes/4),uint32_t(h.rowBytes/2)};
+ auto e=impl_->ComputeEncoder(__func__);if(!e)throw std::runtime_error("Cannot encode fused SiLU-half");[e setComputePipelineState:impl_->kernels->bulkSiluHalf];[e setBuffer:a.data offset:a.offset atIndex:0];[e setBuffer:b.data offset:b.offset atIndex:1];[e setBuffer:h.data offset:h.offset atIndex:2];[e setBytes:&q length:sizeof(q) atIndex:3];[e dispatchThreads:MTLSizeMake(a.rows*a.columns,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[e endEncoding];
+ ++impl_->diagnosticSiluHalfDispatches;carrier.impl_->ready=false;carrier.impl_->pending=true;if(impl_->pendingOutputs.insert(carrier.impl_->PendingKey()).second)impl_->outputs.push_back(carrier.impl_);
+ }
+}
+void MetalContext::EncodeDiagnosticHalfCastReference(const MetalMatrix& input,const MetalMatrix& carrier) {
+ @autoreleasepool {
+ if(!impl_->command||!impl_->diagnosticBulkCast||!input.impl_||!carrier.impl_)throw std::logic_error("Prepare native bulk cast before its reference call");auto a=input.impl_->matrix,h=carrier.impl_->matrix;
+ if(a.device!=impl_->device||h.device!=impl_->device||a.dataType!=MPSDataTypeFloat32||h.dataType!=MPSDataTypeFloat32||a.rows!=h.rows||a.columns!=h.columns*2||a.rowBytes!=a.columns*4||h.rowBytes!=a.columns*2||a.data==h.data||(!input.impl_->ready&&!(input.impl_->pending&&impl_->pendingOutputs.count(input.impl_->PendingKey())))||!BulkSiluHalfSupported(a.rows,a.columns,a.columns,a.columns,a.columns))throw std::invalid_argument("Native half reference shape/readiness/alias mismatch");
+ carrier.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(carrier.impl_->PendingKey()));auto e=impl_->ComputeEncoder(__func__);if(!e)throw std::runtime_error("Cannot encode native half reference");[e setComputePipelineState:impl_->diagnosticBulkCast];[e setBuffer:a.data offset:a.offset atIndex:0];[e setBuffer:h.data offset:h.offset atIndex:1];uint32_t count=uint32_t(a.rows*a.columns);[e setBytes:&count length:sizeof(count) atIndex:2];[e dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[e endEncoding];carrier.impl_->ready=false;carrier.impl_->pending=true;if(impl_->pendingOutputs.insert(carrier.impl_->PendingKey()).second)impl_->outputs.push_back(carrier.impl_);
+ }
+}
+void MetalContext::EncodeDiagnosticBulkGatedDown(const MetalMatrix& gate,const MetalMatrix& up,const MetalAffineInt4Weight& weight,const MetalMatrix& output) {
+ @autoreleasepool {
+ if(!impl_->command||!gate.impl_||!up.impl_||!weight.impl_||!output.impl_)throw std::logic_error("Fused gated down needs an open batch and operands");auto a=gate.impl_->matrix,b=up.impl_->matrix,o=output.impl_->matrix;const auto& w=weight.impl_;
+ if(a.device!=impl_->device||b.device!=impl_->device||o.device!=impl_->device||w->packed.device!=impl_->device||a.rows!=b.rows||a.columns!=b.columns||a.rows!=o.rows||a.columns!=w->columns||o.columns!=w->rows||a.columns!=14336||o.columns!=4096||a.dataType!=MPSDataTypeFloat32||b.dataType!=MPSDataTypeFloat32||o.dataType!=MPSDataTypeFloat32||a.rowBytes!=a.columns*4||b.rowBytes!=b.columns*4||o.rowBytes!=o.columns*4||a.data==o.data||b.data==o.data)throw std::invalid_argument("Fused gated down profile/device mismatch");
+ auto found=impl_->diagnosticBulkPlans.find({a.rows,a.columns,o.columns});if(found==impl_->diagnosticBulkPlans.end())throw std::logic_error("Fused gated down profile was not prepared");for(const auto& scratch:impl_->diagnosticBulkScratch)if(a.data==scratch.impl_->matrix.data||b.data==scratch.impl_->matrix.data||o.data==scratch.impl_->matrix.data)throw std::invalid_argument("Fused down operands alias private workspace");
+ output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));const auto& plan=found->second;
+ EncodeDiagnosticSiluHalf(gate,up,plan.halfCarrier);
+ auto e=impl_->ComputeEncoder(__func__);if(!e)throw std::runtime_error("Cannot encode fused down weight unpack");[e setComputePipelineState:impl_->diagnosticBulkUnpack];[e setBuffer:w->packed offset:0 atIndex:0];[e setBuffer:w->scales offset:0 atIndex:1];[e setBuffer:w->biases offset:0 atIndex:2];[e setBuffer:plan.w.data offset:0 atIndex:3];uint32_t dims[]{uint32_t(o.columns),uint32_t(a.columns)};[e setBytes:dims length:sizeof(dims) atIndex:4];[e dispatchThreads:MTLSizeMake(o.columns*a.columns,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[e endEncoding];
+ [plan.product encodeToCommandBuffer:impl_->command leftMatrix:plan.a rightMatrix:plan.w resultMatrix:o];++impl_->diagnosticBulkDispatches;output.impl_->ready=false;output.impl_->pending=true;if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+ }
+}
+}
+#endif

@@ -1,0 +1,52 @@
+{
+  "scope": "Native C++ token-prefix lineage and batch-layout reuse on the wide prepared profile.",
+  "source": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/source1",
+  "library": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/build-on1/libgarnet.dylib",
+  "arms": [
+    "ordinary-cache",
+    "verify-cache",
+    "reverse-cache"
+  ],
+  "owner_checkpoints": [
+    "prefill",
+    "before_terminal"
+  ],
+  "survivor_admissions": [
+    "A_exact",
+    "B_exact",
+    "A_append",
+    "A_suffix",
+    "A_early"
+  ],
+  "survivor_rows_required": [
+    "B",
+    "C",
+    "D"
+  ],
+  "required_full_hits": {
+    "A_exact": 2048,
+    "B_exact": 2051
+  },
+  "required_partial_hits": {
+    "A_append": 2048,
+    "A_suffix": 1792
+  },
+  "twin_reuse_minimum": 2048,
+  "twin_full_hit_if_retained": 2052,
+  "twin_reason": "A_append first uses one active prefill row with a full four-token tail; the two twins later use two rows. Verify semantic prefix identity does not reuse numerically incompatible states across those layouts.",
+  "expected_output_ids": 224,
+  "full_state_digest_equality": true,
+  "host_entries": 64,
+  "host_bytes": 3221225472,
+  "no_comparator_execution": true,
+  "performance_measured": false,
+  "goal_complete": false,
+  "control_reused": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-prefix-reuse1/ordinary-off-result1.json",
+  "control_reuse_reason": "Retention is disabled in the control; source/library/models/tokens/context/precision/stops/concurrency unchanged. Only an unused input host budget differs.",
+  "early_hit_bounds": [
+    1,
+    511
+  ],
+  "early_hit_policy": "Longest retained whole checkpoint, not an assumed per-token LCP; LRU eviction is allowed. Validate returned prefix tokens and exact full-state/output parity.",
+  "repair": "All 2GiB arm outputs/states match fresh control, including twin full2052 hits, but A_exact misses due pressure and early edit restores256 rather than assumed384. Increase the explicit capacity profile to3GiB to retain A. Preserve all2GiB raw evidence; require full exact A/B hits, bounded correct partial early hits."
+}

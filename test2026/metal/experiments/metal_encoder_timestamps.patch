@@ -1,0 +1,325 @@
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -98,6 +98,9 @@
+ #include <chrono>
+ #endif
+ #include <cstring>
++#include <cstdlib>
++#include <fstream>
++#include "../../../third_party/nlohmann/json.hpp"
+ #include <mach/mach.h>
+ #include <algorithm>
+ #include <cmath>
+@@ -504,6 +507,85 @@
+     id<MTLDevice> device;
+     id<MTLCommandQueue> queue;
+     id<MTLCommandBuffer> command;
++    // Research-only encoder-boundary timing. No kernel/barrier/math changes.
++    // Limited to the measured macOS26 Apple Silicon timestamp frequency API.
++    struct CounterBank {id<MTLCounterSampleBuffer> buffer=nil;std::mutex mutex;};
++    std::shared_ptr<CounterBank> counterBank;
++    std::unique_lock<std::mutex> counterLock;
++    id<MTLCounterSampleBuffer> counterBuffer=nil;
++    std::string counterPath;
++    std::vector<std::string> counterLabels;
++    uint64_t counterHz=0,counterSequence=0;
++    MTLTimestamp counterCPUStart=0,counterGPUStart=0;
++    size_t counterDropped=0;
++    void PrepareCounters() {
++        const char* path=std::getenv("GARNET_METAL_ENCODER_TIMESTAMPS_PATH");
++        if(!path||!*path)return;
++        if(@available(macOS 26.0,*)) {
++            if(!device.hasUnifiedMemory||![device supportsCounterSampling:MTLCounterSamplingPointAtStageBoundary])
++                throw std::runtime_error("Encoder timestamp diagnostic requires Apple unified memory and stage-boundary sampling");
++            counterHz=[device queryTimestampFrequency];
++        }else throw std::runtime_error("Encoder timestamp diagnostic requires macOS26 timestamp frequency API");
++        if(!counterHz)throw std::runtime_error("Encoder timestamp frequency unavailable");
++        // Apple limits live sample buffers: graph contexts share one bank,
++        // serialized from Begin through resolve/abort in diagnostic mode only.
++        static std::mutex bankMutex;static std::map<uint64_t,std::weak_ptr<CounterBank>> banks;
++        std::lock_guard<std::mutex> bankGuard(bankMutex);
++        counterBank=banks[device.registryID].lock();
++        if(!counterBank){counterBank=std::make_shared<CounterBank>();
++        for(id<MTLCounterSet> set in device.counterSets)if([set.name isEqualToString:MTLCommonCounterSetTimestamp]) {
++            auto descriptor=[MTLCounterSampleBufferDescriptor new];descriptor.counterSet=set;
++            descriptor.storageMode=MTLStorageModeShared;descriptor.sampleCount=4096;
++            NSError* error=nil;counterBuffer=[device newCounterSampleBufferWithDescriptor:descriptor error:&error];
++            if(!counterBuffer)throw std::runtime_error(error?error.localizedDescription.UTF8String:"Encoder timestamp buffer unavailable");
++            break;
++        }
++        if(!counterBuffer)throw std::runtime_error("Timestamp counter set unavailable");
++        counterBank->buffer=counterBuffer;banks[device.registryID]=counterBank;
++        }else counterBuffer=counterBank->buffer;
++        counterLabels.reserve(2048);counterPath=path;
++    }
++    id<MTLComputeCommandEncoder> MakeComputeEncoder(const std::string& label) {
++        if(!counterBuffer)return [command computeCommandEncoder];
++        if(counterLabels.size()>=counterBuffer.sampleCount/2){++counterDropped;return [command computeCommandEncoder];}
++        auto descriptor=[MTLComputePassDescriptor computePassDescriptor];
++        auto attachment=descriptor.sampleBufferAttachments[0];attachment.sampleBuffer=counterBuffer;
++        attachment.startOfEncoderSampleIndex=counterLabels.size()*2;
++        attachment.endOfEncoderSampleIndex=counterLabels.size()*2+1;
++        auto encoder=[command computeCommandEncoderWithDescriptor:descriptor];
++        if(encoder)counterLabels.push_back(label);
++        return encoder;
++    }
++    void ResolveCounters(bool success) {
++        if(!counterBuffer)return;
++        auto releaseBank=std::move(counterLock);
++        MTLTimestamp cpuEnd=0,gpuEnd=0;[device sampleTimestamps:&cpuEnd gpuTimestamp:&gpuEnd];
++        const bool calibrationOK=cpuEnd>counterCPUStart&&gpuEnd>counterGPUStart;
++        const double nsPerTick=calibrationOK?double(cpuEnd-counterCPUStart)/double(gpuEnd-counterGPUStart):0;
++        nlohmann::json record{{"calibration",{{"cpu_start_ns",counterCPUStart},{"gpu_start",counterGPUStart},
++                {"cpu_end_ns",cpuEnd},{"gpu_end",gpuEnd},{"ns_per_counter_tick",nsPerTick},{"valid",calibrationOK}}},
++            {"sequence",counterSequence++},{"context",reinterpret_cast<uintptr_t>(this)},
++            {"gpu_ms",gpuMs},{"timestamp_hz",counterHz},{"dropped_encoders",counterDropped},
++            {"encoders",nlohmann::json::array()},{"command_success",success},
++            {"scope","Compute encoder boundaries only; excludes MPS internal encoders, blits and gaps. Instrumented diagnostic, not speed qualification."}};
++        NSData* data=counterLabels.empty()?nil:[counterBuffer resolveCounterRange:NSMakeRange(0,counterLabels.size()*2)];
++        const bool valid=data&&data.length==counterLabels.size()*2*sizeof(MTLCounterResultTimestamp);
++        size_t invalid=0;
++        for(size_t i=0;i<counterLabels.size();++i) {
++            uint64_t start=MTLCounterErrorValue,end=MTLCounterErrorValue;
++            if(valid){MTLCounterResultTimestamp pair[2];std::memcpy(pair,static_cast<const char*>(data.bytes)+i*2*sizeof(pair[0]),sizeof(pair));start=pair[0].timestamp;end=pair[1].timestamp;}
++            const bool ok=success&&calibrationOK&&start!=MTLCounterErrorValue&&end!=MTLCounterErrorValue&&end>=start&&start>=counterGPUStart&&end<=gpuEnd;
++            if(!ok)++invalid;
++            nlohmann::json item{{"label",counterLabels[i]},{"start_ticks",start},{"end_ticks",end},{"valid",ok}};
++            if(ok)item["ms"]=double(end-start)*nsPerTick/1e6;
++            record["encoders"].push_back(std::move(item));
++        }
++        record["invalid_encoders"]=invalid;record["complete_compute_sampling"]=success&&invalid==0&&counterDropped==0;
++        static std::mutex fileMutex;std::lock_guard<std::mutex> lock(fileMutex);
++        std::ofstream stream(counterPath,std::ios::app);stream<<record.dump()<<'\n';stream.flush();
++        if(!stream)throw std::runtime_error("Cannot save encoder timestamp diagnostic");
++    }
++
+ #if defined(GARNET_METAL_MPP_AFFINE_REUSE128)&&defined(GARNET_METAL_VERIFY_ATTENTION)
+     bool verificationAffineReuse128=true;
+ #endif
+@@ -619,6 +701,7 @@
+             throw std::runtime_error("No MPS-capable Metal GPU available");
+         impl_->queue=[impl_->device newCommandQueue];
+         if (!impl_->queue) throw std::runtime_error("Cannot create Metal command queue");
++        impl_->PrepareCounters();
+         // Device kernels are immutable. Contexts retain a shared pipeline set;
+         // the process cache is weak, so closing the last context releases it.
+         std::lock_guard<std::mutex> kernelLock(pipelineMutex);
+@@ -2356,7 +2439,7 @@
+             throw std::logic_error("Affine INT4 output belongs to another command");
+         struct Params {uint64_t rows,inner,columns,aStride,oStride;};
+         Params params{a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+-        auto encoder=[impl_->command computeCommandEncoder];
++        auto encoder=impl_->MakeComputeEncoder(std::string(__func__)+"/"+std::to_string(a.rows)+"/"+std::to_string(a.columns)+"/"+std::to_string(o.columns));
+         if(!encoder)throw std::runtime_error("Cannot encode affine INT4 projection");
+         size_t tileRows=16;
+         auto pipeline=a.rows<=4?impl_->kernels->affineInt4Decode[a.rows-1]:impl_->kernels->affineInt4Gemm;
+@@ -2431,7 +2514,7 @@
+         if(!indices.empty()) {
+             struct Params {uint64_t rows,inner,columns,aStride,oStride;};
+             Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+-            auto encoder=[impl_->command computeCommandEncoder];
++            auto encoder=impl_->MakeComputeEncoder(std::string(__func__)+"/"+std::to_string(a.rows)+"/"+std::to_string(a.columns)+"/"+std::to_string(o.columns));
+             if(!encoder)throw std::runtime_error("Cannot encode indexed FP32 decode");
+             auto pipeline=impl_->kernels->indexedDecodeAffine[indices.size()-1];
+             size_t decodeColumns=1;
+@@ -2547,7 +2630,7 @@
+         if(!indices.empty()) {
+             struct Params {uint64_t rows,inner,columns,aStride,oStride;};
+             Params params{indices.size(),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+-            auto encoder=[impl_->command computeCommandEncoder];
++            auto encoder=impl_->MakeComputeEncoder(std::string(__func__)+"/"+std::to_string(a.rows)+"/"+std::to_string(a.columns)+"/"+std::to_string(o.columns));
+             if(!encoder)throw std::runtime_error("Cannot encode indexed affine projection");
+             [encoder setComputePipelineState:pipeline];
+             [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
+@@ -2732,7 +2815,7 @@
+         if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+             throw std::runtime_error("GPU argmax requires 32-lane SIMD groups");
+         struct Params{uint64_t rows,columns,iStride,oStride;};Params p{a.rows,a.columns,a.rowBytes/4,o.rowBytes/4};
+-        auto encoder=[impl_->command computeCommandEncoder];
++        auto encoder=impl_->MakeComputeEncoder(__func__);
+         if(!encoder)throw std::runtime_error("Cannot create GPU argmax encoder");
+         [encoder setComputePipelineState:pipeline];[encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:o.data offset:o.offset atIndex:1];
+         [encoder setBytes:&p length:sizeof(p) atIndex:2];
+@@ -2780,7 +2863,7 @@
+         struct ProjectionParams{uint64_t rows,inner,columns,aStride,oStride,partialStride;};
+         ProjectionParams p{a.rows,a.columns,w->rows,a.rowBytes/4,debugLogits?debugLogits->impl_->matrix.rowBytes/4:0,parts.rowBytes/4};
+         const uint32_t debugEnabled=debugLogits?1:0;
+-        auto encoder=[impl_->command computeCommandEncoder];
++        auto encoder=impl_->MakeComputeEncoder(__func__);
+         if(!encoder)throw std::runtime_error("Cannot create fused projection encoder");
+         [encoder setComputePipelineState:projection];[encoder setBuffer:a.data offset:a.offset atIndex:0];
+         [encoder setBuffer:w->buffer offset:0 atIndex:1];[encoder setBuffer:parts.data offset:parts.offset atIndex:2];
+@@ -2789,7 +2872,7 @@
+         [encoder setBytes:&debugEnabled length:sizeof(debugEnabled) atIndex:5];
+         [encoder dispatchThreadgroups:MTLSizeMake(groups,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
+         struct ReduceParams{uint64_t rows,columns,iStride,oStride;};ReduceParams rp{a.rows,groups,parts.rowBytes/4,o.rowBytes/4};
+-        encoder=[impl_->command computeCommandEncoder];
++        encoder=impl_->MakeComputeEncoder(__func__);
+         if(!encoder)throw std::runtime_error("Cannot create fused argmax reduction encoder");
+         [encoder setComputePipelineState:reduction];[encoder setBuffer:parts.data offset:parts.offset atIndex:0];
+         [encoder setBuffer:o.data offset:o.offset atIndex:1];[encoder setBytes:&rp length:sizeof(rp) atIndex:2];
+@@ -2866,7 +2949,7 @@
+         auto temporary=scratch->second.impl_->matrix;
+         [product->second encodeToCommandBuffer:impl_->command leftMatrix:a rightMatrix:found->second.view resultMatrix:temporary];
+         struct Params{uint64_t rows,columns,iStride,oStride;};Params p{a.rows,x.columns,temporary.rowBytes/4,x.rowBytes/4};
+-        auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Joined prefill encoder unavailable");
++        auto encoder=impl_->MakeComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Joined prefill encoder unavailable");
+         [encoder setComputePipelineState:impl_->kernels->joinedSplitRescale];[encoder setBuffer:temporary.data offset:temporary.offset atIndex:0];
+         [encoder setBuffer:found->second.scales offset:0 atIndex:1];[encoder setBuffer:x.data offset:x.offset atIndex:2];[encoder setBuffer:y.data offset:y.offset atIndex:3];[encoder setBytes:&p length:sizeof(p) atIndex:4];
+         [encoder dispatchThreads:MTLSizeMake(a.rows*x.columns*2,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
+@@ -2941,7 +3024,7 @@
+         [product->second encodeToCommandBuffer:impl_->command leftMatrix:a rightMatrix:found->second.view resultMatrix:temporary];
+         struct Params{uint64_t rows,columns,iStride,gStride,uStride,oStride;};
+         Params p{a.rows,w0->rows,temporary.rowBytes/4,g.rowBytes/4,u.rowBytes/4,o.rowBytes/4};
+-        auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Joined global split-SiLU encoder unavailable");
++        auto encoder=impl_->MakeComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Joined global split-SiLU encoder unavailable");
+         [encoder setComputePipelineState:impl_->kernels->joinedGlobalSilu];
+         [encoder setBuffer:temporary.data offset:temporary.offset atIndex:0];[encoder setBuffer:g.data offset:g.offset atIndex:1];
+         [encoder setBuffer:u.data offset:u.offset atIndex:2];[encoder setBuffer:o.data offset:o.offset atIndex:3];
+@@ -3137,13 +3220,13 @@
+             auto partial=scratch->second.impl_->matrix;
+             struct Params{uint64_t rows,inner,columns,aStride,oStride,parts;};
+             Params p{a.rows,a.columns,o.columns,a.rowBytes/4,partial.rowBytes/4,parts};
+-            auto encoder=[impl_->command computeCommandEncoder];
++            auto encoder=impl_->MakeComputeEncoder(__func__);
+             if(!encoder)throw std::runtime_error("Cannot create split key projection encoder");
+             [encoder setComputePipelineState:impl_->kernels->bf16Split];[encoder setBuffer:a.data offset:a.offset atIndex:0];
+             [encoder setBuffer:w->buffer offset:0 atIndex:1];[encoder setBuffer:partial.data offset:partial.offset atIndex:2];[encoder setBytes:&p length:sizeof(p) atIndex:3];
+             [encoder dispatchThreadgroups:MTLSizeMake((o.columns+31)/32,(a.rows+15)/16,parts) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
+             struct Reduce{uint64_t rows,columns,iStride,oStride,parts;};Reduce r{a.rows,o.columns,partial.rowBytes/4,o.rowBytes/4,parts};
+-            encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Cannot create split key reduction encoder");
++            encoder=impl_->MakeComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot create split key reduction encoder");
+             [encoder setComputePipelineState:impl_->kernels->bf16SplitReduce];[encoder setBuffer:partial.data offset:partial.offset atIndex:0];[encoder setBuffer:o.data offset:o.offset atIndex:1];
+             [encoder setBytes:&r length:sizeof(r) atIndex:2];
+             const auto total=Elements(o.rows,o.columns);[encoder dispatchThreads:MTLSizeMake(total,1,1) threadsPerThreadgroup:MTLSizeMake(std::min(total,size_t(impl_->kernels->bf16SplitReduce.maxTotalThreadsPerThreadgroup)),1,1)];[encoder endEncoding];
+@@ -3181,7 +3264,7 @@
+             auto temporary=scratch->second.impl_->matrix;
+             [found->second encodeToCommandBuffer:impl_->command leftMatrix:a rightMatrix:w->exactHalf resultMatrix:temporary];
+             struct Params{uint64_t rows,columns,iStride,oStride;};Params p{a.rows,o.columns,temporary.rowBytes/4,o.rowBytes/4};
+-            auto encoder=[impl_->command computeCommandEncoder];
++            auto encoder=impl_->MakeComputeEncoder(__func__);
+             if(!encoder)throw std::runtime_error("Cannot create exact half rescale encoder");
+             [encoder setComputePipelineState:impl_->kernels->halfRescale];
+             [encoder setBuffer:temporary.data offset:temporary.offset atIndex:0];[encoder setBuffer:w->halfScales offset:w->halfScalesOffset atIndex:1];
+@@ -3257,7 +3340,7 @@
+             throw std::runtime_error("BF16 projection requires 32-lane SIMD groups");
+         struct Params{uint64_t rows,inner,columns,aStride,oStride;};
+         Params p{a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4};
+-        auto encoder=[impl_->command computeCommandEncoder];
++        auto encoder=impl_->MakeComputeEncoder(__func__);
+         if(!encoder)throw std::runtime_error("Cannot create BF16 projection encoder");
+         [encoder setComputePipelineState:pipeline];[encoder setBuffer:a.data offset:a.offset atIndex:0];
+ #ifdef GARNET_METAL_INTERLEAVED_BF16_BODY
+@@ -3574,6 +3657,8 @@
+     @autoreleasepool {
+     if(impl_->command)throw std::logic_error("Metal command batch already open");
+     if(impl_->submitted.count)throw std::logic_error("Undrained Metal partial batches");
++    impl_->counterLabels.clear();impl_->counterDropped=0;
++    if(impl_->counterBuffer){impl_->counterLock=std::unique_lock<std::mutex>(impl_->counterBank->mutex);[impl_->device sampleTimestamps:&impl_->counterCPUStart gpuTimestamp:&impl_->counterGPUStart];}
+ #ifdef GARNET_METAL_VERIFY_ATTENTION
+     impl_->verificationAttentionDispatches=0;
+     impl_->verificationConvCheckpoints=impl_->verificationDeltaCheckpoints=0;
+@@ -3691,7 +3776,7 @@
+     struct Params {uint64_t rows,columns,aStride,bStride,cStride;float epsilon,offset;};
+     Params p{a.rows,a.columns,a.rowBytes/4,b.rowBytes/4,c.rowBytes/4,epsilon,offset};
+     auto pipeline=rms?impl_->kernels->rms:(operation==1?impl_->kernels->silu:((operation==2||bias)?impl_->kernels->add:impl_->kernels->mask));
+-    id<MTLComputeCommandEncoder> encoder=[impl_->command computeCommandEncoder];
++    id<MTLComputeCommandEncoder> encoder=impl_->MakeComputeEncoder(std::string(__func__)+"/"+std::to_string(operation));
+     if(!encoder)throw std::runtime_error("Cannot create Metal compute encoder");
+     [encoder setComputePipelineState:pipeline];
+     [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:b.data offset:b.offset atIndex:1];
+@@ -3737,7 +3822,7 @@
+         throw std::runtime_error("Residual normalization requires 32-lane SIMD groups");
+     struct Params {uint64_t rows,columns,aStride,bStride,cStride;float epsilon,offset;};
+     Params p{a.rows,a.columns,a.rowBytes/4,w.rowBytes/4,a.rowBytes/4,epsilon,offset};
+-    auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Cannot create residual normalization encoder");
++    auto encoder=impl_->MakeComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot create residual normalization encoder");
+     [encoder setComputePipelineState:pipeline];
+     for(size_t i=0;i<5;++i)[encoder setBuffer:matrices[i].impl_->matrix.data offset:matrices[i].impl_->matrix.offset atIndex:i];
+     [encoder setBytes:&p length:sizeof(p) atIndex:5];
+@@ -3781,7 +3866,7 @@
+         throw std::runtime_error("Packed prefill normalization requires 32-lane SIMD groups");
+     struct Params {uint64_t rows,columns,packedStride,normStride,chunk;float epsilon,offset;};
+     Params p{n.rows,n.columns,a.rowBytes/4,n.rowBytes/4,chunk,epsilon,offset};
+-    auto encoder=[impl_->command computeCommandEncoder];if(!encoder)throw std::runtime_error("Cannot create packed prefill normalization encoder");
++    auto encoder=impl_->MakeComputeEncoder(__func__);if(!encoder)throw std::runtime_error("Cannot create packed prefill normalization encoder");
+     [encoder setComputePipelineState:pipeline];
+     for(size_t i=0;i<6;++i)[encoder setBuffer:matrices[i].impl_->matrix.data offset:matrices[i].impl_->matrix.offset atIndex:i];
+     [encoder setBytes:&p length:sizeof(p) atIndex:6];
+@@ -3998,7 +4083,7 @@
+         auto& item=found->second;
+         std::copy_n(visionFields,13,mpsFields.begin());
+         mpsFields[5]=item.query.impl_->matrix.rowBytes/4;mpsFields[6]=item.key.impl_->matrix.rowBytes/4;
+-        auto pack=[impl_->command computeCommandEncoder];
++        auto pack=impl_->MakeComputeEncoder(std::string(__func__)+"/"+std::to_string(operation));
+         if(!pack)throw std::runtime_error("Cannot create vision Q/K packing encoder");
+         [pack setComputePipelineState:impl_->kernels->visionPackQK];
+         [pack setBuffer:inputs[0].impl_->matrix.data offset:inputs[0].impl_->matrix.offset atIndex:0];
+@@ -4022,7 +4107,7 @@
+ #endif
+     }
+ #endif
+-    auto encoder=[impl_->command computeCommandEncoder];
++    auto encoder=impl_->MakeComputeEncoder(std::string(__func__)+"/"+std::to_string(operation));
+     if(!encoder)throw std::runtime_error("Cannot create Metal state kernel encoder");
+     [encoder setComputePipelineState:pipeline];
+     for(size_t i=0;i<inputs.size();++i)[encoder setBuffer:inputs[i].impl_->matrix.data offset:inputs[i].impl_->matrix.offset atIndex:i];
+@@ -4685,7 +4770,7 @@
+             if(!impl_->chunkMPSLock.owns_lock())impl_->chunkMPSLock=std::unique_lock<std::mutex>(impl_->kernels->chunkMPSMutex);
+             if(!impl_->kernels->chunkMPSPlans.count({size_t(p.batch),heads,kvHeads,dim,capacity,chunk}))
+                 throw std::logic_error("Flash attention fallback profile must be prepared before encoding");
+-            auto encoder=[impl_->command computeCommandEncoder];
++            auto encoder=impl_->MakeComputeEncoder(__func__);
+             if(!encoder)throw std::runtime_error("Cannot encode tiled flash attention");
+             [encoder setComputePipelineState:impl_->kernels->chunkFlashAttention];
+             const size_t binding[]={0,1,2,3,4,7};
+@@ -4718,7 +4803,7 @@
+             auto matrix=owner.impl_->matrix;[encoder setBuffer:matrix.data offset:matrix.offset atIndex:index];
+         };
+         const size_t count=Elements(Elements(q.rows,heads),dim);
+-        auto pack=[impl_->command computeCommandEncoder];
++        auto pack=impl_->MakeComputeEncoder(__func__);
+         if(!pack)throw std::runtime_error("Cannot encode MPS attention pack");
+         [pack setComputePipelineState:impl_->kernels->chunkMPSPack];
+         bind(pack,inputs[0],0);bind(pack,inputs[1],1);bind(pack,inputs[2],2);bind(pack,inputs[6],3);
+@@ -4749,7 +4834,7 @@
+             [qkCache encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:keyView resultMatrix:cacheScoreView];
+             [plan.qkLive encodeToCommandBuffer:impl_->command leftMatrix:plan.queryView rightMatrix:plan.keyView resultMatrix:plan.liveScoreView];
+         }
+-        auto softmax=[impl_->command computeCommandEncoder];
++        auto softmax=impl_->MakeComputeEncoder(__func__);
+         if(!softmax)throw std::runtime_error("Cannot encode MPS attention selection/softmax");
+         [softmax setComputePipelineState:softmaxPipeline];
+         bind(softmax,plan.cacheScores,0);bind(softmax,plan.liveScores,1);bind(softmax,plan.liveProb,2);
+@@ -4781,7 +4866,7 @@
+ #else
+         impl_->chunkAttentionMPSMatrices+=p.batch*kvHeads*4;
+ #endif
+-        auto unpack=[impl_->command computeCommandEncoder];
++        auto unpack=impl_->MakeComputeEncoder(__func__);
+         if(!unpack)throw std::runtime_error("Cannot encode MPS attention merge");
+         [unpack setComputePipelineState:impl_->kernels->chunkMPSUnpack];
+         bind(unpack,plan.query,0);bind(unpack,plan.livePart,1);bind(unpack,inputs[7],2);bind(unpack,inputs[6],3);bind(unpack,output,4);
+@@ -4986,11 +5071,14 @@
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+     if(impl_->chunkMPSLock.owns_lock())impl_->chunkMPSLock.unlock();
+ #endif
++    impl_->ResolveCounters(success);
+     if(!success)throw std::runtime_error(failure?std::string(failure.UTF8String):"Metal execution did not complete");
+     }
+ }
+ double MetalContext::LastGPUMs() const {return impl_->gpuMs;}
+ void MetalContext::Abort() {
++    // Abort drains all submitted work before relinquishing the shared bank.
++
+ #ifdef GARNET_METAL_VERIFY_ATTENTION
+     impl_->verificationAttentionDispatches=0;
+     impl_->verificationConvCheckpoints=impl_->verificationDeltaCheckpoints=0;
+@@ -5007,6 +5095,7 @@
+     // for reset/reuse; the uncommitted continuation is discarded.
+     for(id<MTLCommandBuffer> prior in impl_->submitted)[prior waitUntilCompleted];
+     impl_->submitted=nil;impl_->partialSubmissions=0;
++    if(impl_->counterLock.owns_lock())impl_->counterLock.unlock();
+     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
+     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
+     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;

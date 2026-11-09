@@ -1,0 +1,59 @@
+{
+  "status": "qualified_native_correctness_not_promoted",
+  "previous_goal_turn_classification": "no progress: answered a metrics question without changing authoritative state; this continuation implemented and tested the next safe native change.",
+  "native_actual_budget": 512,
+  "maximum_prepared_extent": 512,
+  "base_excludes_n4_cache": true,
+  "tests_option_on": 53,
+  "tests_option_off": 53,
+  "portable_checks": 7877,
+  "model_output_ids_exact": 128,
+  "model_state_digests_exact": 520,
+  "hidden_values_exact": 32768,
+  "model_negative_controls": 14,
+  "http_output_ids_exact": 1536,
+  "http_negative_controls": 12,
+  "wide_prefill_invocations": 90,
+  "clipped_prefill_invocations": 57,
+  "diagnostic_warm_metrics": {
+    "warm1": {
+      "ttft_median_seconds": 9.265889854053967,
+      "decode_median_tps": 8.576539796918716,
+      "aggregate_tps": 20.671896039200597,
+      "ranked_ttft_seconds": [
+        3.447144332807511,
+        7.310118416091427,
+        11.221661292016506,
+        15.23888137517497
+      ],
+      "worst_request_ttft_seconds": 15.23888137517497,
+      "observed_token_delivery_gap_p95_seconds": 0.18403095798566937,
+      "observed_token_delivery_gap_max_seconds": 0.9859610830899328
+    },
+    "warm2": {
+      "ttft_median_seconds": 9.592580812401138,
+      "decode_median_tps": 8.390941613043733,
+      "aggregate_tps": 20.130802313120604,
+      "ranked_ttft_seconds": [
+        3.609084083000198,
+        7.586417749989778,
+        11.598743874812499,
+        15.683811415918171
+      ],
+      "worst_request_ttft_seconds": 15.683811415918171,
+      "observed_token_delivery_gap_p95_seconds": 0.18768695811741054,
+      "observed_token_delivery_gap_max_seconds": 1.005265458021313
+    }
+  },
+  "decision": "Keep optional budget clipping disabled. Fewer prefill invocations did not establish a throughput gain and produced longer observed mixed-stage delivery gaps. No production or2x claim.",
+  "timing_limitations": [
+    "One new process/two warm waves, OS/thermal conditions uncontrolled.",
+    "Frozen reference baselines retain different FP16 state policy.",
+    "Common streaming window is HTTP delivery after all first tokens and before first final token, not isolated GPU timing."
+  ],
+  "prefix_cache_lineage_qualified_for_new_engine": false,
+  "reason_prefix_campaign_deferred": "No performance promotion justified; preserve existing qualified prefix engine and avoid treating portable prefix tests as full native cache qualification.",
+  "strict_coding": "0/8 unchanged",
+  "goal_complete": false,
+  "next_action": "Use measured stage costs and decode-latency constraints rather than filling the token budget alone; investigate sharing work between concurrent decode and prefill while preserving the distinct FP32 decode policy."
+}

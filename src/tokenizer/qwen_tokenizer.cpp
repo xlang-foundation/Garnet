@@ -13,6 +13,7 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <iterator>
 #include <mutex>
 #include <sstream>
 #include <stdexcept>
@@ -65,6 +66,24 @@ namespace Garnet::Tokenization
                 return false;
             }
             return true;
+        }
+
+        bool SupportsPostProcessor(const nlohmann::json& post)
+        {
+            if (post.is_null()) return true;
+            if (!post.is_object()) return false;
+            if (post.value("type", std::string()) == "ByteLevel") return true;
+
+            // Qwen3-ASR uses a template that leaves the token sequence intact.
+            // Templates that add tokens or rearrange sequences need explicit support.
+            static const auto identityTemplate = nlohmann::json::parse(R"json({
+                "type": "TemplateProcessing",
+                "single": [{"Sequence": {"id": "A", "type_id": 0}}],
+                "pair": [{"Sequence": {"id": "A", "type_id": 0}},
+                         {"Sequence": {"id": "B", "type_id": 1}}],
+                "special_tokens": {}
+            })json");
+            return post == identityTemplate;
         }
 
         std::string Utf8FromCodepoint(unsigned int cp)
@@ -198,6 +217,8 @@ namespace Garnet::Tokenization
         m_mergeRanks.clear();
         m_maxAddedTokenLength = 0;
         m_normalizeNfc = false;
+        m_configuredPreTokenizer = false;
+        m_preTokenizerSplits.clear();
         m_info = {};
 
         std::string jsonText;
@@ -261,20 +282,38 @@ namespace Garnet::Tokenization
                     if (error) *error = "Qwen tokenizer requires byte-level BPE without byte fallback; use the generic tokenizer API for Mistral/Gemma";
                     return false;
                 }
-                const auto pre = root.find("pre_tokenizer");
-                bool byteLevel = false;
-                if (pre != root.end() && pre->is_object()) {
-                    byteLevel = pre->value("type", std::string()) == "ByteLevel";
-                    if (pre->value("type", std::string()) == "Sequence" &&
-                        pre->contains("pretokenizers") && (*pre)["pretokenizers"].is_array()) {
-                        for (const auto& stage : (*pre)["pretokenizers"])
-                            byteLevel |= stage.is_object() && stage.value("type", std::string()) == "ByteLevel";
-                    }
+                if (!model.value("dropout",nlohmann::json()).is_null() || model.value("ignore_merges",false) ||
+                    (!model.value("continuing_subword_prefix",nlohmann::json()).is_null() && model.at("continuing_subword_prefix")!="") ||
+                    (!model.value("end_of_word_suffix",nlohmann::json()).is_null() && model.at("end_of_word_suffix")!=""))
+                    throw std::runtime_error("unsupported Qwen BPE dropout, merge, or subword settings");
+                const auto& pre=root.at("pre_tokenizer");
+                std::vector<nlohmann::json> stages;
+                if(pre.value("type",std::string())=="Sequence")stages=pre.at("pretokenizers").get<std::vector<nlohmann::json>>();
+                else stages.push_back(pre);
+                bool mapped=false;
+                for(const auto& stage:stages){
+                    const auto type=stage.value("type",std::string());
+                    if(type=="ByteLevel"){
+                        if(mapped || stage.value("add_prefix_space",false))throw std::runtime_error("unsupported Qwen ByteLevel stage/prefix-space setting");
+                        if(stage.value("use_regex",true)){
+                            // This is ByteLevel's declared default regex, not a
+                            // replacement for an explicit checkpoint Split.
+                            m_preTokenizerSplits.emplace_back("'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)|\\s+");
+                        }
+                        mapped=true;
+                    }else if(type=="Split" && !mapped && stage.value("behavior",std::string())=="Isolated" && !stage.value("invert",false)){
+                        m_preTokenizerSplits.emplace_back(stage.at("pattern").at("Regex").get<std::string>());
+                    }else throw std::runtime_error("unsupported Qwen pre-tokenizer stage/order");
                 }
-                if (!byteLevel) {
-                    if (error) *error = "Qwen tokenizer requires a ByteLevel pre-tokenizer; unsupported tokenizer pipeline";
-                    return false;
-                }
+                if(!mapped)throw std::runtime_error("Qwen tokenizer requires ByteLevel mapping");
+                const auto post=root.value("post_processor",nlohmann::json());
+                const auto decoder=root.value("decoder",nlohmann::json());
+                if(!SupportsPostProcessor(post) ||
+                    (!decoder.is_null() && decoder.value("type",std::string())!="ByteLevel"))
+                    throw std::runtime_error("unsupported Qwen tokenizer post-processor/decoder");
+                if(!root.value("padding",nlohmann::json()).is_null() || !root.value("truncation",nlohmann::json()).is_null())
+                    throw std::runtime_error("automatic tokenizer padding/truncation must be disabled");
+                m_configuredPreTokenizer=true;
             }
             if (root.contains("normalizer") && !root["normalizer"].is_null()) {
                 const auto& normalizer=root["normalizer"];
@@ -284,6 +323,11 @@ namespace Garnet::Tokenization
                 }
                 m_normalizeNfc=true;
             }
+            auto validateAdded=[&](const nlohmann::json& item){
+                if(item.value("single_word",false) || item.value("lstrip",false) || item.value("rstrip",false) ||
+                    (m_normalizeNfc && item.value("normalized",false)))
+                    throw std::runtime_error("unsupported Qwen added-token boundary/normalization settings");
+            };
             const nlohmann::json& model = root["model"];
             if (!model.contains("vocab") || !model["vocab"].is_object()) {
                 if (error) *error = "tokenizer.json missing model.vocab";
@@ -297,6 +341,7 @@ namespace Garnet::Tokenization
 
             if (root.contains("added_tokens") && root["added_tokens"].is_array()) {
                 for (const nlohmann::json& item : root["added_tokens"]) {
+                    validateAdded(item);
                     if (!item.is_object() || !item.contains("id") || !item.contains("content") || !item["content"].is_string()) {
                         continue;
                     }
@@ -376,6 +421,7 @@ namespace Garnet::Tokenization
                             tokenizerConfig["added_tokens_decoder"].end();
                          ++iterator) {
                         const auto& item = iterator.value();
+                        validateAdded(item);
                         if (!item.is_object() ||
                             !item.contains("content") ||
                             !item["content"].is_string()) {
@@ -473,13 +519,29 @@ namespace Garnet::Tokenization
         return parts;
     }
 
-    std::vector<std::string> QwenTokenizer::PreTokenizeAscii(const std::string& input) const
+    std::vector<std::string> QwenTokenizer::PreTokenize(const std::string& input) const
     {
         // Match the configured NFC stage and Qwen Unicode regex, preserving
         // case and normalized UTF-8 bytes for BPE. Added special tokens are
         // recognized before this plain-segment operation.
         auto scalars=Unicode::DecodeUtf8(input);
         if (m_normalizeNfc) scalars=Unicode::NormalizeNfc(scalars);
+        if(m_configuredPreTokenizer){
+            std::string normalized;
+            for(auto cp:scalars)Unicode::AppendUtf8(normalized,cp);
+            std::vector<std::string> parts{std::move(normalized)};
+            for(const auto& regex:m_preTokenizerSplits){
+                std::vector<std::string> next;
+                for(const auto& part:parts){
+                    auto split=regex.SplitIsolated(part);
+                    next.insert(next.end(),std::make_move_iterator(split.begin()),std::make_move_iterator(split.end()));
+                }
+                parts=std::move(next);
+            }
+            return parts;
+        }
+        // Compatibility path for old vocab.json + merges.txt folders without
+        // a tokenizer.json pre-tokenizer contract.
         struct Character { std::uint32_t cp; size_t byte; unsigned flags; };
         constexpr unsigned letter=1, mark=2, number=4, space=8;
         std::vector<Character> characters;
@@ -594,7 +656,7 @@ namespace Garnet::Tokenization
     std::vector<int64_t> QwenTokenizer::EncodePlainSegment(const std::string& text) const
     {
         std::vector<int64_t> ids;
-        for (const std::string& pretoken : PreTokenizeAscii(text)) {
+        for (const std::string& pretoken : PreTokenize(text)) {
             std::vector<std::string> bpeTokens = ApplyBpe(ByteLevelChars(pretoken));
             for (const std::string& token : bpeTokens) {
                 auto it = m_tokenToId.find(token);

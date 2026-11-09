@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "scope": "Audit B2 compact spans interleaved with an independent native decoder row.",
+  "summary": {
+    "output_ids": 12,
+    "full_four_row_state_digest_pairs": 780,
+    "rejected_call_state_digest_pairs": 260,
+    "native_verification_calls": 8,
+    "b2_mixed_ticks": 7,
+    "actual_routes": [
+      [
+        128,
+        0,
+        4
+      ],
+      [
+        128,
+        2,
+        1
+      ],
+      [
+        256,
+        2,
+        1
+      ]
+    ]
+  },
+  "all_output_ids_full_kv_hidden_exact_current_ordinary": true,
+  "b2_compact_interleave_qualified": true,
+  "stop_policy": "Empty stop list only in this geometry probe; output budgets govern termination. Primary qualification uses EOS2.",
+  "negative_controls_rejected": [
+    "survivor_hidden",
+    "b2_cache",
+    "wrong_native_budget",
+    "wrong_compact_span",
+    "wrong_target_id"
+  ],
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/audit_probe1.py": "afa215714a316b741e498b4ce93ffe0af2755e2d199243aa4726a10444e744ae",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/probe-ordinary-result1.json": "9f12a1febbbb3852171a604fda241acce558eeb201777eda61a56cd8d28f4b97",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/probe-verify-result1.json": "745a65c35ee292ff2842b15adee44d1e871ced7c4a274a1905f1a6d2c54ef377",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/probe1-preflight.json": "6fa244a4c005c9d1bdc4e05377ae9ff03ce3180592cea91a0b1b81f4c4755552"
+  },
+  "performance_measured": false,
+  "no_comparator_execution": true,
+  "c4t4_qualified": false,
+  "goal_complete": false
+}

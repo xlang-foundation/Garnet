@@ -271,13 +271,15 @@ install(FILES "${PROJECT_SOURCE_DIR}/plugins/registry.json"
 target_compile_definitions(${PROJECT_NAME} PRIVATE GARNET_SERVING_EXPORTS=1)
 target_compile_definitions(${PROJECT_NAME} PRIVATE XLANG3_USE_SHARED)
 target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX)
-target_link_libraries(${PROJECT_NAME} xlang3_runtime)
+target_link_libraries(${PROJECT_NAME} PUBLIC xlang3_runtime)
 include(cmake/GarnetTokenizer.cmake)
 garnet_configure_tokenizers(${PROJECT_NAME})
+include(cmake/GarnetMedia.cmake)
+garnet_configure_media(${PROJECT_NAME})
 
 if(OpenVINO_FOUND)
     target_compile_definitions(${PROJECT_NAME} PRIVATE GARNET_WITH_OPENVINO=1)
-    target_link_libraries(${PROJECT_NAME} openvino::runtime)
+    target_link_libraries(${PROJECT_NAME} PUBLIC openvino::runtime)
     message(STATUS "Garnet OpenVINO backend enabled: ${OpenVINO_VERSION}")
 
     # Keep the runtime and device plugins beside garnet.dll so loading Garnet
@@ -387,6 +389,16 @@ add_executable(garnet_model_catalog_test
     "${CMAKE_CURRENT_SOURCE_DIR}/test2026/native/model_catalog_test.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/model/model_catalog.cpp"
 )
+add_executable(garnet_safetensors_discovery_test
+    "${CMAKE_CURRENT_SOURCE_DIR}/test2026/native/safetensors_discovery_test.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/model/safetensors_index.cpp")
+target_include_directories(garnet_safetensors_discovery_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/model" "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
+add_executable(garnet_prepare_precision
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/generation/prepare_precision.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/model/safetensors_index.cpp")
+target_include_directories(garnet_prepare_precision PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/model" "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 
 find_package(Threads REQUIRED)
 add_executable(garnet_greedy_batch_state_test
@@ -417,7 +429,7 @@ target_include_directories(garnet_qwen3_native_prepare_test PRIVATE
 )
 
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX)
+    target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
     message(STATUS "Garnet native CPU INT4 OpenMP enabled")
 endif()
 
@@ -463,6 +475,9 @@ add_test(NAME garnet_weight_quantization COMMAND garnet_weight_quantization_test
 add_test(NAME garnet_q4q8_linear COMMAND garnet_q4q8_linear_test)
 add_test(NAME garnet_model_catalog COMMAND garnet_model_catalog_test
     "${CMAKE_CURRENT_SOURCE_DIR}/xModel")
+add_test(NAME garnet_safetensors_discovery COMMAND garnet_safetensors_discovery_test
+    "${CMAKE_BINARY_DIR}/test-artifacts/safetensors-discovery")
+set_tests_properties(garnet_safetensors_discovery PROPERTIES TIMEOUT 60)
 add_test(NAME garnet_continuous_batch_scheduler COMMAND garnet_continuous_batch_scheduler_test)
 add_test(NAME garnet_greedy_batch_state COMMAND garnet_greedy_batch_state_test)
 add_test(NAME garnet_device_kv_cabi COMMAND garnet_device_kv_native_smoke "$<TARGET_FILE:garnet>")
@@ -479,6 +494,186 @@ add_test(NAME garnet_production_capture COMMAND "$<TARGET_FILE:xlang3>"
     "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/models/run_production_capture.py")
 set_tests_properties(garnet_production_capture PROPERTIES TIMEOUT 120
     WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_cuda_engine_pool COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/models/run_engine_pool.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/cuda-engine-pool")
+set_tests_properties(garnet_cuda_engine_pool PROPERTIES TIMEOUT 180
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_cuda_engine_pool_weights COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/models/run_engine_pool_weights.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/cuda-engine-pool-weights")
+set_tests_properties(garnet_cuda_engine_pool_weights PROPERTIES TIMEOUT 180
+    ENVIRONMENT "GARNET_TRT_WEIGHT_STREAMING_BUDGET_MIB=1"
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_cuda_async_preparation COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/models/run_async_preparation.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/cuda-async-preparation")
+set_tests_properties(garnet_cuda_async_preparation PROPERTIES TIMEOUT 180
+    ENVIRONMENT "GARNET_TRT_WEIGHT_STREAMING_BUDGET_MIB=1"
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_cuda_dynamic_partitions COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/models/run_dynamic_partitions.py" "${CMAKE_BINARY_DIR}/test-artifacts/cuda-dynamic-partitions")
+set_tests_properties(garnet_cuda_dynamic_partitions PROPERTIES TIMEOUT 180
+    ENVIRONMENT "GARNET_TRT_WEIGHT_STREAMING_BUDGET_MIB=1" WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_cuda_streamed_projection COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/models/run_streamed_projection.py" "${CMAKE_BINARY_DIR}/test-artifacts/streamed-projection")
+set_tests_properties(garnet_cuda_streamed_projection PROPERTIES TIMEOUT 300
+    ENVIRONMENT "GARNET_TRT_WEIGHT_STREAMING_BUDGET_MIB=1" WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_executable(garnet_streamed_projection_test test/cuda/streamed_projection.cpp
+    src/backends/common/streamed_bf16_projection.cpp src/model/safetensors_index.cpp src/cuda/bf16_projection.cu)
+target_include_directories(garnet_streamed_projection_test PRIVATE src/model src/backends/common third_party)
+target_link_libraries(garnet_streamed_projection_test PRIVATE CUDA::cudart CUDA::cublas CUDA::cublasLt)
+set_target_properties(garnet_streamed_projection_test PROPERTIES CUDA_SEPARABLE_COMPILATION OFF
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+add_test(NAME garnet_streamed_projection_concurrency COMMAND garnet_streamed_projection_test
+    "${CMAKE_BINARY_DIR}/test-artifacts/streamed-projection-native")
+set_tests_properties(garnet_streamed_projection_concurrency PROPERTIES TIMEOUT 120
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_cuda_registered_projection COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/models/run_streamed_projection.py" "${CMAKE_BINARY_DIR}/test-artifacts/registered-projection" "registered_bf16")
+set_tests_properties(garnet_cuda_registered_projection PROPERTIES TIMEOUT 300
+    ENVIRONMENT "GARNET_TRT_WEIGHT_STREAMING_BUDGET_MIB=1;GARNET_CUDA_REGISTERED_WEIGHT_BUDGET_MIB=16"
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_registered_projection_concurrency COMMAND garnet_streamed_projection_test
+    "${CMAKE_BINARY_DIR}/test-artifacts/registered-projection-native" "0" "--registered")
+set_tests_properties(garnet_registered_projection_concurrency PROPERTIES TIMEOUT 120
+    ENVIRONMENT "GARNET_CUDA_REGISTERED_WEIGHT_BUDGET_MIB=16" WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_registered_projection_budget COMMAND garnet_streamed_projection_test
+    "${CMAKE_BINARY_DIR}/test-artifacts/registered-projection-budget" "0" "--require-budget-failure")
+set_tests_properties(garnet_registered_projection_budget PROPERTIES TIMEOUT 120
+    ENVIRONMENT "GARNET_CUDA_REGISTERED_WEIGHT_BUDGET_MIB=0" WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_cuda_registered_projection_cache COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/models/run_streamed_projection.py" "${CMAKE_BINARY_DIR}/test-artifacts/registered-projection-cache" "registered_bf16")
+set_tests_properties(garnet_cuda_registered_projection_cache PROPERTIES TIMEOUT 300
+    ENVIRONMENT "GARNET_TRT_WEIGHT_STREAMING_BUDGET_MIB=1;GARNET_CUDA_REGISTERED_WEIGHT_BUDGET_MIB=16;GARNET_CUDA_PROJECTION_DEVICE_CACHE_MIB=1"
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_registered_projection_cache_concurrency COMMAND garnet_streamed_projection_test
+    "${CMAKE_BINARY_DIR}/test-artifacts/registered-projection-cache-native" "0" "--registered")
+set_tests_properties(garnet_registered_projection_cache_concurrency PROPERTIES TIMEOUT 120
+    ENVIRONMENT "GARNET_CUDA_REGISTERED_WEIGHT_BUDGET_MIB=16;GARNET_CUDA_PROJECTION_DEVICE_CACHE_MIB=1" WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+set(GARNET_TEST_MULTI_GPU_DEVICES "" CACHE STRING "Optional comma-separated CUDA devices for native graph placement tests")
+if(GARNET_TEST_MULTI_GPU_DEVICES)
+    add_test(NAME garnet_cuda_device_partitions COMMAND "$<TARGET_FILE:xlang3>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/models/run_device_partitions.py"
+        "${CMAKE_BINARY_DIR}/test-artifacts/cuda-device-partitions" "${GARNET_TEST_MULTI_GPU_DEVICES}")
+    set_tests_properties(garnet_cuda_device_partitions PROPERTIES TIMEOUT 180
+        WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+endif()
+add_test(NAME garnet_generation_tensor_primitives COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_tensor_primitives.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/generation-primitives" build)
+add_test(NAME garnet_generation_native_noise COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_native_noise.py")
+set_tests_properties(garnet_generation_native_noise PROPERTIES TIMEOUT 120
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_generation_attention_compute COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_attention_compute.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/generation-attention-compute")
+set_tests_properties(garnet_generation_attention_compute PROPERTIES TIMEOUT 180
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_flux2_capture COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_flux2_capture.py")
+add_test(NAME garnet_flux2_numerical COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_flux2_numerical.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/flux2-numerical" build)
+set_tests_properties(garnet_generation_tensor_primitives garnet_flux2_capture
+    garnet_flux2_numerical PROPERTIES TIMEOUT 120 WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_generation_helpers COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_generation_helpers.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/generation-helpers")
+add_test(NAME garnet_generation_precision_preparation COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_precision_preparation.py"
+    "$<TARGET_FILE:garnet_prepare_precision>" "${CMAKE_BINARY_DIR}/test-artifacts/precision-preparation")
+set_tests_properties(garnet_generation_precision_preparation PROPERTIES TIMEOUT 120
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+set_tests_properties(garnet_generation_helpers PROPERTIES TIMEOUT 120
+    WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_dynamic_sequence_primitives COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_dynamic_primitives.py" "${CMAKE_BINARY_DIR}/test-artifacts/dynamic-primitives")
+set_tests_properties(garnet_dynamic_sequence_primitives PROPERTIES TIMEOUT 180 WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_linear_accumulation COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_linear_accumulation.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/linear-accumulation")
+set_tests_properties(garnet_linear_accumulation PROPERTIES TIMEOUT 180 WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>"
+    ENVIRONMENT "GARNET_CUDA_REGISTERED_WEIGHT_BUDGET_MIB=4")
+add_test(NAME garnet_query_tiled_attention COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_query_tiled_attention.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/query-tiled-attention")
+set_tests_properties(garnet_query_tiled_attention PROPERTIES TIMEOUT 180 WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_generation_session COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_generation_session.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/generation-session")
+set_tests_properties(garnet_generation_session PROPERTIES TIMEOUT 180 WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>"
+    ENVIRONMENT "GARNET_CUDA_REGISTERED_WEIGHT_BUDGET_MIB=4;GARNET_CUDA_PROJECTION_DEVICE_CACHE_MIB=1")
+add_test(NAME garnet_fused_fp16_attention COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_fused_fp16_attention.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/fused-fp16-attention")
+set_tests_properties(garnet_fused_fp16_attention PROPERTIES TIMEOUT 180 WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+add_test(NAME garnet_projection_cache_policy COMMAND "$<TARGET_FILE:xlang3>"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_projection_cache_policy.py"
+    "${CMAKE_BINARY_DIR}/test-artifacts/projection-cache-policy")
+set_tests_properties(garnet_projection_cache_policy PROPERTIES TIMEOUT 180 WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>"
+    ENVIRONMENT "GARNET_CUDA_REGISTERED_WEIGHT_BUDGET_MIB=4;GARNET_CUDA_PROJECTION_DEVICE_CACHE_MIB=1")
+option(GARNET_TEST_MEDIA "Test separately installed native media providers" OFF)
+option(GARNET_TEST_MEDIA_CUDA "Also test CUDA nvJPEG and NVENC providers" OFF)
+option(GARNET_TEST_PRETRAINED_GENERATION "Run end-to-end generation with configured checkpoints" OFF)
+if(GARNET_TEST_PRETRAINED_GENERATION)
+    if(WIN32)
+        set(garnet_generation_test_pythonpath "$<TARGET_FILE_DIR:garnet>\;${CMAKE_BINARY_DIR}")
+    else()
+        set(garnet_generation_test_pythonpath "$<TARGET_FILE_DIR:garnet>:${CMAKE_BINARY_DIR}")
+    endif()
+endif()
+set(GARNET_FFPROBE_EXECUTABLE "" CACHE FILEPATH "Optional FFprobe validator, used only by media tests")
+set(GARNET_FFMPEG_EXECUTABLE "" CACHE FILEPATH "Optional FFmpeg decoder, used only for independent audio validation")
+if(GARNET_TEST_MEDIA)
+    if(NOT EXISTS "${GARNET_FFPROBE_EXECUTABLE}")
+        message(FATAL_ERROR "GARNET_TEST_MEDIA requires GARNET_FFPROBE_EXECUTABLE and installed media providers")
+    endif()
+    add_test(NAME garnet_native_media COMMAND "$<TARGET_FILE:xlang3>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test/media/run_native_media.py"
+        "${CMAKE_BINARY_DIR}/test-artifacts/native-media" "${GARNET_FFPROBE_EXECUTABLE}")
+    set_tests_properties(garnet_native_media PROPERTIES TIMEOUT 180
+        WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>"
+        ENVIRONMENT "GARNET_TEST_MEDIA_CUDA=$<BOOL:${GARNET_TEST_MEDIA_CUDA}>")
+    if(EXISTS "${GARNET_FFMPEG_EXECUTABLE}")
+        add_test(NAME garnet_native_audio_video COMMAND "$<TARGET_FILE:xlang3>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/test/media/run_native_audio_video.py"
+            "${CMAKE_BINARY_DIR}/test-artifacts/native-audio-video" "${GARNET_FFPROBE_EXECUTABLE}" "${GARNET_FFMPEG_EXECUTABLE}")
+        set_tests_properties(garnet_native_audio_video PROPERTIES TIMEOUT 120 WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+        add_test(NAME garnet_native_media_input COMMAND "$<TARGET_FILE:xlang3>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/test/media/run_native_media_input.py" "${CMAKE_BINARY_DIR}/test-artifacts/native-media-input")
+        set_tests_properties(garnet_native_media_input PROPERTIES TIMEOUT 120 WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+    endif()
+endif()
+set(GARNET_FLUX2_TEST_CHECKPOINT "" CACHE PATH "Optional official FLUX.2 Klein 4B Diffusers checkpoint root")
+if(GARNET_FLUX2_TEST_CHECKPOINT)
+    add_test(NAME garnet_flux2_tokenizer_parity COMMAND "$<TARGET_FILE:xlang3>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_tokenizer_parity.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/fixtures/flux2_tokenizer_reference.json"
+        "${GARNET_FLUX2_TEST_CHECKPOINT}/tokenizer")
+    add_test(NAME garnet_flux2_prompt_parity COMMAND "$<TARGET_FILE:xlang3>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_flux2_prompt_parity.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/fixtures/flux2_prompt_reference.json"
+        "${GARNET_FLUX2_TEST_CHECKPOINT}")
+    add_test(NAME garnet_flux2_checkpoint_contract COMMAND "$<TARGET_FILE:xlang3>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_flux2_checkpoint_contract.py"
+        "${GARNET_FLUX2_TEST_CHECKPOINT}/transformer")
+    add_test(NAME garnet_flux2_vae_checkpoint COMMAND "$<TARGET_FILE:xlang3>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_flux2_vae_checkpoint.py"
+        "${GARNET_FLUX2_TEST_CHECKPOINT}/vae" "${CMAKE_BINARY_DIR}/test-artifacts/flux2-vae-checkpoint")
+    set_tests_properties(garnet_flux2_tokenizer_parity garnet_flux2_prompt_parity
+        garnet_flux2_checkpoint_contract garnet_flux2_vae_checkpoint
+        PROPERTIES TIMEOUT 300 WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>")
+    if(GARNET_TEST_PRETRAINED_GENERATION)
+        add_test(NAME garnet_flux2_generate COMMAND "$<TARGET_FILE:xlang3>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/generation/run_flux2_generate.py"
+            "${GARNET_FLUX2_TEST_CHECKPOINT}" "${CMAKE_BINARY_DIR}/test-artifacts/flux2-generate")
+        set_tests_properties(garnet_flux2_generate PROPERTIES TIMEOUT 1200 RUN_SERIAL TRUE
+            WORKING_DIRECTORY "$<TARGET_FILE_DIR:garnet>"
+            ENVIRONMENT "PYTHONPATH=${garnet_generation_test_pythonpath}")
+    endif()
+endif()
 add_test(NAME garnet_serving_python_defaults COMMAND "$<TARGET_FILE:xlang3>"
     "${CMAKE_CURRENT_SOURCE_DIR}/test/xlang3/serving_defaults.py")
 add_test(NAME garnet_serving_concurrency COMMAND "$<TARGET_FILE:xlang3>"
@@ -556,7 +751,7 @@ endif()
 
 # On Windows, link against cudart (the CUDA runtime) explicitly.
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES} ${CUDA_cuda_LIBRARY}
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${CUDA_LIBRARIES} ${CUDA_cuda_LIBRARY}
             cublas.lib cublasLt.lib "${GARNET_TENSORRT_ROOT}/lib/nvinfer_10.lib"
             nppc.lib nppig.lib nvjpeg.lib
             ${CUDA_CUDA_LIBRARY} # This specifically adds the cuda.lib driver library
@@ -565,7 +760,7 @@ if(WIN32)
     # software. These DLLs are resolved only if a CUDA/TensorRT operation is
     # actually invoked; OpenVINO CPU/Intel-GPU execution does not require them.
     if(MSVC)
-        target_link_libraries(${PROJECT_NAME} delayimp)
+        target_link_libraries(${PROJECT_NAME} PUBLIC delayimp)
         target_link_options(${PROJECT_NAME} PRIVATE
             "/DELAYLOAD:cublas64_13.dll"
             "/DELAYLOAD:cublasLt64_13.dll"
@@ -608,7 +803,7 @@ if(WIN32)
 else()
     find_library(GARNET_TENSORRT_LIBRARY NAMES nvinfer
         PATHS "${GARNET_TENSORRT_ROOT}/lib" REQUIRED NO_DEFAULT_PATH)
-    target_link_libraries(${PROJECT_NAME} pthread dl m
+    target_link_libraries(${PROJECT_NAME} PUBLIC pthread dl m
         "${GARNET_TENSORRT_LIBRARY}" CUDA::cudart CUDA::cuda_driver
         CUDA::cublas CUDA::cublasLt CUDA::nppc CUDA::nppig CUDA::nvjpeg)
     target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--no-undefined")

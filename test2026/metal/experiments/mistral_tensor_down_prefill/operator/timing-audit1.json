@@ -1,0 +1,182 @@
+{
+  "passed": true,
+  "scope": "Audit balanced operator timings and exact pre/post parent witnesses.",
+  "cohorts": [
+    {
+      "cohort": "forward",
+      "shape": "gate",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 4.682562546804547,
+          "native_over_method": 1.0
+        },
+        "manual-cache": {
+          "gpu_median_ms": 4.834374994970858,
+          "native_over_method": 0.9685972957571063
+        },
+        "tensor64m-cache": {
+          "gpu_median_ms": 4.744041594676673,
+          "native_over_method": 0.9870407865013004
+        },
+        "tensor64n-cache": {
+          "gpu_median_ms": 4.648833302780986,
+          "native_over_method": 1.007255421269544
+        },
+        "manual-stream": {
+          "gpu_median_ms": 7.059437455609441,
+          "native_over_method": 0.6633053378897458
+        },
+        "tensor64m-stream": {
+          "gpu_median_ms": 6.7711458541452885,
+          "native_over_method": 0.6915465487924599
+        },
+        "tensor64n-stream": {
+          "gpu_median_ms": 6.703895982354879,
+          "native_over_method": 0.6984837710980865
+        }
+      }
+    },
+    {
+      "cohort": "forward",
+      "shape": "down",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 5.158500047400594,
+          "native_over_method": 1.0
+        },
+        "manual-cache": {
+          "gpu_median_ms": 5.4825833067297935,
+          "native_over_method": 0.940888584596354
+        },
+        "tensor64m-cache": {
+          "gpu_median_ms": 4.882083390839398,
+          "native_over_method": 1.0566185856390442
+        },
+        "tensor64n-cache": {
+          "gpu_median_ms": 4.7209999756887555,
+          "native_over_method": 1.092671059937468
+        },
+        "manual-stream": {
+          "gpu_median_ms": 7.569374982267618,
+          "native_over_method": 0.681496168373894
+        },
+        "tensor64m-stream": {
+          "gpu_median_ms": 6.853979080915451,
+          "native_over_method": 0.7526285076889379
+        },
+        "tensor64n-stream": {
+          "gpu_median_ms": 6.740374956279993,
+          "native_over_method": 0.7653135145834031
+        }
+      }
+    },
+    {
+      "cohort": "reverse",
+      "shape": "gate",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 4.693375085480511,
+          "native_over_method": 1.0
+        },
+        "manual-cache": {
+          "gpu_median_ms": 4.8403540858998895,
+          "native_over_method": 0.9696346594048703
+        },
+        "tensor64m-cache": {
+          "gpu_median_ms": 4.746958380565047,
+          "native_over_method": 0.9887120781795947
+        },
+        "tensor64n-cache": {
+          "gpu_median_ms": 4.671875038184226,
+          "native_over_method": 1.0046020167749696
+        },
+        "manual-stream": {
+          "gpu_median_ms": 7.118062465451658,
+          "native_over_method": 0.6593613231494317
+        },
+        "tensor64m-stream": {
+          "gpu_median_ms": 6.77454168908298,
+          "native_over_method": 0.6927959559306835
+        },
+        "tensor64n-stream": {
+          "gpu_median_ms": 6.758062518201768,
+          "native_over_method": 0.6944853014957543
+        }
+      }
+    },
+    {
+      "cohort": "reverse",
+      "shape": "down",
+      "rows": {
+        "inline": {
+          "gpu_median_ms": 5.157187464646995,
+          "native_over_method": 1.0
+        },
+        "manual-cache": {
+          "gpu_median_ms": 5.476812599226832,
+          "native_over_method": 0.9416403010347736
+        },
+        "tensor64m-cache": {
+          "gpu_median_ms": 4.886875161901116,
+          "native_over_method": 1.0553139365730637
+        },
+        "tensor64n-cache": {
+          "gpu_median_ms": 4.727874998934567,
+          "native_over_method": 1.0908045296902253
+        },
+        "manual-stream": {
+          "gpu_median_ms": 7.5558333192020655,
+          "native_over_method": 0.6825438368976118
+        },
+        "tensor64m-stream": {
+          "gpu_median_ms": 6.860312540084124,
+          "native_over_method": 0.7517423491297316
+        },
+        "tensor64n-stream": {
+          "gpu_median_ms": 6.746979197487235,
+          "native_over_method": 0.7643698481488836
+        }
+      }
+    }
+  ],
+  "measured_gpu_commands": 392,
+  "warmup_gpu_commands": 196,
+  "pre_post_witnesses": 56,
+  "gather_and_scatter_included": true,
+  "stream_weight_expansion_included": true,
+  "cached_setup_excluded_and_disclosed": true,
+  "negative_controls_rejected": [
+    "missing sample",
+    "wrong balanced order",
+    "cold sample admitted",
+    "false GPU duration",
+    "reversed GPU clock",
+    "nonfinite wall",
+    "stream expansion omitted",
+    "wrong result parent",
+    "prepared input mutated",
+    "wrong native baseline resource",
+    "fabricated profile admission"
+  ],
+  "decision": "Reject per-call expanded-weight tensor operands for native integration: slower than inline Q4 in both shapes and cohorts. Cached down products show a small component gain but do not establish a memory-bounded model improvement.",
+  "native_runtime_changed": false,
+  "writer_map_qualified": false,
+  "model_or_http_admitted": false,
+  "quality_admitted": false,
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-forward1/result1.json": "a481b4696c1f3133a7fc8044215bbc8124ab533c6a14822e70b659aef13c6ff6",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-forward1-status.json": "b85a5ea9591b0b13d9f1c08a260e3f78854dc50769c947f2d6aa74dad94d4a11",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-forward1-command.json": "6d7ce44f818497fc625323f02f85d8f20d3fc5c3ab1a25f4f1b32fe1e7fd6325",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-reverse1/result1.json": "f84da57efa808314614710bccf8b9a582b5c3f49e0090ec9557e8a1237888ef3",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-reverse1-status.json": "098cecd6200af06f19fe400ccfedb04022ee96394cac35c721a84a30d7fe740c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-reverse1-command.json": "2528b4f574e08f4031e5566f69ca8241917c6d48f86a338a2ec093e24c7c6017",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/audit_timing1.py": "d7f496fa267f6adaabcc2a1fb445ac4a0457349ca132f2eecf339d05a4c73cc7",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/pilot2-audit.json": "75b9ec62336cf99ec652316cd2ebea3c427b5ebc7bd58b4d871bc4c8c307daeb",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/audit_pilot2.py": "f3ba008ae30f607f5e166358a03521ffaccd35e53a6fd413f3dc6447b4b90005",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/plan2.json": "115603c498243b3ed0513ea7e3edd0a320bc438d1509fee4389b9738914c5e2e",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing1-preflight.json": "9b319a759df24a4bc130a90211aeffb286b128a2f9f9ed96866f84ebaa614c55",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing1-postflight.json": "5dedcebb8f97db1eef1790fbe682854d05f56a2e02c01a40e18862492f9d9361",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-tensor-view-prefill-screen1/timing-preparation1.json": "ca2644e2f8434a54dd4336b49d628047e0fd1d08c57b62d9221ccebeecd9a6bf"
+  }
+}

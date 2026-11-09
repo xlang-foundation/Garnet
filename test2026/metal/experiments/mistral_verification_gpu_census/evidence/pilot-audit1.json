@@ -1,0 +1,139 @@
+{
+  "passed": true,
+  "scope": "Audit saved preliminary operator coverage and recompute command medians.\nCPU numerical assertions were executed by the pinned C++ host. Output word\nparents and raw GPU clock endpoints were not retained, so this saved-data audit\ndoes not independently replay the FP64 oracle or qualify numeric/performance use.\n",
+  "pilot_summaries": {
+    "1": [
+      {
+        "shape": "gate",
+        "rows": 1,
+        "median_command_ms": {
+          "0": 0.2563751768320799,
+          "1": 0.24512503296136856,
+          "4": 0.25891675613820553
+        },
+        "control_over_candidate_ratio": {
+          "1": 1.0458955323118073,
+          "4": 0.9901837975106988
+        }
+      },
+      {
+        "shape": "gate",
+        "rows": 4,
+        "median_command_ms": {
+          "0": 0.2827499993145466,
+          "1": 0.5706248339265585,
+          "4": 0.3029999788850546
+        },
+        "control_over_candidate_ratio": {
+          "1": 0.49550945297788695,
+          "4": 0.9331683795985016
+        }
+      },
+      {
+        "shape": "down",
+        "rows": 1,
+        "median_command_ms": {
+          "0": 0.27525005862116814,
+          "1": 0.26599992997944355,
+          "4": 0.301166670396924
+        },
+        "control_over_candidate_ratio": {
+          "1": 1.034774928859716,
+          "4": 0.9139459497905298
+        }
+      },
+      {
+        "shape": "down",
+        "rows": 4,
+        "median_command_ms": {
+          "0": 0.3334584180265665,
+          "1": 0.7488334085792303,
+          "4": 0.42487517930567265
+        },
+        "control_over_candidate_ratio": {
+          "1": 0.4453038742745743,
+          "4": 0.7848385461619607
+        }
+      }
+    ],
+    "2": [
+      {
+        "shape": "gate",
+        "rows": 1,
+        "median_command_ms": {
+          "0": 0.27283327654004097,
+          "1": 0.25041657499969006,
+          "4": 0.2797916531562805
+        },
+        "control_over_candidate_ratio": {
+          "1": 1.0895176429131286,
+          "4": 0.9751301493888638
+        }
+      },
+      {
+        "shape": "gate",
+        "rows": 4,
+        "median_command_ms": {
+          "0": 0.28900010511279106,
+          "1": 0.49687502905726433,
+          "4": 0.9690416045486927
+        },
+        "control_over_candidate_ratio": {
+          "1": 0.5816353976594869,
+          "4": 0.2982329177160415
+        }
+      },
+      {
+        "shape": "down",
+        "rows": 1,
+        "median_command_ms": {
+          "0": 0.2495415974408388,
+          "1": 0.2545833121985197,
+          "4": 0.27495832182466984
+        },
+        "control_over_candidate_ratio": {
+          "1": 0.9801962088004046,
+          "4": 0.9075615379990635
+        }
+      },
+      {
+        "shape": "down",
+        "rows": 4,
+        "median_command_ms": {
+          "0": 0.3226250410079956,
+          "1": 0.6784999277442694,
+          "4": 1.078041736036539
+        },
+        "control_over_candidate_ratio": {
+          "1": 0.4754975318576524,
+          "4": 0.29926952753623315
+        }
+      }
+    ]
+  },
+  "candidate_outputs_unchanged_by_vector_load_revision": true,
+  "numeric_assertions_host_reported": true,
+  "raw_word_parents_retained": false,
+  "independent_saved_fp64_replay": false,
+  "raw_gpu_clock_endpoints_retained": false,
+  "full_trained_operator_qualification": false,
+  "repeated_operator_timing_qualification": false,
+  "selected_for_native_integration": false,
+  "reason": "Large four-row regressions in both pilots; do not integrate the new arithmetic policy.",
+  "negative_controls_rejected": [
+    "missing_cell",
+    "missing_sample",
+    "wrong_order",
+    "nonfinite_time",
+    "wrong_bound",
+    "batch_identity_failure",
+    "retained_buffers"
+  ],
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-q4-centered-group64-pilot1/pilot-output1/result1.json": "55c2644995bc0c5170023739ddb55d7b5921aae61cbdc2815c54f19eef9c770b",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-q4-centered-group64-pilot1/pilot-output2/result1.json": "48f38e0e5b9a4f5a8dde3603f966af7ed21ad1c7ec48db1e876b0173f90065af"
+  },
+  "no_runtime_integration": true,
+  "serving_speed_claim": false,
+  "goal_complete": false
+}

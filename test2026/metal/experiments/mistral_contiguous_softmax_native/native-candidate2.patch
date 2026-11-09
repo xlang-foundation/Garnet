@@ -1,0 +1,408 @@
+diff --git a/cmake/GarnetMetal.cmake b/cmake/GarnetMetal.cmake
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -124,6 +124,14 @@
+ endif()
+ option(GARNET_METAL_CHUNK_ATTENTION_BUCKETS "Select prepared context buckets and sparse tails from completed native controls" OFF)
+ option(GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS "Prepare MPS request-span schedules and omit inactive request products" OFF)
++option(GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX "Prepare exact contiguous-control MPS softmax with generic fallback" OFF)
++if(GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX)
++    if(NOT GARNET_METAL_CHUNK_ATTENTION_MPS OR NOT GARNET_METAL_CHUNK_ATTENTION_BUCKETS OR
++       NOT GARNET_METAL_CHUNK_ATTENTION_INDEX32)
++        message(FATAL_ERROR "Contiguous MPS softmax requires prepared MPS context buckets and bounded index32")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX=1)
++endif()
+ if(GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS)
+     if(NOT GARNET_METAL_CHUNK_ATTENTION_BUCKETS)
+         message(FATAL_ERROR "Active request attention schedules require prepared context buckets")
+@@ -845,6 +853,14 @@
+     add_test(NAME metal_chunk_attention_mps_plan COMMAND garnet_chunk_attention_mps_plan_test)
+     add_executable(garnet_chunk_attention_policy_test test2026/metal/chunk_attention_policy_test.cpp)
+     add_test(NAME native_chunk_attention_policy COMMAND garnet_chunk_attention_policy_test)
++    add_executable(garnet_contiguous_softmax_policy_test test2026/metal/contiguous_softmax_policy_test.cpp)
++    add_test(NAME native_contiguous_softmax_policy COMMAND garnet_contiguous_softmax_policy_test)
++    if(GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS)
++        add_executable(garnet_contiguous_softmax_test test2026/metal/contiguous_softmax_native_test.cpp)
++        target_link_libraries(garnet_contiguous_softmax_test PRIVATE garnet_metal)
++        add_test(NAME metal_contiguous_softmax_native COMMAND garnet_contiguous_softmax_test)
++        set_tests_properties(metal_contiguous_softmax_native PROPERTIES TIMEOUT 180)
++    endif()
+     if(GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS)
+         add_executable(garnet_chunk_attention_active_rows_test test2026/metal/chunk_attention_active_rows_test.cpp)
+         target_include_directories(garnet_chunk_attention_active_rows_test PRIVATE third_party)
+diff --git a/src/backends/metal/decoder_session.h b/src/backends/metal/decoder_session.h
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -440,6 +440,7 @@
+     size_t LastChunkKVScatterDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkKVScatterDispatches():0;}
+     size_t LastLayoutVectorDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastLayoutVectorDispatches():0;}
+     size_t LastChunkAttentionMPSDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSDispatches():0;}
++    size_t LastChunkAttentionContiguousSoftmaxDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionContiguousSoftmaxDispatches():0;}
+     size_t LastChunkFlashAttentionDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkFlashAttentionDispatches():0;}
+     size_t LastChunkAttentionMPSMatrices() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSMatrices():0;}
+     size_t LastChunkAttentionMPSSkippedMatrices() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSSkippedMatrices():0;}
+@@ -647,6 +648,7 @@
+         APISET().AddProp("chunk_kv_scatter_dispatches",&MetalDecoderSession::LastChunkKVScatterDispatches);
+         APISET().AddProp("layout_vector_dispatches",&MetalDecoderSession::LastLayoutVectorDispatches);
+         APISET().AddProp("chunk_attention_mps_dispatches",&MetalDecoderSession::LastChunkAttentionMPSDispatches);
++        APISET().AddProp("chunk_attention_contiguous_softmax_dispatches",&MetalDecoderSession::LastChunkAttentionContiguousSoftmaxDispatches);
+         APISET().AddProp("chunk_flash_attention_dispatches",&MetalDecoderSession::LastChunkFlashAttentionDispatches);
+         APISET().AddProp("chunk_attention_mps_matrices",&MetalDecoderSession::LastChunkAttentionMPSMatrices);
+         APISET().AddProp("chunk_attention_mps_skipped_matrices",&MetalDecoderSession::LastChunkAttentionMPSSkippedMatrices);
+diff --git a/src/backends/metal/metal_context.h b/src/backends/metal/metal_context.h
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -450,6 +450,7 @@
+     size_t LastLayoutVectorDispatches() const;
+     size_t LastChunkAttentionOptimizedDispatches() const;
+     size_t LastChunkAttentionMPSDispatches() const;
++    size_t LastChunkAttentionContiguousSoftmaxDispatches() const;
+     size_t LastChunkFlashAttentionDispatches() const;
+     size_t LastChunkAttentionMPSMatrices() const;
+     size_t LastChunkAttentionMPSSkippedMatrices() const;
+diff --git a/src/backends/metal/metal_context.mm b/src/backends/metal/metal_context.mm
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -57,6 +57,10 @@
+ #endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+ #include "chunk_attention_mps_shader.h"
++#ifdef GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX
++#include "chunk_mps_contiguous_shader.h"
++#include "chunk_mps_contiguous_policy.h"
++#endif
+ #include "chunk_attention_policy.h"
+ #endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+@@ -528,6 +532,9 @@
+             MPSMatrixDescriptor* cache;
+             MPSMatrixMultiplication *qk,*pv;
+             id<MTLComputePipelineState> softmax;
++#ifdef GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX
++            id<MTLComputePipelineState> contiguousSoftmax=nil;
++#endif
+         };
+         std::map<size_t,Bucket> buckets;
+ #endif
+@@ -662,6 +669,7 @@
+     size_t verificationKVBackups=0,verificationKVRestores=0;
+ #endif
+     size_t chunkAttentionMPSDispatches=0,chunkFlashAttentionDispatches=0;
++    size_t chunkAttentionContiguousSoftmaxDispatches=0;
+     size_t chunkAttentionMPSMatrices=0,chunkAttentionMPSSkippedMatrices=0;
+     size_t chunkKVScatterDispatches=0;
+     size_t layoutVectorDispatches=0;
+@@ -1903,6 +1911,9 @@
+ #endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkAttentionMPSShader]];
++#ifdef GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX
++        source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkMPSContiguousShader]];
++#endif
+ #endif
+ #ifdef GARNET_METAL_CHUNK_FLASH_ATTENTION
+         source=[source stringByAppendingString:[NSString stringWithUTF8String:kChunkFlashAttentionShader]];
+@@ -4370,7 +4381,7 @@
+     impl_->screenDiagnosticReady=false;
+ #endif
+     impl_->partialSubmissions=0;
+-    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
++    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=impl_->chunkAttentionContiguousSoftmaxDispatches=0;
+     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
+     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
+     impl_->chunkKVScatterDispatches=0;
+@@ -5480,6 +5491,16 @@
+         bucket.softmax=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+         if(!bucket.scores||!bucket.cache||!bucket.qk||!bucket.pv||!bucket.softmax||bucket.softmax.threadExecutionWidth!=32||bucket.softmax.maxTotalThreadsPerThreadgroup<128)
+             throw std::runtime_error("Cannot prepare MPS attention context bucket");
++#ifdef GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX
++        // Every admitted bucket is compiled before leases or command encoding.
++        if(batch<=4&&heads<=32&&kvHeads<=8&&dim==128&&capacity<=4096&&chunk<=512) {
++            auto specialized=[impl_->kernels->library newFunctionWithName:@"chunk_mps_softmax_contiguous" constantValues:constants error:&error];
++            if(!specialized)throw std::runtime_error("Cannot specialize contiguous MPS softmax bucket");
++            bucket.contiguousSoftmax=[impl_->device newComputePipelineStateWithFunction:specialized error:&error];
++            if(!bucket.contiguousSoftmax||bucket.contiguousSoftmax.threadExecutionWidth!=32||bucket.contiguousSoftmax.maxTotalThreadsPerThreadgroup<128)
++                throw std::runtime_error("Cannot prepare contiguous MPS softmax bucket");
++        }
++#endif
+         plan.buckets.emplace(bound,std::move(bucket));
+     }
+ #endif
+@@ -5627,9 +5648,20 @@
+         auto cacheDescriptor=plan.cacheDescriptor;auto cacheScoreView=plan.cacheScoreView;
+         auto qkCache=plan.qkCache,pvCache=plan.pvCache;auto softmaxPipeline=impl_->kernels->chunkMPSSoftmax;
+         size_t extent=capacity;
++        bool contiguousSoftmax=false;
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+         const auto& bucket=plan.buckets.at(policy.capacity);extent=policy.capacity;
+         cacheDescriptor=bucket.cache;cacheScoreView=bucket.scores;qkCache=bucket.qk;pvCache=bucket.pv;softmaxPipeline=bucket.softmax;
++#ifdef GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX
++        // Prove actual controls once per owner, not separately for each query/head.
++        // Never narrow based on pending GPU writes or unproved alias/control state.
++        if(bucket.contiguousSoftmax&&controlsReady&&policy.known&&!fullRequestRows&&
++           ChunkMPSContiguousPrefix(size_t(p.batch),chunk,capacity,
++               reinterpret_cast<const float*>(static_cast<const char*>(s.data.contents)+s.offset),size_t(p.sStride),
++               reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset),size_t(p.aStride))) {
++            contiguousSoftmax=true;softmaxPipeline=bucket.contiguousSoftmax;
++        }
++#endif
+ #endif
+         auto bind=[](id<MTLComputeCommandEncoder> encoder,const MetalMatrix& owner,size_t index) {
+             auto matrix=owner.impl_->matrix;[encoder setBuffer:matrix.data offset:matrix.offset atIndex:index];
+@@ -5672,7 +5704,8 @@
+         bind(softmax,plan.cacheScores,0);bind(softmax,plan.liveScores,1);bind(softmax,plan.liveProb,2);
+         bind(softmax,inputs[5],3);bind(softmax,inputs[6],4);
+         [softmax setBytes:&p length:sizeof(p) atIndex:5];[softmax setBytes:plan.pitches.data() length:sizeof(plan.pitches) atIndex:6];
+-        [softmax setThreadgroupMemoryLength:(extent*4+15)&~size_t(15) atIndex:0];[softmax setThreadgroupMemoryLength:(extent*2+15)&~size_t(15) atIndex:1];
++        [softmax setThreadgroupMemoryLength:(extent*4+15)&~size_t(15) atIndex:0];
++        if(!contiguousSoftmax)[softmax setThreadgroupMemoryLength:(extent*2+15)&~size_t(15) atIndex:1];
+         [softmax dispatchThreadgroups:MTLSizeMake(q.rows*heads,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[softmax endEncoding];
+         // Both QK products have consumed packed queries. Reuse their storage
+         // for the old-cache contribution, keeping scratch fixed per profile.
+@@ -5707,6 +5740,7 @@
+         output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
+         if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);
+         ++impl_->chunkAttentionMPSDispatches;
++        if(contiguousSoftmax)++impl_->chunkAttentionContiguousSoftmaxDispatches;
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_BUCKETS
+         ++impl_->chunkAttentionBucketDispatches;
+         impl_->chunkAttentionBucketCapacity=std::max(impl_->chunkAttentionBucketCapacity,extent);
+@@ -5809,6 +5843,7 @@
+ size_t MetalContext::LastChunkKVScatterDispatches() const {return impl_->chunkKVScatterDispatches;}
+ size_t MetalContext::LastLayoutVectorDispatches() const {return impl_->layoutVectorDispatches;}
+ size_t MetalContext::LastChunkAttentionMPSDispatches() const {return impl_->chunkAttentionMPSDispatches;}
++size_t MetalContext::LastChunkAttentionContiguousSoftmaxDispatches() const {return impl_->chunkAttentionContiguousSoftmaxDispatches;}
+ size_t MetalContext::LastChunkFlashAttentionDispatches() const {return impl_->chunkFlashAttentionDispatches;}
+ size_t MetalContext::LastChunkAttentionMPSMatrices() const {return impl_->chunkAttentionMPSMatrices;}
+ size_t MetalContext::LastChunkAttentionMPSSkippedMatrices() const {return impl_->chunkAttentionMPSSkippedMatrices;}
+@@ -5991,7 +6026,7 @@
+     // for reset/reuse; the uncommitted continuation is discarded.
+     for(id<MTLCommandBuffer> prior in impl_->submitted)[prior waitUntilCompleted];
+     impl_->submitted=nil;impl_->partialSubmissions=0;
+-    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
++    impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=impl_->chunkAttentionContiguousSoftmaxDispatches=0;
+     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
+     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
+     impl_->chunkKVScatterDispatches=0;
+diff --git a/src/entry/metal_main.cpp b/src/entry/metal_main.cpp
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -270,6 +270,9 @@
+ #endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+     info+="; chunk_attention_mps";
++#ifdef GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX
++    info+="; chunk_mps_contiguous_softmax_optional";
++#endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_SCRATCH
+     info+="; chunk_attention_full_write_scratch";
+ #endif
+diff --git a/src/backends/metal/chunk_mps_contiguous_policy.h b/src/backends/metal/chunk_mps_contiguous_policy.h
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/chunk_mps_contiguous_policy.h
+@@ -0,0 +1,28 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++#include <cmath>
++#include <cstddef>
++namespace Garnet {
++// Call only for completed, shared, nonpending controls. Unknown GPU controls
++// must retain generic selection; this helper never synchronizes or reads them.
++inline bool ChunkMPSContiguousPrefix(size_t batch,size_t chunk,size_t capacity,
++    const float* slots,size_t slotStride,const float* active,size_t activeStride) {
++    if(!batch||batch>4||!chunk||chunk>512||!capacity||capacity>4096||
++       !slots||!active||slotStride<chunk||activeStride<chunk)return false;
++    for(size_t b=0;b<batch;++b) {
++        size_t count=0;
++        while(count<chunk&&active[b*activeStride+count]!=0) {
++            if(!std::isfinite(active[b*activeStride+count]))return false;
++            ++count;
++        }
++        for(size_t t=count;t<chunk;++t)if(active[b*activeStride+t]!=0)return false;
++        if(!count)continue;
++        float first=slots[b*slotStride];
++        if(count>capacity||!std::isfinite(first)||first<0||first!=std::floor(first)||
++           double(first)+double(count)>double(capacity))return false;
++        for(size_t t=0;t<count;++t)
++            if(slots[b*slotStride+t]!=first+float(t))return false;
++    }
++    return true;
++}
++}
+diff --git a/src/backends/metal/chunk_mps_contiguous_shader.h b/src/backends/metal/chunk_mps_contiguous_shader.h
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/chunk_mps_contiguous_shader.h
+@@ -0,0 +1,56 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++namespace Garnet {
++inline constexpr const char* kChunkMPSContiguousShader=R"METAL(
++#if defined(GARNET_CHUNK_ATTENTION_INDEX32) && defined(GARNET_CHUNK_ATTENTION_BUCKETS)
++kernel void chunk_mps_softmax_contiguous(device float* cacheScores [[buffer(0)]],device const float* liveScores [[buffer(1)]],
++    device float* liveProb [[buffer(2)]],device const float* slots [[buffer(3)]],device const float* active [[buffer(4)]],
++    constant ChunkAttentionParams& runtime [[buffer(5)]],constant ChunkMPSPitch& pitch [[buffer(6)]],
++    threadgroup float* scratch [[threadgroup(0)]],
++    uint query [[threadgroup_position_in_grid]],uint tid [[thread_index_in_threadgroup]],
++    uint lane [[thread_index_in_simdgroup]],uint simd [[simdgroup_index_in_threadgroup]]) {
++    const auto p=chunk_mps_params(runtime);
++    uint t=query%p.chunk,b=query/(p.chunk*p.heads);
++#ifdef GARNET_CHUNK_ATTENTION_BUCKETS
++    const uint extent=chunk_mps_extent;
++#else
++    const uint extent=p.capacity;
++#endif
++    if(active[b*p.aStride+t]==0) {
++        for(uint s=tid;s<extent;s+=128)cacheScores[query*pitch.cacheScore+s]=0;
++        for(uint j=tid;j<p.chunk;j+=128)liveProb[query*pitch.liveScore+j]=0;
++        return;
++    }
++    uint visible=uint(min(ulong(extent),ulong(slots[b*p.sStride+t])+1));
++    // Admitted only after completed native controls prove contiguous active prefixes.
++    const int first=int(slots[b*p.sStride]);
++    threadgroup float partial[4];
++    for(uint s=tid;s<visible;s+=128) {
++        int latest=-1;
++        int candidate=int(s)-first;if(candidate>=0&&candidate<=int(t))latest=candidate;
++        scratch[s]=(latest<0?cacheScores[query*pitch.cacheScore+s]:liveScores[query*pitch.liveScore+uint(latest)])*rsqrt(float(p.dim));
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    float maximum=-INFINITY;for(uint s=tid;s<visible;s+=128)maximum=max(maximum,scratch[s]);
++    maximum=simd_max(maximum);if(lane==0)partial[simd]=maximum;
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    maximum=simd_max(lane<4?partial[lane]:-INFINITY);
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    float denominator=0;
++    for(uint s=tid;s<visible;s+=128){float probability=exp(scratch[s]-maximum);scratch[s]=probability;denominator+=probability;}
++    denominator=simd_sum(denominator);if(lane==0)partial[simd]=denominator;
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    denominator=simd_sum(lane<4?partial[lane]:0.0f);
++    // All scratch reads below follow the last writes before the reduction's
++    // threadgroup barrier. Each output probability has one owning thread.
++    for(uint s=tid;s<extent;s+=128)
++        cacheScores[query*pitch.cacheScore+s]=s<visible&&(int(s)<first||int(s)>first+int(t))?scratch[s]/denominator:0;
++    for(uint j=tid;j<p.chunk;j+=128) {
++        float position=slots[b*p.sStride+j];
++        bool valid=j<=t&&active[b*p.aStride+j]!=0&&isfinite(position)&&position>=0&&position<float(visible)&&position==floor(position);
++        liveProb[query*pitch.liveScore+j]=valid?scratch[uint(position)]/denominator:0;
++    }
++}
++#endif
++)METAL";
++}
+diff --git a/test2026/metal/contiguous_softmax_policy_test.cpp b/test2026/metal/contiguous_softmax_policy_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/contiguous_softmax_policy_test.cpp
+@@ -0,0 +1,30 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "../../src/backends/metal/chunk_mps_contiguous_policy.h"
++#include <array>
++#include <limits>
++#include <stdexcept>
++#include <iostream>
++using namespace Garnet;
++int main(){try{
++    constexpr size_t batch=4,chunk=17,stride=21;
++    std::array<float,batch*stride> slots{},active{};
++    for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t){slots[b*stride+t]=float(128+t);active[b*stride+t]=float(t<chunk-b);}
++    auto need=[](bool yes){if(!yes)throw std::runtime_error("Contiguous prefix proof differs");};
++    auto admit=[&]{return ChunkMPSContiguousPrefix(batch,chunk,256,slots.data(),stride,active.data(),stride);};
++    need(admit());size_t rejected=0;
++    auto originalSlots=slots,originalActive=active;
++    for(float bad:{-1.0f,0.5f,std::numeric_limits<float>::infinity(),std::numeric_limits<float>::quiet_NaN(),250.0f}) {
++        slots=originalSlots;slots[0]=bad;need(!admit());++rejected;
++    }
++    slots=originalSlots;slots[5]=slots[4];need(!admit());++rejected;
++    slots=originalSlots;active[4]=0;need(!admit());++rejected;
++    active=originalActive;active[0]=std::numeric_limits<float>::quiet_NaN();need(!admit());++rejected;
++    active=originalActive;active[chunk-1]=0;need(admit());
++    active.fill(0);slots.fill(std::numeric_limits<float>::quiet_NaN());need(admit());
++    need(!ChunkMPSContiguousPrefix(5,chunk,256,slots.data(),stride,active.data(),stride));
++    need(!ChunkMPSContiguousPrefix(batch,chunk,8192,slots.data(),stride,active.data(),stride));
++    need(!ChunkMPSContiguousPrefix(batch,chunk,256,nullptr,stride,active.data(),stride));
++    need(!ChunkMPSContiguousPrefix(batch,chunk,256,slots.data(),chunk-1,active.data(),stride));
++    need(!ChunkMPSContiguousPrefix(batch,0,256,slots.data(),stride,active.data(),stride));
++    std::cout<<"Native contiguous-control proof: strided/ragged/empty valid controls; "<<rejected<<" changed invalid controls and5 unsupported layouts rejected\n";return 0;
++}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+diff --git a/test2026/metal/contiguous_softmax_native_test.cpp b/test2026/metal/contiguous_softmax_native_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/contiguous_softmax_native_test.cpp
+@@ -0,0 +1,74 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "metal_context.h"
++#include <algorithm>
++#include <cmath>
++#include <cstring>
++#include <iostream>
++#include <stdexcept>
++using namespace Garnet;
++namespace {
++void Need(bool yes,const char* message){if(!yes)throw std::runtime_error(message);}
++struct Fixture {
++    static constexpr size_t batch=4,chunk=16,heads=32,kv=8,dim=128,capacity=256,rows=batch*chunk;
++    MetalContext gpu;
++    std::vector<float> q,k,v,kc,vc,gate,slots,active;
++    std::vector<MetalMatrix> inputs;
++    MetalMatrix control,candidate,copied,zero;
++    size_t cells=0,words=0,oracle=0;
++    Fixture() {
++        auto values=[](size_t n,float phase){std::vector<float> a(n);for(size_t i=0;i<n;++i)a[i]=float(.2*std::sin(double(i)*.131+phase));return a;};
++        q=values(rows*heads*dim,.1f);k=values(rows*kv*dim,.7f);v=values(k.size(),1.1f);
++        kc=values(batch*kv*capacity*dim,2.1f);vc=values(kc.size(),3.2f);gate=values(q.size(),4.3f);
++        slots.resize(rows);active.resize(rows,1);for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t)slots[b*chunk+t]=float(128+t);
++        inputs={gpu.Upload(q,rows,heads*dim),gpu.Upload(k,rows,kv*dim),gpu.Upload(v,rows,kv*dim),gpu.Upload(kc,batch,kv*capacity*dim),gpu.Upload(vc,batch,kv*capacity*dim),gpu.Upload(slots,batch,chunk),gpu.Upload(active,batch,chunk),gpu.Upload(gate,rows,heads*dim)};
++        control=gpu.Allocate(rows,heads*dim);candidate=gpu.Allocate(rows,heads*dim);copied=gpu.Allocate(batch,chunk);zero=gpu.Upload(std::vector<float>(rows,0),batch,chunk);
++        if(!gpu.ChunkAttentionMPSPlanCount()) {
++            gpu.Begin();bool rejected=false;try{gpu.EncodeAttentionChunk(inputs,candidate,heads,kv,dim,capacity,chunk,false);}catch(const std::logic_error&){rejected=true;}
++            gpu.Abort();Need(rejected,"Unprepared profile was compiled during encoding");
++        }
++        gpu.PrepareAttentionChunk(inputs,heads,kv,dim,capacity,chunk);
++    }
++    void Oracle(const std::vector<float>& got) {
++        for(size_t b=0;b<batch;++b)for(size_t t:{size_t(0),chunk/2,chunk-1})for(size_t h:{size_t(0),heads-1}) {
++            size_t flat=b*chunk+t;if(!active[flat])continue;size_t visible=size_t(slots[flat])+1,kvh=h/(heads/kv);
++            std::vector<double> scores(visible);std::vector<int> latest(visible,-1);double maximum=-INFINITY;
++            for(size_t s=0;s<visible;++s){for(size_t j=0;j<=t;++j)if(active[b*chunk+j]&&slots[b*chunk+j]==float(s))latest[s]=int(j);
++                double dot=0;for(size_t d=0;d<dim;++d){float key=latest[s]<0?kc[((b*kv+kvh)*capacity+s)*dim+d]:k[((b*chunk+size_t(latest[s]))*kv+kvh)*dim+d];dot+=double(q[(flat*heads+h)*dim+d])*key;}
++                scores[s]=dot/std::sqrt(double(dim));maximum=std::max(maximum,scores[s]);}
++            double denominator=0;for(auto& x:scores){x=std::exp(x-maximum);denominator+=x;}
++            for(size_t d:{size_t(0),dim-1}){double expected=0;for(size_t s=0;s<visible;++s){float value=latest[s]<0?vc[((b*kv+kvh)*capacity+s)*dim+d]:v[((b*chunk+size_t(latest[s]))*kv+kvh)*dim+d];expected+=scores[s]/denominator*value;}
++                size_t index=(flat*heads+h)*dim+d;expected/=1+std::exp(-double(gate[index]));Need(std::abs(double(got[index])-expected)<=1e-5+2e-4*std::abs(expected),"Native attention exceeds original FP64 bound");++oracle;}
++        }
++    }
++    void Run(int kind) {
++        for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t){slots[b*chunk+t]=float(128+t);active[b*chunk+t]=1;}
++        if(kind==1){for(size_t t=13;t<chunk;++t)active[chunk+t]=0;for(size_t t=1;t<chunk;++t)active[2*chunk+t]=0;for(size_t t=0;t<chunk;++t)active[3*chunk+t]=0;}
++        if(kind==2)active[3]=0;
++        if(kind==3)slots[5]=slots[4];
++        gpu.Update(inputs[5],slots);gpu.Update(inputs[6],active);
++        auto plans=gpu.ChunkAttentionMPSPlanCount(),scratch=gpu.ChunkAttentionMPSScratchBytes();
++        for(int variant=0;variant<2;++variant){gpu.Begin();auto args=inputs;if(kind==4){gpu.EncodeAdd(inputs[5],zero,copied);args[5]=copied;}
++            gpu.EncodeAttentionChunk(args,variant?candidate:control,heads,kv,dim,capacity,chunk,true,false,variant==0);
++            gpu.Flush();gpu.SubmitAndWait();size_t expected=0;
++#ifdef GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX
++            if(variant&&(kind==0||kind==1))expected=1;
++#endif
++            Need(gpu.LastChunkAttentionContiguousSoftmaxDispatches()==expected,"Native specialization/fallback dispatch differs");
++            Need(gpu.LastChunkAttentionMPSDispatches()==1,"MPS attention coverage differs");
++            Need(gpu.LastChunkAttentionUnknownControls()==size_t(kind==4),"Pending GPU control became host-known");
++            Need(gpu.ChunkAttentionMPSPlanCount()==plans&&gpu.ChunkAttentionMPSScratchBytes()==scratch,"Execution changed prepared storage");}
++        auto a=gpu.Download(control),b=gpu.Download(candidate);Need(a.size()==b.size()&&!std::memcmp(a.data(),b.data(),a.size()*4),"Native specialization changed an output bit");
++        for(size_t i=0;i<b.size();++i){Need(std::isfinite(b[i]),"Nonfinite output");if(!active[i/(heads*dim)])Need(b[i]==0,"Inactive output stale");}
++        for(size_t i:{size_t(3),size_t(4)}){auto got=gpu.Download(inputs[i]);const auto& original=i==3?kc:vc;Need(got.size()==original.size()&&!std::memcmp(got.data(),original.data(),got.size()*4),"Readonly KV changed");}
++        Oracle(b);++cells;words+=b.size();
++    }
++    void RejectAndRecover() {
++        gpu.Begin();bool alias=false;try{gpu.EncodeAttentionChunk(inputs,inputs[0],heads,kv,dim,capacity,chunk,true);}catch(const std::invalid_argument&){alias=true;}gpu.Abort();Need(alias,"Output alias admitted");
++        auto args=inputs;args[0]=gpu.Allocate(rows,heads*dim);gpu.Begin();bool unready=false;try{gpu.EncodeAttentionChunk(args,candidate,heads,kv,dim,capacity,chunk,true);}catch(const std::logic_error&){unready=true;}gpu.Abort();Need(unready,"Uninitialized input admitted");
++        gpu.Begin();gpu.EncodeAttentionChunk(inputs,candidate,heads,kv,dim,capacity,chunk,true);gpu.Abort();Need(gpu.LastChunkAttentionContiguousSoftmaxDispatches()==0,"Abort retained dispatch state");Run(0);
++    }
++};
++}
++int main(){try{{Fixture f;for(int kind=0;kind<5;++kind)f.Run(kind);f.RejectAndRecover();std::cout<<"Native contiguous softmax "<<f.cells<<" cells, "<<f.words<<" complete exact output words, "<<f.oracle<<" FP64 values; pending/gap/overwrite/full-row fallback and abort recovery verified\n";}
++    auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Native owners retained after close");return 0;
++}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

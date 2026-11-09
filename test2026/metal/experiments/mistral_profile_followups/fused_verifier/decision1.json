@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "decision": "Existing four-row FP32 gate/up fusion composes correctly with GQA16 QK/value verification. Keep optional: paired native real-helper gain1.44-1.51% is below the predeclared3% stage gate;2x and HTTP goals remain unmet.",
+  "native_tests": 57,
+  "source_files_unchanged": 26561,
+  "output_ids_qualified": 512,
+  "qualified_full_state_digest_pairs": 260,
+  "additional_measured_target_ids": 512,
+  "median_native_decode_tps": {
+    "off": 35.230071789665146,
+    "on": 35.749021615571415
+  },
+  "paired_native_ratios": [
+    {
+      "cohort": 1,
+      "decode_ratio": 1.0150703210424656
+    },
+    {
+      "cohort": 2,
+      "decode_ratio": 1.0143907546708821
+    }
+  ],
+  "new_runtime_code": false,
+  "xmodel_operator_changes": false,
+  "no_comparator_execution": true,
+  "no_http_or_quality_admission": true,
+  "next_step": "Reduce real helper-prefill overhead through existing compiled upper-bound profiles; target GPU dominates target wall time so CPU command encoding alone is not the leading observed opportunity.",
+  "goal_complete": false
+}

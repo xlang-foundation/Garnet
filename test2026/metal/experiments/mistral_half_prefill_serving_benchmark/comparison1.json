@@ -1,0 +1,235 @@
+{
+  "scope": "Mistral7B 4bit,~2048 frozen prompt tokens (C1:2048; C4:2048/2051/2048/2049),128 output tokens; C1 and C4, no prefix retention. Native2 fresh engines/cell:2 first rounds and4 warmed rounds. Frozen references15 warmed measured waves/cell, never rerun. Thermal/OS conditions uncontrolled; native FP32 canonical KV/decode with half prefill, references FP16 state. Cold is fresh process, not hardware cold. Observational, no causal speedup or coding-quality qualification.",
+  "native": {
+    "p2048-c1-o128": {
+      "cold": {
+        "measured_waves": 2,
+        "median": {
+          "ttft_median_seconds": 3.968691749381833,
+          "decode_median_tps": 17.722524733299224,
+          "aggregate_tps": 11.476205691015856
+        },
+        "range": {
+          "ttft_median_seconds": [
+            3.806340207811445,
+            4.131043290952221
+          ],
+          "decode_median_tps": [
+            17.393057348388197,
+            18.05199211821025
+          ],
+          "aggregate_tps": [
+            11.169818266933305,
+            11.782593115098406
+          ]
+        }
+      },
+      "warmed": {
+        "measured_waves": 4,
+        "median": {
+          "ttft_median_seconds": 4.012002417002805,
+          "decode_median_tps": 17.300469273752803,
+          "aggregate_tps": 11.25761520738956
+        },
+        "range": {
+          "ttft_median_seconds": [
+            3.6916248330380768,
+            4.269481333205476
+          ],
+          "decode_median_tps": [
+            17.19480634639194,
+            18.015175017145065
+          ],
+          "aggregate_tps": [
+            10.977885293276513,
+            11.898794156019122
+          ]
+        }
+      }
+    },
+    "p2048-c4-o128": {
+      "cold": {
+        "measured_waves": 2,
+        "median": {
+          "ttft_median_seconds": 15.288641781720798,
+          "decode_median_tps": 12.532007679913846,
+          "aggregate_tps": 20.07491208467744
+        },
+        "range": {
+          "ttft_median_seconds": [
+            15.24282233393751,
+            15.334461229504086
+          ],
+          "decode_median_tps": [
+            12.405827317046873,
+            12.658188042780822
+          ],
+          "aggregate_tps": [
+            19.958663833487506,
+            20.191160335867373
+          ]
+        }
+      },
+      "warmed": {
+        "measured_waves": 4,
+        "median": {
+          "ttft_median_seconds": 15.605798989534378,
+          "decode_median_tps": 12.622635081937215,
+          "aggregate_tps": 19.871331099912005
+        },
+        "range": {
+          "ttft_median_seconds": [
+            15.459270520950668,
+            15.776733479113318
+          ],
+          "decode_median_tps": [
+            12.526168296793102,
+            12.794015971119176
+          ],
+          "aggregate_tps": [
+            19.81211478898691,
+            20.05684637157207
+          ]
+        }
+      }
+    }
+  },
+  "references": {
+    "vllm-metal": {
+      "p2048-c1-o128": {
+        "measured_waves": 15,
+        "median": {
+          "ttft_median_seconds": 4.2186499170493335,
+          "decode_median_tps": 20.751221590240995,
+          "aggregate_tps": 12.345161851581897
+        },
+        "range": {
+          "ttft_median_seconds": [
+            3.732310666004196,
+            5.010484082857147
+          ],
+          "decode_median_tps": [
+            17.228530127120674,
+            24.748229996574867
+          ],
+          "aggregate_tps": [
+            10.575633558810472,
+            14.4401600033898
+          ]
+        }
+      },
+      "p2048-c4-o128": {
+        "measured_waves": 15,
+        "median": {
+          "ttft_median_seconds": 11.569546042010188,
+          "decode_median_tps": 10.483987284770734,
+          "aggregate_tps": 21.178787200642738
+        },
+        "range": {
+          "ttft_median_seconds": [
+            11.329999249894172,
+            15.08056747901719
+          ],
+          "decode_median_tps": [
+            8.153958581124481,
+            10.594494997535293
+          ],
+          "aggregate_tps": [
+            16.88769616382055,
+            21.469306502411523
+          ]
+        }
+      }
+    },
+    "sglang-mlx": {
+      "p2048-c1-o128": {
+        "measured_waves": 15,
+        "median": {
+          "ttft_median_seconds": 4.158831042004749,
+          "decode_median_tps": 20.73700076281581,
+          "aggregate_tps": 12.518221714237225
+        },
+        "range": {
+          "ttft_median_seconds": [
+            3.920264458982274,
+            4.77910566679202
+          ],
+          "decode_median_tps": [
+            18.817042311998836,
+            22.258359925350092
+          ],
+          "aggregate_tps": [
+            11.418533314420394,
+            13.110462806078342
+          ]
+        }
+      },
+      "p2048-c4-o128": {
+        "measured_waves": 15,
+        "median": {
+          "ttft_median_seconds": 10.884484875015914,
+          "decode_median_tps": 6.306760478301644,
+          "aggregate_tps": 16.336590125923106
+        },
+        "range": {
+          "ttft_median_seconds": [
+            10.231152500142343,
+            12.761449333629571
+          ],
+          "decode_median_tps": [
+            5.685331515519856,
+            6.8421927767972495
+          ],
+          "aggregate_tps": [
+            14.47849542886359,
+            17.573845052242234
+          ]
+        }
+      }
+    }
+  },
+  "warmed_ratios": {
+    "vllm-metal": {
+      "p2048-c1-o128": {
+        "ttft_native_over_reference": 0.9510157268060145,
+        "decode_native_over_reference": 0.8337084734273653,
+        "aggregate_native_over_reference": 0.9119050315202647
+      },
+      "p2048-c4-o128": {
+        "ttft_native_over_reference": 1.3488687397818504,
+        "decode_native_over_reference": 1.2039918343160456,
+        "aggregate_native_over_reference": 0.9382657709176542
+      }
+    },
+    "sglang-mlx": {
+      "p2048-c1-o128": {
+        "ttft_native_over_reference": 0.9646947366894794,
+        "decode_native_over_reference": 0.834280206266609,
+        "aggregate_native_over_reference": 0.8992982760950821
+      },
+      "p2048-c4-o128": {
+        "ttft_native_over_reference": 1.4337655083113485,
+        "decode_native_over_reference": 2.0014451357975753,
+        "aggregate_native_over_reference": 1.2163695695823284
+      }
+    }
+  },
+  "quality_gate_passed": false,
+  "strict_coding": "0/8",
+  "goal_complete": false,
+  "audit_sha256": "b9a911f2da4365abe017e32bb2e86b56738f28a1a950d7af0f6086841fcff7f0",
+  "targets_met_against_each_reference": {
+    "vllm-metal": {
+      "single_request_decode_2x": false,
+      "aggregate_throughput_2x": false,
+      "half_ttft_c1": false,
+      "half_ttft_c4": false
+    },
+    "sglang-mlx": {
+      "single_request_decode_2x": false,
+      "aggregate_throughput_2x": false,
+      "half_ttft_c1": false,
+      "half_ttft_c4": false
+    }
+  }
+}

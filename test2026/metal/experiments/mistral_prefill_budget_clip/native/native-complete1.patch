@@ -1,0 +1,141 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -143,0 +144,7 @@
++option(GARNET_METAL_PREFILL_BUDGET_CLIP "Allow prepared owner extents larger than their actual clipped token quantum" OFF)
++if(GARNET_METAL_PREFILL_BUDGET_CLIP)
++    if(NOT GARNET_METAL_CHUNK_HALF_WIDE OR NOT GARNET_METAL_WIDE_OWNER_PREFILL OR NOT GARNET_METAL_DENSE_PREFILL_MAX_TOKENS EQUAL 512)
++        message(FATAL_ERROR "Clipped prefill requires qualified wide half owner profiles and512-token workspace")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_PREFILL_BUDGET_CLIP=1)
++endif()
+@@ -838,0 +846,2 @@
++add_executable(garnet_prefill_budget_clip_test test2026/native/prefill_budget_clip_test.cpp src/runtime/scheduler/continuous_batch_scheduler.cpp)
++add_test(NAME native_prefill_budget_clip COMMAND garnet_prefill_budget_clip_test)
+--- a/src/backends/metal/compact_prefill_session.cpp
++++ b/src/backends/metal/compact_prefill_session.cpp
+@@ -179 +179 @@
+-    const std::vector<size_t>& remaining,size_t maximum,size_t budget) {
++    const std::vector<size_t>& remaining,size_t maximum,size_t budget,bool clipToBudget) {
+@@ -187 +187 @@
+-    return SelectDenseOwnerPrefillChunk(rows,remaining,maximum,budget,families);
++    return SelectDenseOwnerPrefillChunk(rows,remaining,maximum,budget,families,clipToBudget);
+--- a/src/backends/metal/continuous_scheduler.cpp
++++ b/src/backends/metal/continuous_scheduler.cpp
+@@ -179 +179,5 @@
+-        return int(session->SelectPreparedPrefillChunk(rows,epochs,remaining,maximumPrefillChunk_,size_t(budget)));
++        bool clip=false;
++#ifdef GARNET_METAL_PREFILL_BUDGET_CLIP
++        clip=prefillBudgetClip_;
++#endif
++        return int(session->SelectPreparedPrefillChunk(rows,epochs,remaining,maximumPrefillChunk_,size_t(budget),clip));
+@@ -227,0 +232,8 @@
++#ifdef GARNET_METAL_PREFILL_BUDGET_CLIP
++bool MetalContinuousScheduler::SetPrefillBudgetClip(bool enabled) {
++    std::lock_guard<std::mutex> lock(mutex_);Ready();
++    if(!inflight_.empty()||!adaptiveProfiles_||rows_!=4||maximumPrefillChunk_!=512)return false;
++    if(!scheduler_->SetPrefillBudgetClip(enabled))return false;
++    prefillBudgetClip_=enabled;return true;
++}
++#endif
+@@ -229,0 +242,3 @@
++#ifdef GARNET_METAL_PREFILL_BUDGET_CLIP
++    if(prefillBudgetClip_&&tokens!=512)return false;
++#endif
+@@ -469 +484,5 @@
+-        {"tracked",scheduler_->TrackedRequestCount()},{"inflight",inflight_.size()},{"rows",rows_},{"capacity",capacity_},{"prefill_completion_priority",scheduler_->PrefillCompletionPriority()}}.dump();
++        {"tracked",scheduler_->TrackedRequestCount()},{"inflight",inflight_.size()},{"rows",rows_},{"capacity",capacity_},{"prefill_completion_priority",scheduler_->PrefillCompletionPriority()}
++#ifdef GARNET_METAL_PREFILL_BUDGET_CLIP
++        ,{"prefill_budget_clip",prefillBudgetClip_}
++#endif
++        }.dump();
+@@ -479,0 +499,3 @@
++#ifdef GARNET_METAL_PREFILL_BUDGET_CLIP
++    prefillBudgetClip_=false;
++#endif
+--- a/src/backends/metal/continuous_scheduler.h
++++ b/src/backends/metal/continuous_scheduler.h
+@@ -20,0 +21,3 @@
++#ifdef GARNET_METAL_PREFILL_BUDGET_CLIP
++    bool prefillBudgetClip_=false;
++#endif
+@@ -42,0 +46,3 @@
++#ifdef GARNET_METAL_PREFILL_BUDGET_CLIP
++    bool SetPrefillBudgetClip(bool enabled);
++#endif
+@@ -68,0 +75,3 @@
++#ifdef GARNET_METAL_PREFILL_BUDGET_CLIP
++        APISET().AddFunc<1>("set_prefill_budget_clip",&MetalContinuousScheduler::SetPrefillBudgetClip);
++#endif
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -311 +311 @@
+-        const std::vector<size_t>& remaining,size_t maximum,size_t budget);
++        const std::vector<size_t>& remaining,size_t maximum,size_t budget,bool clipToBudget=false);
+--- a/src/backends/metal/prefill_profile_policy.h
++++ b/src/backends/metal/prefill_profile_policy.h
+@@ -15 +15 @@
+-    const std::vector<DenseOwnerPrefillFamily>& families) {
++    const std::vector<DenseOwnerPrefillFamily>& families,bool clipToBudget=false) {
+@@ -26,0 +27 @@
++    if(clipToBudget&&rows.size()!=1)throw std::invalid_argument("Clipped prepared prefill supports one stable owner");
+@@ -30 +31,5 @@
+-    if(longest<=128)while(wanted<longest&&wanted<maximum)wanted*=2;
++    if(clipToBudget) {
++        const size_t bound=std::min({longest,maximum,budget});
++        if(longest&&!bound)return 0;
++        while(wanted<bound&&wanted<maximum)wanted*=2;
++    }else if(longest<=128)while(wanted<longest&&wanted<maximum)wanted*=2;
+@@ -39 +44 @@
+-        size_t tokens=0;for(size_t count:remaining)tokens+=std::min(count,chunk);
++        size_t tokens=0;for(size_t count:remaining)tokens+=clipToBudget?std::min({count,chunk,budget}):std::min(count,chunk);
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -272,0 +273,3 @@
++#ifdef GARNET_METAL_PREFILL_BUDGET_CLIP
++    info+="; native_prefill_budget_clip_optional_v1";
++#endif
+--- a/src/runtime/scheduler/continuous_batch_scheduler.cpp
++++ b/src/runtime/scheduler/continuous_batch_scheduler.cpp
+@@ -19,0 +20,3 @@
++        if(m_config.clipPrefillToBudget&&(!m_config.completePrefillFirst||!m_config.prefillChunkTokens||
++            !m_config.prefillChunkSelector||m_config.maxPrefillBatch<1||m_config.maxPrefillTokensPerTick<2))
++            throw std::invalid_argument("Clipped prefill requires one completion-first owner and prepared profiles");
+@@ -202,0 +206,2 @@
++            if(m_config.clipPrefillToBudget&&prefill.requests.size()!=1)
++                throw std::logic_error("Clipped prefill requires exactly one stable owner");
+@@ -209 +214 @@
+-                    m_prefillQueue.push_back(request.id);
++                    if(m_config.clipPrefillToBudget)m_prefillQueue.push_front(request.id);else m_prefillQueue.push_back(request.id);
+@@ -216 +221,2 @@
+-                    const int count=std::min(chunk,state.request.promptTokens-state.prefillProcessed);
++                    const int logical=std::min(chunk,state.request.promptTokens-state.prefillProcessed);
++                    const int count=m_config.clipPrefillToBudget?std::min(logical,budget):logical;
+@@ -225 +231,2 @@
+-                    const int count=std::min(chunk,state.request.promptTokens-state.prefillProcessed);
++                    const int logical=std::min(chunk,state.request.promptTokens-state.prefillProcessed);
++                    const int count=m_config.clipPrefillToBudget?std::min(logical,budget):logical;
+@@ -273,0 +281,7 @@
++    bool ContinuousBatchScheduler::SetPrefillBudgetClip(bool enabled)
++    {
++        if(!m_requests.empty()||m_groupChunks>1||
++           (enabled&&(!m_config.completePrefillFirst||!m_config.prefillChunkTokens||!m_config.prefillChunkSelector||
++            m_config.maxPrefillBatch<1||m_config.maxPrefillTokensPerTick<2)))return false;
++        m_config.clipPrefillToBudget=enabled;return true;
++    }
+@@ -276 +290 @@
+-        if(!m_requests.empty() || (enabled && (!m_config.prefillChunkTokens || m_groupChunks>1)))return false;
++        if(!m_requests.empty() || (!enabled&&m_config.clipPrefillToBudget) || (enabled && (!m_config.prefillChunkTokens || m_groupChunks>1)))return false;
+--- a/src/runtime/scheduler/continuous_batch_scheduler.h
++++ b/src/runtime/scheduler/continuous_batch_scheduler.h
+@@ -77,0 +78,3 @@
++        // Optional one-owner policy: prepared tensor extent and actual quantum
++        // differ. The latter is clipped to the budget left after ready decode.
++        bool clipPrefillToBudget = false;
+@@ -119,0 +123,2 @@
++        bool SetPrefillBudgetClip(bool enabled);
++        bool PrefillBudgetClip() const {return m_config.clipPrefillToBudget;}
+--- a/test2026/metal/half_chunk_attention_test.cpp
++++ b/test2026/metal/half_chunk_attention_test.cpp
+@@ -180 +180 @@
+- if(!makeReference&&!trained){CheckWidePartition(gpu,0,512,false);CheckWidePartition(gpu,1920,257,false);CheckWidePartition(gpu,3584,512,true);}
++ if(!makeReference&&!trained){CheckWidePartition(gpu,0,512,false);CheckWidePartition(gpu,1920,257,false);CheckWidePartition(gpu,3584,512,true);for(size_t active:{509ul,510ul,511ul})CheckWidePartition(gpu,3584,active,true);}

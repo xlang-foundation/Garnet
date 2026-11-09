@@ -1,0 +1,19 @@
+{
+  "scope": "Independent current-build ordinary one-token decode reference. No proposer or target verifier executes; complete generated IDs must still match the original frozen outputs. State remains producer-specific.",
+  "source": "worker1.py",
+  "worker_sha256": "d50119fe26dd22888b1b5a50c6657e66c2d25975a28b34f6c015b8aa4f76a963",
+  "changes": [
+    {
+      "old": "mode_names=['base'] if occupancy else ['base','scores','stop']",
+      "new": "mode_names=['ordinary']; require occupancy-control"
+    },
+    {
+      "old": "per-mode confidence policy",
+      "new": "ordinary only, no confidence"
+    }
+  ],
+  "untimed_correctness_only": true,
+  "old_frozen_state_gate_failed_for_both_current_builds": true,
+  "no_inference_rerun_of_existing_four_stages": true,
+  "goal_complete": false
+}

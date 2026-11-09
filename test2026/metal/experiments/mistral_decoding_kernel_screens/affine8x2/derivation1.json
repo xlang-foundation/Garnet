@@ -1,0 +1,17 @@
+{
+  "base": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1",
+  "base_files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/screen3.mm": "9944af12e4b4d284960f2c42d4a032edbe10e9cbe7d291c60e42a5c4eca5df8d",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/interleaved3.metal": "79b413131cab50b0e4d2ced82e20d5eb317dec6ba4762d00628725a3fdcd81a9",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/control1.metal": "235fa95409746c9d38d310fed3e661a423967ece0f6608a0b021ec5c1d564f5a",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/audit4.py": "9bf4d3d59193b105f40547b5c5d52e84c658c93f6e1ebf2f997bdb37e54228ae",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-fp32-projection-screen1/plan1.json": "1464fe87689a040aa1ba7f3088ee9c2c6c749a27db803f09b3a0342af0ba6ef5"
+  },
+  "selected_count_specialized": true,
+  "changes": [
+    "8 rows x2 columns:16 accumulators/lane, same serial FMA and simd_sum order",
+    "candidate grid ceil(N/8)*ceil(selectedCount/8)",
+    "second fresh cohort reverses geometry and method order",
+    "no native runtime changes"
+  ]
+}

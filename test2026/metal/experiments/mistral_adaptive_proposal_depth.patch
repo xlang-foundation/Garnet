@@ -1,0 +1,48 @@
+--- a/test2026/metal/run_mistral_proposal_depth_oracle.py
++++ b/test2026/metal/run_mistral_proposal_depth_oracle.py
+@@ -1,5 +1,5 @@
+ # SPDX-License-Identifier: Apache-2.0
+-"""Causal proposal-depth feasibility only; the target is a frozen token oracle.
++"""Causal adaptive-depth feasibility only; the target is a frozen token oracle.
+
+ Args LIB SOURCE INPUT OUTPUT. Native Qwen0.6 proposes from user messages and
+ already-committed Mistral text. A separate frozen oracle supplies acceptance and
+@@ -108,29 +108,30 @@
+   'text_zero_based_3axis_v1','B1D512T16oracle-feasibility','text'],2,512*1024*1024)
+  prepared=dict(graphs=graph_count,prefill_compile_ms=prepared_compile_ms,memory=json.loads(garnet.memory_stats_json()))
+  for index,case in enumerate(inputs['cases']):
+-  for depth in ([3,7] if index%2==0 else [7,3]):
+-   inputs['draft_token_limit']=8 if depth==3 else 16
++  for policy in ['adaptive']:
++   previous_accepted=0
+    draft.session.clear_token_prefixes();assert draft_lease is None
+    with open(case['control']) as stream:raw=json.load(stream)
+    oracle=raw['generated_ids'];assert raw['prompt_ids']==case['prompt_ids']
+    generated=[oracle[0]];rounds=[];began=time.monotonic()
+    while generated[-1] not in inputs['target_stops'] and len(generated)<inputs['output_limit']:
++    depth=7 if previous_accepted>=3 else 3;inputs['draft_token_limit']=8 if depth==3 else 16
+     cursor=len(generated);remaining=inputs['output_limit']-cursor
+     proposal,trace=propose(case,generated,min(depth,remaining-1),'resident') if remaining>1 else ([],dict(seconds=0.,reason='clipped_tail',aligned=False))
+     emitted=oracle_commit(oracle,cursor,proposal,remaining);assert emitted
+-    rounds.append(dict(committed_before=cursor,proposal=proposal,emitted_ids=emitted,consumed=len(emitted),accepted_draft=len(emitted)-1,draft=trace))
+-    generated.extend(emitted)
++    rounds.append(dict(depth=depth,draft_budget=inputs['draft_token_limit'],committed_before=cursor,proposal=proposal,emitted_ids=emitted,consumed=len(emitted),accepted_draft=len(emitted)-1,draft=trace))
++    generated.extend(emitted);previous_accepted=len(emitted)-1
+    if draft_lease is not None:assert draft.session.release_request_row(0,draft_lease[1]);draft_lease=None
+    assert generated==oracle,'oracle token mismatch'
+    assert len(draft.prefill_graphs)==graph_count,'new graph after readiness'
+    assert draft.prefill_compile_ms==0,'compilation after readiness'
+-   records.append(dict(case_id=case['id'],depth=depth,draft_budget=inputs['draft_token_limit'],generated_ids=generated,
++   records.append(dict(case_id=case['id'],depth='adaptive',draft_budget='per-round',generated_ids=generated,
+     draft_only_seconds=time.monotonic()-began,rounds=rounds,memory=json.loads(garnet.memory_stats_json())))
+-   save(False);print('oracle_depth',case['id'],depth,'target_calls',len(rounds),'accepted',sum(t['accepted_draft'] for t in rounds),'draft_steps',sum(len(t['draft'].get('executed_draft_ids',[])) for t in rounds),flush=True)
++   save(False);print('oracle_adaptive',case['id'],'target_calls',len(rounds),'accepted',sum(t['accepted_draft'] for t in rounds),'draft_steps',sum(len(t['draft'].get('executed_draft_ids',[])) for t in rounds),flush=True)
+ finally:
+  if draft is not None:draft.close()
+  garnet.shutdown();cleanup=json.loads(garnet.memory_stats_json())
+  for key in ('garnet_live_matrix_owners','garnet_live_affine_weight_owners','garnet_live_bf16_weight_owners','garnet_live_pipeline_sets'):assert cleanup[key]==0
+  assert cleanup['metal_allocated_bytes']<=4*1024*1024
+- save(len(records)==16)
+-assert len(records)==16
++ save(len(records)==8)
++assert len(records)==8

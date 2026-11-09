@@ -10,6 +10,7 @@
 int main() {
     try {
         Garnet::MetalContext gpu;
+        size_t packedNormCases=0,residualNormCases=0,normFP64Words=0;
 #ifdef GARNET_METAL_MPS_VISION_SCORES
         size_t visionChecks=0;
         for(size_t tokens:{4,24,216})for(size_t batch:{1,2})for(size_t heads:{2,12})for(size_t dim:{8,64}) {
@@ -148,7 +149,7 @@ int main() {
 #endif
         try {gpu.UploadBF16(&nonfinite,2,1,1);}catch(const std::invalid_argument&){bf16Rejected=true;}
         if(!bf16Rejected)throw std::runtime_error("Nonfinite BF16 weight accepted");
-        for(size_t width:{7,1031})for(float offset:{0.0f,1.0f}) {
+        for(size_t width:{7,1031,4096})for(float offset:{0.0f,1.0f}) {
 #ifdef GARNET_METAL_GLOBAL_HALF_ALPHA
             if(width==7&&offset==0) {
                 // Identical shapes with different common scales must not share
@@ -186,7 +187,7 @@ int main() {
             }
 #endif
 #ifdef GARNET_METAL_PACKED_PREFILL_NORM
-            for(size_t batch:{1,2})for(size_t chunk:{2,24,64,80})for(float scale:{1.0f,-1.0f,0.5f,2.0f}) {
+            for(size_t batch:{1,2,3,4})for(size_t chunk:{2,24,64,80,128})for(float scale:{1.0f,-1.0f,0.5f,2.0f}) {
                 if(chunk>Garnet::kMetalPrefillChunkLimit)continue;
                 const size_t rows=batch*chunk,count=rows*width;
                 std::vector<float> av(count),bv(count),wv(width);
@@ -198,12 +199,24 @@ int main() {
                 gpu.EncodeRMSNorm(layout,w,norm,1e-6f,offset);gpu.SubmitAndWait();
                 const auto expectedP=gpu.Download(packed),expectedL=gpu.Download(layout),expectedN=gpu.Download(norm);
                 auto fp=gpu.Allocate(batch,chunk*width),fl=gpu.Allocate(rows,width),fn=gpu.Allocate(rows,width),sum=gpu.Allocate(rows,width);
+                const std::vector<float> poison(count,std::numeric_limits<float>::quiet_NaN());
+                gpu.Update(fp,poison);gpu.Update(fl,poison);gpu.Update(fn,poison);
                 gpu.Begin();gpu.EncodePackedPrefillNorm(a,b,w,fp,fl,fn,1e-6f,offset);
                 gpu.EncodeAdd(fl,fn,sum);gpu.SubmitAndWait();
                 const auto actualP=gpu.Download(fp),actualL=gpu.Download(fl),actualN=gpu.Download(fn),actualSum=gpu.Download(sum);
                 if(std::memcmp(actualP.data(),expectedP.data(),count*4)||std::memcmp(actualL.data(),expectedL.data(),count*4)||
                     std::memcmp(actualN.data(),expectedN.data(),count*4)||gpu.LastPackedPrefillNormDispatches()!=1)
                     throw std::runtime_error("Packed prefill normalization changed output bits/counter");
+                for(size_t row=0;row<rows;++row) {
+                    double squares=0;for(size_t j=0;j<width;++j){float x=av[row*width+j]+bv[row*width+j];squares+=double(x)*x;}
+                    for(size_t j=0;j<width;++j){const size_t at=row*width+j;float x=av[at]+bv[at];
+                        const double expected=double(x)/std::sqrt(squares/width+1e-6)*(double(wv[j])+offset);
+                        if(!std::isfinite(actualN[at])||actualP[at]!=x||actualL[at]!=x||std::abs(actualN[at]-expected)>2e-6+2e-6*std::abs(expected))
+                            throw std::runtime_error("Packed norm full-output independent FP64 mismatch");
+                        ++normFP64Words;
+                    }
+                }
+                ++packedNormCases;
                 for(size_t i=0;i<count;++i)if(actualSum[i]!=expectedL[i]+expectedN[i])
                     throw std::runtime_error("Packed prefill normalization outputs unavailable downstream");
                 gpu.Begin();if(gpu.LastPackedPrefillNormDispatches())throw std::runtime_error("Packed prefill Begin counter not reset");
@@ -222,9 +235,15 @@ int main() {
                 gpu.EncodePackedPrefillNorm(a,b,w,fp,fl,fn,1e-6f,offset);gpu.Abort();
                 if(gpu.LastPackedPrefillNormDispatches())throw std::runtime_error("Packed prefill Abort counter not reset");
             }
+            {
+                auto a=gpu.Upload(std::vector<float>(70,.25f),5,14),b=gpu.Upload(std::vector<float>(70,.5f),5,14),w=gpu.Upload(std::vector<float>(7,1.f),1,7);
+                auto packed=gpu.Allocate(5,14),flat=gpu.Allocate(10,7),norm=gpu.Allocate(10,7);
+                gpu.Begin();bool rejected=false;try{gpu.EncodePackedPrefillNorm(a,b,w,packed,flat,norm,1e-6f,0);}catch(const std::invalid_argument&){rejected=true;}
+                gpu.Abort();if(!rejected)throw std::runtime_error("Packed norm accepted physical batch beyond4");
+            }
 #endif
 #ifdef GARNET_METAL_RESIDUAL_NORM
-            for(size_t rows:{1,2,16,32})for(float scale:{1.0f,-1.0f,0.5f,2.0f}) {
+            for(size_t rows:{1,2,4,16,32})for(float scale:{1.0f,-1.0f,0.5f,2.0f}) {
                 std::vector<float> av(rows*width),bv(rows*width),wv(width);
                 for(size_t i=0;i<av.size();++i){av[i]=std::sin(float(i)*.013f)*scale;bv[i]=std::cos(float(i)*.027f)*.2f;}
                 for(size_t i=0;i<width;++i)wv[i]=std::cos(float(i)*.11f);
@@ -232,12 +251,23 @@ int main() {
                 auto r=gpu.Allocate(rows,width),n=gpu.Allocate(rows,width),fr=gpu.Allocate(rows,width),fn=gpu.Allocate(rows,width);
                 gpu.Begin();gpu.EncodeAdd(a,b,r);gpu.EncodeRMSNorm(r,w,n,1e-6f,offset);gpu.SubmitAndWait();
                 const auto expectedR=gpu.Download(r),expectedN=gpu.Download(n);
+                const std::vector<float> poison(rows*width,std::numeric_limits<float>::quiet_NaN());gpu.Update(fr,poison);gpu.Update(fn,poison);
                 gpu.Begin();gpu.EncodeResidualRMSNorm(a,b,w,fr,fn,1e-6f,offset);
                 auto downstream=gpu.Allocate(rows,width);gpu.EncodeAdd(fr,fn,downstream);gpu.SubmitAndWait();
                 auto actualR=gpu.Download(fr),actualN=gpu.Download(fn),sum=gpu.Download(downstream);
                 if(actualR!=expectedR||actualN!=expectedN||std::memcmp(actualR.data(),expectedR.data(),actualR.size()*4)||
                     std::memcmp(actualN.data(),expectedN.data(),actualN.size()*4)||gpu.LastResidualNormDispatches()!=1)
                     throw std::runtime_error("Fused residual RMS differs from original outputs/counter");
+                for(size_t row=0;row<rows;++row) {
+                    double squares=0;for(size_t j=0;j<width;++j){float x=av[row*width+j]+bv[row*width+j];squares+=double(x)*x;}
+                    for(size_t j=0;j<width;++j){const size_t at=row*width+j;float x=av[at]+bv[at];
+                        const double expected=double(x)/std::sqrt(squares/width+1e-6)*(double(wv[j])+offset);
+                        if(!std::isfinite(actualN[at])||actualR[at]!=x||std::abs(actualN[at]-expected)>2e-6+2e-6*std::abs(expected))
+                            throw std::runtime_error("Residual norm full-output independent FP64 mismatch");
+                        ++normFP64Words;
+                    }
+                }
+                ++residualNormCases;
                 for(size_t i=0;i<sum.size();++i)if(sum[i]!=expectedR[i]+expectedN[i])
                     throw std::runtime_error("Fused residual RMS outputs unavailable to downstream consumer");
                 gpu.Begin();if(gpu.LastResidualNormDispatches())throw std::runtime_error("Residual RMS Begin counter not reset");
@@ -267,6 +297,7 @@ int main() {
                     if(!std::isfinite(actual[row*width+k])||std::abs(actual[row*width+k]-expected)>2e-6)
                         throw std::runtime_error("Parallel RMS differs from independent FP64 reference");}}
         }
+        std::cout<<"norm_fusion_oracle packed_cases="<<packedNormCases<<" residual_cases="<<residualNormCases<<" fp64_words="<<normFP64Words<<"\n";
         for(size_t width:{7,1031}) {
             std::vector<float> values(2*width,-100);values[3]=8;values[width-1]=8;values[width+5]=9;
             auto a=gpu.Upload(values,2,width),out=gpu.Allocate(2,2);

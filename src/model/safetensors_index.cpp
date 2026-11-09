@@ -141,14 +141,18 @@ namespace Garnet
         std::error_code filesystemError;
         std::filesystem::path resolvedPath = filePath;
         if (std::filesystem::is_directory(resolvedPath, filesystemError)) {
-            const auto singleFile = resolvedPath / "model.safetensors";
-            const auto indexFile = resolvedPath / "model.safetensors.index.json";
-            if (std::filesystem::is_regular_file(singleFile, filesystemError)) {
-                resolvedPath = singleFile;
-            }
-            else {
+            bool found=false;
+            for(const char* filename:{"model.safetensors","model.safetensors.index.json",
+                "diffusion_pytorch_model.safetensors","diffusion_pytorch_model.safetensors.index.json"}){
                 filesystemError.clear();
-                resolvedPath = indexFile;
+                const auto candidate=filePath/filename;
+                if(std::filesystem::is_regular_file(candidate,filesystemError)){
+                    resolvedPath=candidate;found=true;break;
+                }
+            }
+            if(!found){
+                errorMessage="directory contains no supported safetensors model or index: "+resolvedPath.string();
+                return false;
             }
         }
         resolvedPath = std::filesystem::absolute(resolvedPath).lexically_normal();
@@ -157,6 +161,10 @@ namespace Garnet
         const bool isShardIndex = resolvedPath.extension() == ".json";
         if (isShardIndex) {
             std::ifstream indexStream(resolvedPath);
+            if(!indexStream){
+                errorMessage="safetensors index is missing or unreadable: "+resolvedPath.string();
+                return false;
+            }
             nlohmann::json indexRoot;
             try {
                 indexStream >> indexRoot;

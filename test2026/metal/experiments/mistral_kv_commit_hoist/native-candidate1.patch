@@ -1,0 +1,422 @@
+diff --git a/cmake/GarnetMetal.cmake b/cmake/GarnetMetal.cmake
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -124,6 +124,14 @@
+ endif()
+ option(GARNET_METAL_CHUNK_ATTENTION_BUCKETS "Select prepared context buckets and sparse tails from completed native controls" OFF)
+ option(GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS "Prepare MPS request-span schedules and omit inactive request products" OFF)
++option(GARNET_METAL_CHUNK_KV_COMMIT_HOIST "Prove and hoist private KV commits before unchanged attention math" OFF)
++if(GARNET_METAL_CHUNK_KV_COMMIT_HOIST)
++    if(NOT GARNET_METAL_CHUNK_ATTENTION_MPS OR NOT GARNET_METAL_CHUNK_KV_INPLACE OR NOT GARNET_METAL_CHUNK_KV_SCATTER OR
++       NOT GARNET_METAL_RESIDENT_KV_INPLACE OR NOT GARNET_METAL_PREPARED_KV_ROW_SPANS)
++        message(FATAL_ERROR "KV commit hoist requires prepared private in-place KV and MPS attention")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_CHUNK_KV_COMMIT_HOIST=1)
++endif()
+ if(GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS)
+     if(NOT GARNET_METAL_CHUNK_ATTENTION_BUCKETS)
+         message(FATAL_ERROR "Active request attention schedules require prepared context buckets")
+@@ -845,6 +853,11 @@
+     add_test(NAME metal_chunk_attention_mps_plan COMMAND garnet_chunk_attention_mps_plan_test)
+     add_executable(garnet_chunk_attention_policy_test test2026/metal/chunk_attention_policy_test.cpp)
+     add_test(NAME native_chunk_attention_policy COMMAND garnet_chunk_attention_policy_test)
++    add_executable(garnet_kv_commit_hoist_policy_test test2026/metal/kv_commit_hoist_policy_test.cpp)
++    add_test(NAME native_kv_commit_hoist_policy COMMAND garnet_kv_commit_hoist_policy_test)
++    add_executable(garnet_kv_commit_hoist_controls_test test2026/metal/kv_commit_hoist_controls_test.cpp)
++    target_link_libraries(garnet_kv_commit_hoist_controls_test PRIVATE garnet_metal)
++    add_test(NAME metal_kv_commit_hoist_controls COMMAND garnet_kv_commit_hoist_controls_test)
+     if(GARNET_METAL_CHUNK_ATTENTION_ACTIVE_ROWS)
+         add_executable(garnet_chunk_attention_active_rows_test test2026/metal/chunk_attention_active_rows_test.cpp)
+         target_include_directories(garnet_chunk_attention_active_rows_test PRIVATE third_party)
+diff --git a/src/backends/metal/chunk_mps_contiguous_policy.h b/src/backends/metal/chunk_mps_contiguous_policy.h
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/chunk_mps_contiguous_policy.h
+@@ -0,0 +1,28 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++#include <cmath>
++#include <cstddef>
++namespace Garnet {
++// Call only for completed, shared, nonpending controls. Unknown GPU controls
++// must retain generic selection; this helper never synchronizes or reads them.
++inline bool ChunkMPSContiguousPrefix(size_t batch,size_t chunk,size_t capacity,
++    const float* slots,size_t slotStride,const float* active,size_t activeStride) {
++    if(!batch||batch>4||!chunk||chunk>512||!capacity||capacity>4096||
++       !slots||!active||slotStride<chunk||activeStride<chunk)return false;
++    for(size_t b=0;b<batch;++b) {
++        size_t count=0;
++        while(count<chunk&&active[b*activeStride+count]!=0) {
++            if(!std::isfinite(active[b*activeStride+count]))return false;
++            ++count;
++        }
++        for(size_t t=count;t<chunk;++t)if(active[b*activeStride+t]!=0)return false;
++        if(!count)continue;
++        float first=slots[b*slotStride];
++        if(count>capacity||!std::isfinite(first)||first<0||first!=std::floor(first)||
++           double(first)+double(count)>double(capacity))return false;
++        for(size_t t=0;t<count;++t)
++            if(slots[b*slotStride+t]!=first+float(t))return false;
++    }
++    return true;
++}
++}
+diff --git a/src/backends/metal/compiled_graph.cpp b/src/backends/metal/compiled_graph.cpp
+--- a/src/backends/metal/compiled_graph.cpp
++++ b/src/backends/metal/compiled_graph.cpp
+@@ -300,6 +300,9 @@
+     verificationTokens_=0;
+ #ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+     diagnosticAliases_.clear();
++#endif
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++    kvHoistPlan_={};
+ #endif
+     visionGlobalAlphaDispatches_=0;++generation_;ready_=false;bf16Projections_=false;outputParts_.clear();outputStorageGroups_.clear();residentOps_.clear();controlSources_.clear();ops_.clear();inputs_.clear();inputShapes_.clear();tensors_.clear();weights_.clear();sharedWeights_.clear();weightRecords_.clear();bindings_.clear();slots_.clear();gpu_.reset();
+ #ifdef GARNET_METAL_MTP_DEFER_PACKS
+@@ -1316,6 +1319,21 @@
+             if(eligible&&writer)outputStorageGroups_[part]=std::move(group);
+         }
+         resetKVPrefix_[0]=ComputeResetKVPrefix(1);resetKVPrefix_[1]=ComputeResetKVPrefix(2);
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++        // Build from immutable logical aliases before any shared scratch rebinding.
++        if(!mtpProgram_&&!verificationTokens_&&inputs_.size()==6&&inputShapes_[0].size()==3&&
++           inputShapes_[0][2]==4096&&outputStorageGroups_.size()==3&&residentOps_.size()==ops_.size()) {
++            std::vector<KVHoistNode> nodes;nodes.reserve(ops_.size());
++            for(size_t i=0;i<ops_.size();++i){const auto& op=ops_[i];KVHoistNode n;n.resident=residentOps_[i];
++                n.kind=op.kind==Kind::AttentionChunk?KVHoistNode::Attention:op.kind==Kind::KVChunk?KVHoistNode::Commit:KVHoistNode::Other;
++                n.reads={canonical(op.a),canonical(op.b)};for(auto id:op.arguments){n.reads.push_back(canonical(id));n.args.push_back(canonical(id));}
++                n.writes={canonical(op.out)};if(op.auxiliaryOutput!=SIZE_MAX)n.writes.push_back(canonical(op.auxiliaryOutput));n.dims=op.dimensions;nodes.push_back(std::move(n));}
++            std::array<size_t,6> ids;for(size_t i=0;i<6;++i)ids[i]=canonical(inputs_[i]);
++            std::array<std::vector<size_t>,2> groups;for(size_t i=0;i<2;++i)for(auto id:outputStorageGroups_[i+1])groups[i].push_back(canonical(id));
++            for(auto& group:groups){std::sort(group.begin(),group.end());group.erase(std::unique(group.begin(),group.end()),group.end());}
++            kvHoistPlan_=ProveKVCommitHoist(nodes,ids,groups,size_t(inputShapes_[0][0]),size_t(inputShapes_[0][1]));
++        }
++#endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+         for(const auto& op:ops_)if(op.kind==Kind::AttentionChunk) {
+             std::vector<MetalMatrix> args;for(auto id:op.arguments)args.push_back(slots_[id].matrix);
+@@ -1604,8 +1622,33 @@
+     const char* profile=std::getenv("GARNET_METAL_PROFILE_OPS");
+     const bool profileOps=profile&&std::strcmp(profile,"1")==0;
+     static const char* names[]={"MatMul","BF16MatVec","Norm","Silu","Add","Bias","Mask","Conv","Delta","Slice","Prepare","GateNorm","Concat","NormRope","KVUpdate","KVChunk","AttentionChunk","Scores","AttentionContext","Vision","Layout","DeltaSplit","ConvChunk","DeltaChunk","VerificationAttention"};
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++    bool hoisted=false;
++#endif
+     for(size_t i=0;i<ops_.size();++i) {
+         if(!packedOutput&&!residentOps_[i])continue;
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++        if(hoisted&&(i==kvHoistPlan_.commits[0]||i==kvHoistPlan_.commits[1]))continue;
++        if(!packedOutput&&!verification&&!profileOps&&kvHoistPlan_.Valid()&&i==kvHoistPlan_.attention&&
++           residentOps_[kvHoistPlan_.commits[0]]&&residentOps_[kvHoistPlan_.commits[1]]) {
++            const auto& attention=ops_[i];const auto& args=attention.arguments;
++            bool safe=true;
++            for(size_t part=0;part<2;++part){const auto& commit=ops_[kvHoistPlan_.commits[part]];
++                const auto& old=slots_[args[part+3]].matrix;
++                safe=safe&&old.SameView(slots_[commit.out].matrix)&&old.SameView(slots_[commit.arguments[1]].matrix);
++                for(size_t n:{size_t(0),size_t(1),size_t(2),size_t(5),size_t(6),size_t(7)})safe=safe&&!old.SharesStorage(slots_[args[n]].matrix);
++                safe=safe&&!old.SharesStorage(slots_[attention.out].matrix);
++            }
++            safe=safe&&!slots_[args[3]].matrix.SharesStorage(slots_[args[4]].matrix)&&
++                gpu.CanHoistKVControls(slots_[args[5]].matrix,slots_[args[6]].matrix,size_t(inputShapes_[0][0]),attention.dimensions[4],attention.dimensions[3]);
++            if(safe){
++                for(auto at:kvHoistPlan_.commits){const auto& commit=ops_[at];const auto& a=commit.arguments;
++                    gpu.EncodeKVChunk(slots_[a[0]].matrix,slots_[a[1]].matrix,slots_[a[2]].matrix,slots_[a[3]].matrix,slots_[commit.out].matrix,
++                        commit.dimensions[0],commit.dimensions[1],commit.dimensions[2],commit.dimensions[3],commit.contiguousSlots);}
++                gpu.NoteChunkKVCommitHoist();hoisted=true;
++            }
++        }
++#endif
+         const auto& op=ops_[i];
+         gpu.SetGpuCounterRegion(names[size_t(op.kind)],i,slots_[op.a].rows,slots_[op.a].columns);
+         struct CounterRegionScope {MetalContext& gpu;~CounterRegionScope(){gpu.ClearGpuCounterRegion();}} counterScope{gpu};
+diff --git a/src/backends/metal/compiled_graph.h b/src/backends/metal/compiled_graph.h
+--- a/src/backends/metal/compiled_graph.h
++++ b/src/backends/metal/compiled_graph.h
+@@ -2,6 +2,9 @@
+ #pragma once
+ #include "xlang3/xlang3.h"
+ #include "metal_context.h"
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++#include "kv_commit_hoist_policy.h"
++#endif
+ #include "safetensors_index.h"
+ #ifdef GARNET_METAL_MLX_AFFINE_INT4
+ #include "mlx_qwen35_checkpoint.h"
+@@ -54,6 +57,9 @@
+     std::vector<size_t> outputParts_;
+     std::vector<std::vector<size_t>> outputStorageGroups_;
+     std::vector<uint8_t> residentOps_;
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++    KVHoistPlan kvHoistPlan_;
++#endif
+     uint64_t generation_=0;
+     double compileMs_=0,inferenceMs_=0;
+     size_t visionGlobalAlphaDispatches_=0;
+diff --git a/src/backends/metal/decoder_session.h b/src/backends/metal/decoder_session.h
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -438,6 +438,7 @@
+     size_t LastChunkProbabilityReuseDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkProbabilityReuseDispatches():0;}
+     size_t LastChunkAttentionIndex32Dispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionIndex32Dispatches():0;}
+     size_t LastChunkKVScatterDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkKVScatterDispatches():0;}
++    size_t LastChunkKVHoistedCommits() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkKVHoistedCommits():0;}
+     size_t LastLayoutVectorDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastLayoutVectorDispatches():0;}
+     size_t LastChunkAttentionMPSDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSDispatches():0;}
+     size_t LastChunkFlashAttentionDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkFlashAttentionDispatches():0;}
+@@ -645,6 +646,7 @@
+         APISET().AddProp("chunk_probability_reuse_dispatches",&MetalDecoderSession::LastChunkProbabilityReuseDispatches);
+         APISET().AddProp("chunk_attention_index32_dispatches",&MetalDecoderSession::LastChunkAttentionIndex32Dispatches);
+         APISET().AddProp("chunk_kv_scatter_dispatches",&MetalDecoderSession::LastChunkKVScatterDispatches);
++        APISET().AddProp("chunk_kv_hoisted_commits",&MetalDecoderSession::LastChunkKVHoistedCommits);
+         APISET().AddProp("layout_vector_dispatches",&MetalDecoderSession::LastLayoutVectorDispatches);
+         APISET().AddProp("chunk_attention_mps_dispatches",&MetalDecoderSession::LastChunkAttentionMPSDispatches);
+         APISET().AddProp("chunk_flash_attention_dispatches",&MetalDecoderSession::LastChunkFlashAttentionDispatches);
+diff --git a/src/backends/metal/kv_commit_hoist_policy.h b/src/backends/metal/kv_commit_hoist_policy.h
+new file mode 100644
+--- /dev/null
++++ b/src/backends/metal/kv_commit_hoist_policy.h
+@@ -0,0 +1,64 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++#include <algorithm>
++#include <array>
++#include <cstddef>
++#include <cstdint>
++#include <set>
++#include <vector>
++namespace Garnet {
++// Slot IDs are immutable logical roots, never inferred from pooled GPU storage.
++struct KVHoistNode {
++    enum Kind {Other,Attention,Commit};Kind kind=Other;bool resident=true;
++    std::vector<size_t> reads,writes,args,dims;
++};
++struct KVHoistPlan {size_t attention=SIZE_MAX;std::array<size_t,2> commits{SIZE_MAX,SIZE_MAX};bool Valid()const{return attention!=SIZE_MAX;}};
++inline KVHoistPlan ProveKVCommitHoist(const std::vector<KVHoistNode>& nodes,
++    const std::array<size_t,6>& inputs,const std::array<std::vector<size_t>,2>& outputs,size_t batch,size_t chunk) {
++    KVHoistPlan none,plan;
++    if(!batch||batch>4||chunk<2||chunk>128||batch*chunk>512||
++       std::set<size_t>(inputs.begin(),inputs.end()).size()!=6)return none;
++    auto has=[](const auto& a,size_t id){return std::find(a.begin(),a.end(),id)!=a.end();};
++    for(size_t i=0;i<nodes.size();++i)if(nodes[i].resident&&nodes[i].kind==KVHoistNode::Attention) {
++        if(plan.Valid())return none;const auto& n=nodes[i];
++        if(n.dims!=std::vector<size_t>{32,8,128,4096,chunk,0}||n.args.size()!=8||n.writes.size()!=1||
++           n.args[3]!=inputs[1]||n.args[4]!=inputs[2]||n.args[5]!=inputs[4]||n.args[6]!=inputs[5])return none;
++        plan.attention=i;
++    }
++    if(!plan.Valid())return none;const auto& a=nodes[plan.attention];
++    if(std::set<size_t>{a.args[0],a.args[1],a.args[2]}.size()!=3)return none;
++    for(size_t part=0;part<2;++part) {
++        if(outputs[part].empty())return none;
++        for(auto id:outputs[part])if(has(inputs,id)||has(outputs[1-part],id)||has(a.args,id))return none;
++        size_t producers=0;
++        for(size_t i=0;i<nodes.size();++i)if(nodes[i].resident) {
++            const auto& n=nodes[i];
++            if(has(n.writes,inputs[part+1]))return none;
++            for(auto id:n.writes)if(has(outputs[part],id)) {
++                if(++producers!=1||n.kind!=KVHoistNode::Commit||i<=plan.attention||n.writes.size()!=1||
++                   n.dims!=std::vector<size_t>{8,128,4096,chunk}||
++                   n.args!=std::vector<size_t>{a.args[part+1],inputs[part+1],inputs[4],inputs[5],inputs[3]})return none;
++                plan.commits[part]=i;
++            }
++        }
++        if(producers!=1)return none;
++    }
++    for(size_t role=0;role<3;++role){size_t producers=0;
++        if(has(inputs,a.args[role]))return none;
++        for(size_t i=0;i<nodes.size();++i)if(nodes[i].resident&&has(nodes[i].writes,a.args[role])) {
++            if(i>=plan.attention||++producers!=1)return none;
++        }
++        if(producers!=1)return none;
++    }
++    for(size_t i=0;i<nodes.size();++i)if(nodes[i].resident) {
++        const auto& n=nodes[i];
++        for(size_t part=0;part<2;++part) {
++            if(i>=plan.attention&&has(n.reads,inputs[part+1])&&i!=plan.attention&&i!=plan.commits[part])return none;
++            if(i<plan.commits[part])for(auto id:outputs[part])if(has(n.reads,id))return none;
++        }
++        if(i>=plan.attention&&i<=std::max(plan.commits[0],plan.commits[1]))
++            for(auto id:n.writes)if(id==a.args[1]||id==a.args[2]||id==inputs[3]||id==inputs[4]||id==inputs[5])return none;
++    }
++    return plan;
++}
++}
+diff --git a/src/backends/metal/metal_context.h b/src/backends/metal/metal_context.h
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -63,6 +63,7 @@
+     MetalMatrix() = default;
+     bool Valid() const {return bool(impl_);}
+     bool SharesStorage(const MetalMatrix&) const;
++    bool SameView(const MetalMatrix& other) const {return impl_&&impl_==other.impl_;}
+     bool CompatibleLayout(const MetalMatrix&) const;
+ };
+ #ifdef GARNET_METAL_REQUEST_ROWS
+@@ -121,6 +122,10 @@
+ };
+ struct MetalProfileOwnerStats {size_t matrices=0,affineWeights=0,bf16Weights=0,pipelineSets=0;};
+ class MetalContext {
++    friend class MetalCompiledGraph;
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++    void NoteChunkKVCommitHoist();
++#endif
+     struct Impl;
+     std::unique_ptr<Impl> impl_;
+ #ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+@@ -447,6 +452,10 @@
+     size_t LastChunkProbabilityReuseDispatches() const;
+     size_t LastChunkAttentionIndex32Dispatches() const;
+     size_t LastChunkKVScatterDispatches() const;
++    size_t LastChunkKVHoistedCommits() const;
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++    bool CanHoistKVControls(const MetalMatrix&,const MetalMatrix&,size_t batch,size_t chunk,size_t capacity) const;
++#endif
+     size_t LastLayoutVectorDispatches() const;
+     size_t LastChunkAttentionOptimizedDispatches() const;
+     size_t LastChunkAttentionMPSDispatches() const;
+diff --git a/src/backends/metal/metal_context.mm b/src/backends/metal/metal_context.mm
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -3,6 +3,9 @@
+ #endif
+ // SPDX-License-Identifier: Apache-2.0
+ #include "metal_context.h"
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++#include "chunk_mps_contiguous_policy.h"
++#endif
+ #ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+ #include "bulk_silu_half_policy.h"
+ #include "bulk_silu_half_shader.h"
+@@ -663,7 +666,7 @@
+ #endif
+     size_t chunkAttentionMPSDispatches=0,chunkFlashAttentionDispatches=0;
+     size_t chunkAttentionMPSMatrices=0,chunkAttentionMPSSkippedMatrices=0;
+-    size_t chunkKVScatterDispatches=0;
++    size_t chunkKVScatterDispatches=0,chunkKVHoistedCommits=0;
+     size_t layoutVectorDispatches=0;
+     size_t chunkAttentionBucketDispatches=0,chunkAttentionTailDispatches=0,chunkAttentionBucketCapacity=0,chunkAttentionUnknownControls=0;
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+@@ -4373,7 +4376,7 @@
+     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
+     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
+     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
+-    impl_->chunkKVScatterDispatches=0;
++    impl_->chunkKVScatterDispatches=impl_->chunkKVHoistedCommits=0;
+     impl_->layoutVectorDispatches=0;
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
+@@ -5807,6 +5810,19 @@
+ size_t MetalContext::LastChunkProbabilityReuseDispatches() const {return impl_->chunkProbabilityReuseDispatches;}
+ size_t MetalContext::LastChunkAttentionIndex32Dispatches() const {return impl_->chunkAttentionIndex32Dispatches;}
+ size_t MetalContext::LastChunkKVScatterDispatches() const {return impl_->chunkKVScatterDispatches;}
++size_t MetalContext::LastChunkKVHoistedCommits() const {return impl_->chunkKVHoistedCommits;}
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++void MetalContext::NoteChunkKVCommitHoist(){impl_->chunkKVHoistedCommits+=2;}
++bool MetalContext::CanHoistKVControls(const MetalMatrix& slots,const MetalMatrix& active,size_t batch,size_t chunk,size_t capacity) const {
++    if(!slots.impl_||!active.impl_||!slots.impl_->ready||!active.impl_->ready||slots.impl_->pending||active.impl_->pending)return false;
++    const auto s=slots.impl_->matrix,a=active.impl_->matrix;
++    if(s.device!=impl_->device||a.device!=impl_->device||s.dataType!=MPSDataTypeFloat32||a.dataType!=MPSDataTypeFloat32||
++       s.rows!=batch||a.rows!=batch||s.columns!=chunk||a.columns!=chunk||s.rowBytes%4||a.rowBytes%4||
++       s.data.storageMode!=MTLStorageModeShared||a.data.storageMode!=MTLStorageModeShared||!s.data.contents||!a.data.contents)return false;
++    return ChunkMPSContiguousPrefix(batch,chunk,capacity,reinterpret_cast<const float*>(static_cast<const char*>(s.data.contents)+s.offset),s.rowBytes/4,
++        reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset),a.rowBytes/4);
++}
++#endif
+ size_t MetalContext::LastLayoutVectorDispatches() const {return impl_->layoutVectorDispatches;}
+ size_t MetalContext::LastChunkAttentionMPSDispatches() const {return impl_->chunkAttentionMPSDispatches;}
+ size_t MetalContext::LastChunkFlashAttentionDispatches() const {return impl_->chunkFlashAttentionDispatches;}
+@@ -5994,7 +6010,7 @@
+     impl_->bodyShapeDispatches=impl_->bodyShapeMisses=0;impl_->chunkProbabilityReuseDispatches=impl_->chunkAttentionIndex32Dispatches=impl_->chunkAttentionMPSDispatches=impl_->chunkFlashAttentionDispatches=0;
+     impl_->chunkAttentionBucketDispatches=impl_->chunkAttentionTailDispatches=impl_->chunkAttentionBucketCapacity=impl_->chunkAttentionUnknownControls=0;
+     impl_->chunkAttentionMPSMatrices=impl_->chunkAttentionMPSSkippedMatrices=0;
+-    impl_->chunkKVScatterDispatches=0;
++    impl_->chunkKVScatterDispatches=impl_->chunkKVHoistedCommits=0;
+     impl_->layoutVectorDispatches=0;
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
+diff --git a/src/entry/metal_main.cpp b/src/entry/metal_main.cpp
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -268,6 +268,9 @@
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_INDEX32
+     info+="; chunk_attention_index32";
+ #endif
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++    info+="; chunk_kv_commit_hoist";
++#endif
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
+     info+="; chunk_attention_mps";
+ #ifdef GARNET_METAL_CHUNK_ATTENTION_SCRATCH
+diff --git a/test2026/metal/kv_commit_hoist_controls_test.cpp b/test2026/metal/kv_commit_hoist_controls_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/kv_commit_hoist_controls_test.cpp
+@@ -0,0 +1,24 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "metal_context.h"
++#include <cmath>
++#include <iostream>
++#include <stdexcept>
++using namespace Garnet;
++int main(){try{{MetalContext gpu;auto need=[](bool b){if(!b)throw std::runtime_error("KV hoist control guard failure");};
++ const size_t batch=4,chunk=16,cap=256;std::vector<float> slots(batch*chunk),active(batch*chunk,1);
++ for(size_t b=0;b<batch;++b)for(size_t t=0;t<chunk;++t)slots[b*chunk+t]=128+t;
++ auto s=gpu.Upload(slots,batch,chunk),a=gpu.Upload(active,batch,chunk),z=gpu.Upload(std::vector<float>(batch*chunk,0),batch,chunk),pending=gpu.Allocate(batch,chunk);
++ auto copy=s;need(s.SameView(copy)&&!s.SameView(a)&&!MetalMatrix().SameView(MetalMatrix()));
++ need(gpu.LastChunkKVHoistedCommits()==0);
++#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
++ need(gpu.CanHoistKVControls(s,a,batch,chunk,cap));
++ active[3]=0;gpu.Update(a,active);need(!gpu.CanHoistKVControls(s,a,batch,chunk,cap));active[3]=1;
++ slots[5]=slots[4];gpu.Update(s,slots);gpu.Update(a,active);need(!gpu.CanHoistKVControls(s,a,batch,chunk,cap));slots[5]=133;gpu.Update(s,slots);
++ active[0]=NAN;gpu.Update(a,active);need(!gpu.CanHoistKVControls(s,a,batch,chunk,cap));active[0]=1;gpu.Update(a,active);
++ need(!gpu.CanHoistKVControls(pending,a,batch,chunk,cap));need(!gpu.CanHoistKVControls(s,a,batch,chunk+1,cap));
++ gpu.Begin();gpu.EncodeAdd(s,z,pending);need(!gpu.CanHoistKVControls(pending,a,batch,chunk,cap));gpu.Abort();need(gpu.LastChunkKVHoistedCommits()==0);
++ for(size_t t=0;t<chunk;++t)active[3*chunk+t]=0;gpu.Update(a,active);need(gpu.CanHoistKVControls(s,a,batch,chunk,cap));
++#endif
++ std::cout<<"Native KV hoist ready/pending/gap/overwrite/nonfinite/empty-owner/shape and exact-view guards pass\n";
++ }auto owners=MetalContext::ProfileOwnerStats();if(owners.matrices||owners.affineWeights||owners.bf16Weights||owners.pipelineSets)throw std::runtime_error("KV hoist guard test retained native owners");return 0;
++}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+diff --git a/test2026/metal/kv_commit_hoist_policy_test.cpp b/test2026/metal/kv_commit_hoist_policy_test.cpp
+new file mode 100644
+--- /dev/null
++++ b/test2026/metal/kv_commit_hoist_policy_test.cpp
+@@ -0,0 +1,39 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "../../src/backends/metal/kv_commit_hoist_policy.h"
++#include <iostream>
++#include <stdexcept>
++using namespace Garnet;
++int main(){try{
++ const std::array<size_t,6> ids{0,1,2,3,4,5};const std::array<std::vector<size_t>,2> outputs{{{10},{11}}};
++ std::vector<KVHoistNode> baseline;
++ for(size_t out:{size_t(8),size_t(6),size_t(7)})baseline.push_back({KVHoistNode::Other,true,{0},{out},{},{}});
++ baseline.push_back({KVHoistNode::Attention,true,{8,6,7,1,2,4,5},{9},{8,6,7,1,2,4,5,8},{32,8,128,4096,128,0}});
++ baseline.push_back({KVHoistNode::Commit,true,{6,1,4,5,3},{10},{6,1,4,5,3},{8,128,4096,128}});
++ baseline.push_back({KVHoistNode::Commit,true,{7,2,4,5,3},{11},{7,2,4,5,3},{8,128,4096,128}});
++ baseline.push_back({KVHoistNode::Other,true,{9},{14},{},{}});
++ auto require=[](bool b){if(!b)throw std::runtime_error("KV hoist policy failure");};
++ auto valid=[&](const auto& n){return ProveKVCommitHoist(n,ids,outputs,4,128).Valid();};
++ auto plan=ProveKVCommitHoist(baseline,ids,outputs,4,128);require(plan.Valid()&&plan.attention==3&&plan.commits==std::array<size_t,2>{4,5});size_t rejected=0;
++ auto reject=[&](auto change){auto n=baseline;change(n);require(!valid(n));++rejected;};
++ reject([](auto& n){n[4].resident=false;});reject([](auto& n){n[5].kind=KVHoistNode::Other;});
++ reject([](auto& n){n.push_back(n[3]);});reject([](auto& n){n[3].dims[5]=1;});
++ for(size_t at=0;at<6;++at)reject([&](auto& n){++n[3].dims[at];});
++ for(size_t at=0;at<5;++at)reject([&](auto& n){n[4].args[at]=99;});
++ for(size_t at=0;at<4;++at)reject([&](auto& n){++n[5].dims[at];});
++ reject([](auto& n){n[4].writes={10,20};});reject([](auto& n){n[5].writes={10};});
++ reject([](auto& n){n[6].reads.push_back(1);});reject([](auto& n){n[6].reads.push_back(2);});
++ reject([](auto& n){n.insert(n.begin()+4,{KVHoistNode::Other,true,{1},{20},{},{}});});
++ reject([](auto& n){n.insert(n.begin()+4,{KVHoistNode::Other,true,{11},{20},{},{}});});
++ reject([](auto& n){n.insert(n.begin()+4,{KVHoistNode::Other,true,{0},{6},{},{}});});
++ reject([](auto& n){n.insert(n.begin()+4,{KVHoistNode::Other,true,{0},{4},{},{}});});
++ reject([](auto& n){n.push_back({KVHoistNode::Other,true,{0},{1},{},{}});});
++ reject([](auto& n){n.push_back(n[4]);});reject([](auto& n){n[3].args[1]=8;});
++ reject([](auto& n){n[0].resident=false;});reject([](auto& n){n.push_back(n[1]);});
++ for(size_t b:{size_t(0),size_t(5)}){require(!ProveKVCommitHoist(baseline,ids,outputs,b,128).Valid());++rejected;}
++ for(size_t t:{size_t(0),size_t(1),size_t(129),size_t(512)}){require(!ProveKVCommitHoist(baseline,ids,outputs,4,t).Valid());++rejected;}
++ auto other=outputs;other[1]={10};require(!ProveKVCommitHoist(baseline,ids,other,4,128).Valid());++rejected;
++ auto duplicate=ids;duplicate[2]=duplicate[1];require(!ProveKVCommitHoist(baseline,duplicate,outputs,4,128).Valid());++rejected;
++ auto earlier=baseline;earlier.insert(earlier.begin(),{KVHoistNode::Other,true,{1,2},{20},{},{}});require(valid(earlier));
++ auto updated=baseline;updated.push_back({KVHoistNode::Other,true,{10,11},{20},{},{}});require(valid(updated));
++ std::cout<<"Immutable KV hoist proof: baseline/prior-reader/updated-reader accepted; "<<rejected<<" invalid alias/consumer/producer/order/shape/layout cases rejected\n";return 0;
++}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

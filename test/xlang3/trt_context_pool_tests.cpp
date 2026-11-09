@@ -78,6 +78,18 @@ int main() {
         });
         for (auto& worker : workers) worker.join();
         if (failures || pool.Size() > 3) throw std::runtime_error("context pool test failed");
+        // Residency may trim only idle contexts. A busy lease must survive;
+        // released slots (even with pending completion events) can be retired.
+        {
+            auto active = pool.Acquire(cudaStreamPerThread);
+            pool.RetireIdle();
+            if(pool.Size()!=1||!active->context)throw std::runtime_error("context retirement freed an active lease");
+        }
+        if(pool.RetireIdle()!=1||pool.Size()!=0)throw std::runtime_error("idle context retirement failed");
+        {
+            auto renewed=pool.Acquire(cudaStreamPerThread);
+            if(!renewed->context)throw std::runtime_error("context did not recreate after retirement");
+        }
         std::cout << "garnet-trt-concurrent-contexts-passed: 480 calls, " << pool.Size() << " slots\n";
         return 0;
     } catch (const std::exception& error) {

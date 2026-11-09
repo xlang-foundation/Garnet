@@ -1,0 +1,32 @@
+{
+  "changes": [
+    {
+      "old": "prepareCounted=prepPipe(true)",
+      "new": "prepareCounted=prepPipe(false)"
+    },
+    {
+      "old": "{\"counted\",!timing}",
+      "new": "{\"counted\",false}"
+    },
+    {
+      "old": "==1u,\"Preparation did not write exactly once\"",
+      "new": "==0u,\"Uninstrumented preparation changed writer buffer\""
+    },
+    {
+      "old": "  auto encode=[&](size_t rows,",
+      "new": "  Report(destination/\"result1.json\",report);continue;\n  auto encode=[&](size_t rows,"
+    },
+    {
+      "old": "{\"exact_native_captured_controls\",!timing}",
+      "new": "{\"exact_native_captured_controls\",false},{\"preparation_only\",true}"
+    },
+    {
+      "old": "{\"allocation_bytes\",target.length}",
+      "new": "{\"allocation_bytes\",target.length},{\"allocated_size_bytes\",target.allocatedSize}"
+    }
+  ],
+  "original_host_sha256": "1c5734757b3e233b13bf48a15e3a5b68fcbf809bffc919f6dd6762dc520ed53b",
+  "normal_host_sha256": "7e34add750a36db3bf744d85c40f519d271de5983ca7aedc36d31ae709a05480",
+  "shader_unchanged": true,
+  "scope": "Exercise uninstrumented preparation and save complete half hashes; skip already qualified matmul checks."
+}

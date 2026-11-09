@@ -1,0 +1,49 @@
+{
+  "original_transport_sha256": "c2161b661ee803d751e59053b6496bca8b5e8c1a83b761372838e63ffbaf9af9",
+  "replacements": [
+    {
+      "old": "    matrix_attention = profile.get('chunk_attention_mps', False)",
+      "new": "    half_attention = profile.get('half_attention_policy', False)\n    require(half_attention is True and 'fp16_prefill_all_p16_gpupack_v1' in backend, 'wrong native half producer')\n    require([e for e in events if e['event']=='native_chunk_half_attention_prepared']==[dict(event='native_chunk_half_attention_prepared',enabled=True,scratch_bytes=71303552)], 'wrong half preparation')\n    matrix_attention = profile.get('chunk_attention_mps', False)",
+      "count": 1
+    },
+    {
+      "old": "tail = stage == 'prefill' and active <= 8",
+      "new": "tail = stage == 'prefill' and active <= 8 and not half_attention",
+      "count": 1
+    },
+    {
+      "old": "elif kind in ('native_chunk_flash_attention',",
+      "new": "elif kind in ('native_chunk_half_attention', 'native_chunk_flash_attention',",
+      "count": 1
+    },
+    {
+      "old": "0 if tail or flash_attention else expected",
+      "new": "0 if tail or flash_attention or half_attention else expected",
+      "count": 3
+    },
+    {
+      "old": "            elif kind == 'native_chunk_flash_attention':",
+      "new": "            elif kind == 'native_chunk_half_attention':\n                require(half_attention and e['dispatches'] == expected, 'incorrect half attention dispatch')\n            elif kind == 'native_chunk_flash_attention':",
+      "count": 1
+    },
+    {
+      "old": "3+int(active_requests)+int(flash_attention)",
+      "new": "3+int(active_requests)+int(flash_attention)+int(half_attention)",
+      "count": 1
+    },
+    {
+      "old": "    require(wide_owner or counts['native_profile_tick']==0,",
+      "new": "    require(counts['native_chunk_half_attention']==generic_prefill_batches+stage_counts['decode'], 'missing half route event')\n    require(wide_owner or counts['native_profile_tick']==0,",
+      "count": 1
+    }
+  ],
+  "original_policies_sha256": "4e53276e9fab21ecc6ec519a155852dc0ba9b83e86776229b81269f590f4c84e",
+  "extracted_functions": [
+    "paired_policy",
+    "profile32_policy",
+    "silu_policy",
+    "split_policy",
+    "timing",
+    "value_policy"
+  ]
+}

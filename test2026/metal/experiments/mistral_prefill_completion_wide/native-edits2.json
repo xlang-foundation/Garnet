@@ -1,0 +1,81 @@
+{
+  "src/backends/metal/half_attention_profile.h": [],
+  "cmake/GarnetMetal.cmake": [
+    {
+      "old": "option(GARNET_METAL_CHUNK_HALF_ATTENTION \"M5 bounded half-QKV prefill with GPU packing; distinct numerical policy\" OFF)",
+      "new": "option(GARNET_METAL_CHUNK_HALF_WIDE \"Qualify native half attention for prepared owner chunks up to512\" OFF)\nif(GARNET_METAL_CHUNK_HALF_WIDE)\n    if(NOT GARNET_METAL_CHUNK_HALF_ATTENTION OR NOT GARNET_METAL_WIDE_OWNER_PREFILL OR\n       NOT \"${GARNET_METAL_DENSE_PREFILL_MAX_TOKENS}\" STREQUAL \"512\")\n        message(FATAL_ERROR \"Wide half attention requires half attention, prepared wide owners and a512-token compiled budget\")\n    endif()\n    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_CHUNK_HALF_WIDE=1)\nendif()\noption(GARNET_METAL_CHUNK_HALF_ATTENTION \"M5 bounded half-QKV prefill with GPU packing; distinct numerical policy\" OFF)"
+    }
+  ],
+  "src/backends/metal/metal_context.mm": [
+    {
+      "old": "#include \"chunk_half_attention_shader.h\"",
+      "new": "#include \"chunk_half_attention_shader.h\"\n#include \"half_attention_profile.h\""
+    },
+    {
+      "old": "if(batch<=4&&heads==32&&kvHeads==8&&dim==128&&capacity<=4096&&chunk<=128&&q.rows<=512)",
+      "new": "if(batch<=4&&heads==32&&kvHeads==8&&dim==128&&capacity<=4096&&chunk<=kMetalHalfAttentionMaximumChunk&&q.rows<=512)"
+    },
+    {
+      "old": "||chunk>128||q.rows>512)",
+      "new": "||chunk>kMetalHalfAttentionMaximumChunk||q.rows>512)"
+    },
+    {
+      "old": "||chunk<2||chunk>128||!CanHoistKVControls(inputs[5],inputs[6],inputs[3].impl_->matrix.rows,chunk,capacity))throw std::invalid_argument(\"Half attention requires compiler-proved committed KV and completed contiguous controls\");",
+      "new": "||chunk<2||chunk>kMetalHalfAttentionMaximumChunk||!CanHoistKVControls(inputs[5],inputs[6],inputs[3].impl_->matrix.rows,chunk,capacity))throw std::invalid_argument(\"Half attention requires compiler-proved committed KV and completed contiguous controls\");"
+    }
+  ],
+  "src/backends/metal/kv_commit_hoist_policy.h": [
+    {
+      "old": "size_t batch,size_t chunk) {",
+      "new": "size_t batch,size_t chunk,size_t maximumChunk=128) {"
+    },
+    {
+      "old": "if(!batch||batch>4||chunk<2||chunk>128||batch*chunk>512||",
+      "new": "if((maximumChunk!=128&&maximumChunk!=512)||!batch||batch>4||chunk<2||chunk>maximumChunk||batch>512/chunk||"
+    }
+  ],
+  "src/backends/metal/compiled_graph.cpp": [
+    {
+      "old": "#include \"float16_codec.h\"",
+      "new": "#include \"float16_codec.h\"\n#include \"half_attention_profile.h\""
+    },
+    {
+      "old": "kvHoistPlan_=ProveKVCommitHoist(nodes,ids,groups,size_t(inputShapes_[0][0]),size_t(inputShapes_[0][1]));",
+      "new": "kvHoistPlan_=ProveKVCommitHoist(nodes,ids,groups,size_t(inputShapes_[0][0]),size_t(inputShapes_[0][1]),kMetalHalfAttentionMaximumChunk);"
+    }
+  ],
+  "src/entry/metal_main.cpp": [
+    {
+      "old": "info+=\"; fp16_prefill_all_p16_gpupack_v1\";",
+      "new": "info+=\"; fp16_prefill_all_p16_gpupack_v1\";\n#ifdef GARNET_METAL_CHUNK_HALF_WIDE\n        info+=\"; half_attention_maximum_chunk=512\";\n#endif"
+    }
+  ],
+  "test2026/metal/kv_commit_hoist_policy_test.cpp": [
+    {
+      "old": " auto earlier=baseline;",
+      "new": " for(const auto& shape:std::vector<std::pair<size_t,size_t>>{{1,256},{2,256},{1,512}}){\n  auto n=baseline;const auto b=shape.first,t=shape.second;n[3].dims[4]=t;n[4].dims[3]=n[5].dims[3]=t;\n  require(!ProveKVCommitHoist(n,ids,outputs,b,t).Valid());\n  require(ProveKVCommitHoist(n,ids,outputs,b,t,512).Valid());\n  n[6].reads.push_back(1);require(!ProveKVCommitHoist(n,ids,outputs,b,t,512).Valid());++rejected;\n }\n for(size_t maximum:{size_t(0),size_t(129),size_t(513),SIZE_MAX}){require(!ProveKVCommitHoist(baseline,ids,outputs,4,128,maximum).Valid());++rejected;}\n auto tooMany=baseline;tooMany[3].dims[4]=512;tooMany[4].dims[3]=tooMany[5].dims[3]=512;\n require(!ProveKVCommitHoist(tooMany,ids,outputs,2,512,512).Valid());++rejected;\n auto earlier=baseline;"
+    }
+  ],
+  "test2026/metal/half_chunk_attention_test.cpp": [
+    {
+      "old": "#include \"metal_context.h\"",
+      "new": "#include \"metal_context.h\"\n#include \"half_attention_profile.h\""
+    },
+    {
+      "old": "{1,17,4096,3840}};",
+      "new": "{1,17,4096,3840}\n#ifdef GARNET_METAL_CHUNK_HALF_WIDE\n ,{1,256,4096,1920},{2,256,4096,0},{1,512,4096,1920},{1,512,4096,3584}\n#endif\n };"
+    },
+    {
+      "old": "for(size_t ci=0;ci<8;++ci){auto a=shapes[ci];",
+      "new": "for(size_t ci=0;ci<sizeof(shapes)/sizeof(shapes[0]);++ci){auto a=shapes[ci];"
+    },
+    {
+      "old": "}\nint main(int argc,char** argv)",
+      "new": "\n#ifdef GARNET_METAL_CHUNK_HALF_WIDE\nvoid CheckWidePartition(MetalContext& gpu,size_t first,size_t active,bool gated){\n Fixture whole(gpu,1,512,4096,first,gated,false),piece(gpu,1,128,4096,first,gated,false);\n for(size_t t=active;t<512;++t)whole.data[6][t]=0;gpu.Update(whole.args[6],whole.data[6]);\n auto run=[&](Fixture& f){gpu.Begin();f.Commit();MetalHalfAttentionReference::Run(gpu,f.args,f.out,f.cap,f.chunk,f.gated);gpu.SubmitAndWait();Need(gpu.LastHalfAttentionDispatches()==1,\"Wide partition lost half route\");return gpu.Download(f.out);};\n const auto expected=run(whole);std::vector<float> joined(expected.size(),0);\n for(size_t start=0;start<active;start+=128){\n  for(size_t role:{size_t(0),size_t(1),size_t(2),size_t(7)}){const size_t width=role==0||role==7?4096:1024;\n   piece.data[role].assign(whole.data[role].begin()+start*width,whole.data[role].begin()+(start+128)*width);gpu.Update(piece.args[role],piece.data[role]);}\n  for(size_t t=0;t<128;++t){piece.data[5][t]=float(first+start+t);piece.data[6][t]=start+t<active?1.f:0.f;}\n  gpu.Update(piece.args[5],piece.data[5]);gpu.Update(piece.args[6],piece.data[6]);auto values=run(piece);\n  std::copy(values.begin(),values.end(),joined.begin()+start*4096);\n }\n Need(!std::memcmp(expected.data(),joined.data(),joined.size()*4),\"Changing512/128 chunk partition changed complete attention output\");\n for(size_t role:{size_t(3),size_t(4)}){auto a=gpu.Download(whole.parents[role]),b=gpu.Download(piece.parents[role]);Need(a.size()==b.size()&&!std::memcmp(a.data(),b.data(),a.size()*4),\"Wide partition changed complete canonical cache parent/guards\");}\n std::cout<<\"half_native512/128 exact partition first=\"<<first<<\" active=\"<<active<<\" gated=\"<<gated<<\" output_words=\"<<joined.size()<<\" PASS\\n\";\n}\n#endif\n}\nint main(int argc,char** argv)"
+    },
+    {
+      "old": "if(!makeReference&&!trained)CheckBatchIndependence(gpu);",
+      "new": "if(!makeReference&&!trained)CheckBatchIndependence(gpu);\n#ifdef GARNET_METAL_CHUNK_HALF_WIDE\n if(!makeReference&&!trained){CheckWidePartition(gpu,0,512,false);CheckWidePartition(gpu,1920,257,false);CheckWidePartition(gpu,3584,512,true);}\n#endif"
+    }
+  ]
+}

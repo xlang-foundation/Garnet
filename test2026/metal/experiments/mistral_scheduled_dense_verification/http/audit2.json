@@ -1,0 +1,127 @@
+{
+  "passed": true,
+  "scope": "Audit diagnostic B1 HTTP streams, native scheduler progress and helper causality.",
+  "requests": 6,
+  "output_ids": 768,
+  "all_output_ids_exact_current_native": true,
+  "native_target_calls": 282,
+  "split_layer_dispatches": 9024,
+  "metrics": [
+    {
+      "engine": 1,
+      "wave": 0,
+      "phase": "cold",
+      "ttft_median_seconds": 3.4747948748990893,
+      "decode_median_tps": 24.05323587109106,
+      "aggregate_tps": 14.601744339520176
+    },
+    {
+      "engine": 1,
+      "wave": 1,
+      "phase": "warmed",
+      "ttft_median_seconds": 3.415638125035912,
+      "decode_median_tps": 24.37585475615726,
+      "aggregate_tps": 14.821103920635254
+    },
+    {
+      "engine": 1,
+      "wave": 2,
+      "phase": "warmed",
+      "ttft_median_seconds": 3.4432633749675006,
+      "decode_median_tps": 23.764441430083128,
+      "aggregate_tps": 14.544858082358623
+    },
+    {
+      "engine": 2,
+      "wave": 0,
+      "phase": "cold",
+      "ttft_median_seconds": 3.450512208044529,
+      "decode_median_tps": 23.7357471220117,
+      "aggregate_tps": 14.506814216535648
+    },
+    {
+      "engine": 2,
+      "wave": 1,
+      "phase": "warmed",
+      "ttft_median_seconds": 3.5805527919437736,
+      "decode_median_tps": 23.78223320627709,
+      "aggregate_tps": 14.331755316884662
+    },
+    {
+      "engine": 2,
+      "wave": 2,
+      "phase": "warmed",
+      "ttft_median_seconds": 3.6240552079398185,
+      "decode_median_tps": 23.61613515731768,
+      "aggregate_tps": 14.202862734069923
+    }
+  ],
+  "warmed_median": {
+    "ttft_median_seconds": 3.511908083455637,
+    "decode_median_tps": 23.77333731818011,
+    "aggregate_tps": 14.438306699621641
+  },
+  "diagnostic_ratios_vs_frozen_references": {
+    "vllm-metal": {
+      "ttft_native_over_reference": 0.8324720354875961,
+      "decode_native_over_reference": 1.1456355576367792,
+      "aggregate_native_over_reference": 1.1695518352213041
+    },
+    "sglang-mlx": {
+      "ttft_native_over_reference": 0.8444459628162088,
+      "decode_native_over_reference": 1.1464212009293482,
+      "aggregate_native_over_reference": 1.1533832064342386
+    }
+  },
+  "negative_controls_rejected": [
+    "fake_budget",
+    "wrong_epoch",
+    "future_helper_prefix",
+    "missing_rollback",
+    "fake_split_counter",
+    "wrong_stream_id",
+    "false_ttft",
+    "false_decode"
+  ],
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/preflight1.json": "2339c30202ff9e1490a1683ca64327fdd4bf6adb670993d9889fd993aaf0f484",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/postflight1.json": "262f06c5cd3df3f167ab0b4b2c97d1da5f826a70b9535f7ab50898cfd09080f5",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/result1.json": "8aeaa09f642e56684be1efc45a72e6fe166e74382903aaf7811d835aa401eb3f",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-verification1/qualification-audit2.json": "6f5eba2eade106e491e607225e0c3ab5f8fb645dd210610e761f868d4229fc02",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/status1.json": "e5a394d2a807c817c2a74636912e0d86ac29224294cebd0bed26f09bb9ed5556",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/server/worker-stdout.jsonl": "ece73bfc9e24b9a97f5de63a422aa18cbf91a64c1e0fd9c7d1cdbf6b9c06dfdb",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/server/worker-exit.json": "373377391997aac24e75d9d8e0f0f81f5e77d9c731e99c9e91a19f577713897b",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/wave0/request-0.request.json": "572de0c700597cdb542124bd90a776cd8882f41e44320232e5d023ad694987fe",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/wave0/request-0.events.jsonl": "813e7eb1ada1eb1d0b3442323bbe094a342795febb0e697f59bbb3c9ab8be023",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/wave0/request-0.result.json": "f849069c251461b3fba34cd84f826933bef4935a61cbf8dce166d0939e20987e",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/wave1/request-0.request.json": "572de0c700597cdb542124bd90a776cd8882f41e44320232e5d023ad694987fe",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/wave1/request-0.events.jsonl": "5199b678dc54a1470840d34985f668f7081e529669831565e0a794bfc7ca2b7b",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/wave1/request-0.result.json": "21e44c49a5b9a777f950daea8597a4799f7287ba64681dca7931f37e3145331b",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/wave2/request-0.request.json": "572de0c700597cdb542124bd90a776cd8882f41e44320232e5d023ad694987fe",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/wave2/request-0.events.jsonl": "b464d41d4fb963d7b1e43ae7cb240a038bc676d06a3b3a08c467821d681b7e39",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine1/wave2/request-0.result.json": "a441e7ebb8a7de955867401c58f7ba420b7036ae791d55da546b875d75265496",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/status1.json": "d970a6ccf108cb676293ef93790b39b3781a6c2aa9815a63bd14f83415b6ef3d",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/server/worker-stdout.jsonl": "ebb5d7492c16dc33f5473522e349b9cfd8586667af7d86c11841ca110efd3efd",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/server/worker-exit.json": "373377391997aac24e75d9d8e0f0f81f5e77d9c731e99c9e91a19f577713897b",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/wave0/request-0.request.json": "572de0c700597cdb542124bd90a776cd8882f41e44320232e5d023ad694987fe",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/wave0/request-0.events.jsonl": "beed26dcec49c1f29531b22b4ba1d77a4b13daf6b539c7aa854a8024acf76784",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/wave0/request-0.result.json": "97d267e78e1f2fd369e53ab06fead1363510fd222976288b34ce075aea940a6c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/wave1/request-0.request.json": "572de0c700597cdb542124bd90a776cd8882f41e44320232e5d023ad694987fe",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/wave1/request-0.events.jsonl": "9f7f4a822dcf47917ac89995c532ac9be61576ed1159ba7e6944dada299402ae",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/wave1/request-0.result.json": "8afaf00b163355d26c73afb68fe17fefc97ad6734dc222fdfb20679ffc32499b",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/wave2/request-0.request.json": "572de0c700597cdb542124bd90a776cd8882f41e44320232e5d023ad694987fe",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/wave2/request-0.events.jsonl": "59e85c9d9fc680d9d42642b508e9884508cab3ccdeeacaa2ab657929f02bfdf1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-http1/engine2/wave2/request-0.result.json": "38b1ff4de24869aa19cb4044db6bcb8c80d753426051e744ad98f9fcdb4e32a1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-serving1/comparison1.json": "77e292129403f717399cadfd413612a0b800a3636d4ce31c470b0fcf3913f548"
+  },
+  "http_full_kv_hidden_observed": false,
+  "separate_native_full_state_qualification": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-verification1/qualification-audit2.json",
+  "active_rows": 1,
+  "reference_max_sequences": 4,
+  "matched_maximum_concurrency_profile": false,
+  "c4_throughput_measured": false,
+  "selected_full_serving_comparison_promoted": false,
+  "coding_quality_qualified": false,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

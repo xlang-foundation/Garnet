@@ -35,8 +35,12 @@ def main():
     p.add_argument('--arithmetic', choices=('fp16', 'fp32_prefill_control'), default='fp16')
     p.add_argument('--inner-tile', type=int, choices=(0, 64, 256), default=0)
     p.add_argument('--palette-row-group', type=int, choices=(1, 16), default=1)
+    p.add_argument('--intermediate-tile', type=int, choices=(0,1024,2048), default=0)
+    p.add_argument('--activation-scale', type=int, choices=(1,16,64,256), default=1)
     a = p.parse_args()
     assert ct.__version__ == '9.0'
+    assert not a.intermediate_tile or (a.representation == 'fp16' and a.inner_tile == 0 and a.arithmetic == 'fp16')
+    assert a.activation_scale == 1 or a.intermediate_tile, 'Activation scaling requires the explicit channel-tile profile'
     assert a.arithmetic == 'fp16' or a.representation == 'fp16', 'FP32 control uses dense exact FP16 values expanded to FP32'
     assert a.palette_row_group == 1 or (a.inner_tile == 64 and a.representation == 'lut')
     assert sha(a.checkpoint) == 'd7182d886f93a9efa73d6d556ee33ffe839a4e09e15965eeef46f295ab5b503d'
@@ -107,6 +111,7 @@ def main():
     # Channel-first 1x1 convolutions keep the sequence dimension separate from
     # the learned projection channels, following Apple's ANE transformer layout.
     tile_weight_words = 0
+    scaled_up_roundtrip_words = 0
     def projection(x, name):
         nonlocal tile_weight_words
         if not a.inner_tile:
@@ -159,8 +164,36 @@ def main():
             level += 1
         return parts[0]
 
+    def channel_branches(x):
+        nonlocal tile_weight_words, scaled_up_roundtrip_words
+        parts = []
+        for begin in range(0, 14336, a.intermediate_tile):
+            end = begin + a.intermediate_tile
+            gate_weight = np.ascontiguousarray(weights['gate_proj'][begin:end])
+            up_weight = np.ascontiguousarray(weights['up_proj'][begin:end])
+            scaled = (up_weight * np.float16(a.activation_scale)).astype(np.float16)
+            restored = (scaled / np.float16(a.activation_scale)).astype(np.float16)
+            assert np.isfinite(scaled).all() and np.array_equal(restored.view(np.uint16),up_weight.view(np.uint16))
+            scaled_up_roundtrip_words += up_weight.size
+            up_weight = scaled
+            down_weight = np.ascontiguousarray(weights['down_proj'][:, begin:end])
+            tile_weight_words += gate_weight.size + up_weight.size + down_weight.size
+            label = 'channels_' + str(begin)
+            gate = mb.conv(x=x, weight=gate_weight, name=label+'_gate')
+            up = mb.conv(x=x, weight=up_weight, name=label+'_up')
+            activated = mb.mul(x=mb.mul(x=gate, y=mb.sigmoid(x=gate)), y=up)
+            parts.append(mb.conv(x=activated, weight=down_weight, name=label+'_down'))
+        level = 0
+        while len(parts) > 1:
+            parts = [mb.add(x=parts[i], y=parts[i+1], name='channel_sum_'+str(level)+'_'+str(i))
+                     if i+1 < len(parts) else parts[i] for i in range(0,len(parts),2)]
+            level += 1
+        return mb.mul(x=parts[0], y=np.float16(1/a.activation_scale), name='y')
+
     @mb.program(input_specs=[mb.TensorSpec((1, 4096, 1, a.rows), dtype=types.fp16)], opset_version=ct.target.iOS18)
     def program(x):
+        if a.intermediate_tile:
+            return channel_branches(x)
         if a.arithmetic == 'fp32_prefill_control':
             x = mb.cast(x=x, dtype='fp32')
         gate = projection(x, 'gate_proj')
@@ -181,9 +214,10 @@ def main():
     counts = collections.Counter()
     for block in spec.mlProgram.functions['main'].block_specializations.values():
         counts.update(op.type for op in block.operations)
-    expected_convs = 3 if not a.inner_tile else 2*(4096//a.inner_tile)+14336//a.inner_tile
+    expected_convs = 3*(14336//a.intermediate_tile) if a.intermediate_tile else (3 if not a.inner_tile else 2*(4096//a.inner_tile)+14336//a.inner_tile)
     assert counts['conv'] == expected_convs and counts['constexpr_lut_to_dense'] == (expected_convs if a.representation == 'lut' else 0), counts
-    assert not a.inner_tile or tile_weight_words == 176160768
+    assert not (a.inner_tile or a.intermediate_tile) or tile_weight_words == 176160768
+    assert not a.intermediate_tile or scaled_up_roundtrip_words == 58720256
     package = a.output/'mistral_mlp.mlpackage'
     model.save(str(package))
     print('compile', flush=True)
@@ -197,16 +231,19 @@ def main():
     report = dict(checkpoint=str(a.checkpoint), checkpoint_sha256=sha(a.checkpoint),
                   coremltools=ct.__version__, numpy=np.__version__, rows=a.rows, hidden=4096,
                   intermediate=14336, layer=0, representation=a.representation, arithmetic=a.arithmetic,
-                  inner_tile=a.inner_tile, palette_row_group=a.palette_row_group,
+                  inner_tile=a.inner_tile, intermediate_tile=a.intermediate_tile, activation_scale=a.activation_scale,
+                  scaled_up_roundtrip_words_matched=scaled_up_roundtrip_words,
+                  scale_cancellation="up weights multiplied by exact power of two; reciprocal final output scale",
+                  palette_row_group=a.palette_row_group,
                   projection_convolutions=expected_convs, remapped_tile_weight_words_matched=tile_weight_words,
-                  reduction='balanced' if a.inner_tile else 'single_conv',
+                  reduction='balanced_intermediate_channel_branches' if a.intermediate_tile else ('balanced' if a.inner_tile else 'single_conv'),
                   compiled=str(compiled), operation_counts=dict(counts), weights=records,
                   input=str(input_path), input_sha256=sha(input_path),
                   input_mode=a.input_mode,
                   input_scope='Frozen prompt embedding proxy (repeated for512 rows); normalized_embedding applies real layer0 post-attention norm weights and RMS epsilon. Not actual post-attention hidden activations.',
                   input_rms=float(np.sqrt(np.mean(input_rows.astype(np.float64)**2))),
                   export_seconds=time.monotonic()-started, max_rss_bytes=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
-                  scope='One actual-weight Mistral MLP block; exact FP16 weight values. Arithmetic mode is explicit: FP16 or FP32 prefill control with rounded down operand. No full-model/quality/ANE execution/performance claim.', files={})
+                  scope='One actual-weight Mistral MLP block; exact FP16 weight values. Arithmetic mode is explicit: FP16 or FP32 prefill control with rounded down operand. Optional up-weight scaling is exactly reversible with reciprocal output scaling, but changes intermediate range and rounding. No full-model/quality/ANE execution/performance claim.', files={})
     for path in a.output.rglob('*'):
         if path.is_file():
             report['files'][str(path.relative_to(a.output))] = sha(path)

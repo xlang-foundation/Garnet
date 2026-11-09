@@ -1,0 +1,50 @@
+diff --git a/test2026/metal/local_coder_batch_worker.py b/test2026/metal/local_coder_batch_worker.py
+--- a/test2026/metal/local_coder_batch_worker.py
++++ b/test2026/metal/local_coder_batch_worker.py
+@@ -257,7 +257,7 @@
+             raise ValueError('Mistral serving study requires its explicit FP16 coefficient/operand profile')
+     width=text_config['hidden_size'];vocab=text_config['vocab_size']
+     incoming=queue.Queue(maxsize=16);shutdown=threading.Event();input_failure=[]
+-    decoder=None;policy=None;jobs={};keys=set()
++    decoder=None;policy=None;jobs={};keys=set();observed_leases={}
+     def read():
+         pending=b''
+         try:
+@@ -605,6 +605,20 @@
+                     native_request=identity,native_row=request['row'],native_epoch=request['epoch'],
+                     request_window_seconds=time.monotonic()-job['began'],memory=json.loads(garnet.memory_stats_json())))
+                 keys.remove(job['id']);del jobs[identity]
++        def survivor_state():
++            current={identity:lease for identity,lease in observed_leases.items() if identity in jobs}
++            result={str(identity):dict(row=lease[0],epoch=lease[1],kv=[],hidden=None) for identity,lease in current.items()}
++            for layer in range(32):
++                pair=decoder.session.snapshot(layer)
++                for identity,lease in current.items():
++                    result[str(identity)]['kv'].append([decoder.io.verification_f32_sha256(decoder.io.rows(v,lease[0],1)) for v in pair])
++            hidden=decoder.session.diagnostic_final_hidden()
++            for identity,lease in current.items():
++                result[str(identity)]['hidden']=decoder.io.verification_f32_sha256(decoder.io.rows(hidden,lease[0],1))
++                if tracked_rows:
++                    result[str(identity)]['tokens']=decoder.session.diagnostic_tracked_token_count(lease[0],lease[1])
++                    result[str(identity)]['prefill_tokens']=decoder.session.tracked_prefill_prefix_tokens(lease[0],lease[1])
++            return result
+         while not shutdown.is_set():
+             if not jobs:
+                 try:admit(incoming.get(timeout=.1))
+@@ -618,7 +632,16 @@
+             while not incoming.empty():admit(incoming.get_nowait())
+             if not jobs:continue
+             started=time.monotonic() if trace_stages else 0
++            active={identity:lease for identity,lease in observed_leases.items() if identity in jobs}
++            pending=[identity for identity in jobs if identity not in observed_leases]
++            observe=bool(active) and len(active)<batch and bool(pending)
++            before=survivor_state() if observe else None
+             tick=json.loads(policy.next_json());plans=tick['batches']
++            if observe:
++                after=survivor_state();assert before==after,'New lease/restore changed a surviving native row'
++                emit(dict(event='native_survivor_restore_witness',pending_requests=pending,before=before,after=after))
++            for plan in plans:
++                for request in plan['requests']:observed_leases[request['id']]=(request['row'],request['epoch'])
+             if wide_owner:emit(dict(event='native_profile_tick',batches=plans,token_count=tick['packed']['token_count']))
+             if trace_stages:
+                 ended=time.monotonic()

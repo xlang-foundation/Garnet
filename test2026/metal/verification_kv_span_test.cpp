@@ -178,6 +178,12 @@ int main(){try{
         Job single(1,1,1,1,1,0,0);uint32_t minusZero=0x80000000u,nan=0x7fc33333u;
         std::memcpy(single.initial.data(),&minusZero,4);std::memcpy(single.tokens.data(),&nan,4);
         for(size_t keep:{0,1})Case(gpu,single,keep,0);
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+        for(size_t mode=0;mode<7;++mode)for(size_t keep=0;keep<=4;++keep)
+            Case(gpu,Job(4,4,1,7,8,4,mode),keep,(mode+keep)%4);
+        for(size_t mode:{0,3,5,6})for(size_t keep=0;keep<=4;++keep)
+            Case(gpu,Job(4,4,8,128,4096,4092,mode),keep,(mode+keep)%4);
+#endif
         Carried(gpu);Invalid(gpu);
     }
     auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Owners remain after KV-span gate");

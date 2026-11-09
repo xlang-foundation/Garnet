@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "json_bpe_tokenizer.h"
 #include "tokenizer_assets.h"
-#define PCRE2_CODE_UNIT_WIDTH 8
-#include <pcre2.h>
+#include "tokenizer_regex.h"
 #include <algorithm>
 #include <array>
 #include <limits>
+#include <iterator>
 #include <queue>
 #include <unordered_map>
 #include <unordered_set>
@@ -71,7 +71,6 @@ std::string RestoreSpaces(const std::string& s) {
 struct JsonBpeTokenizer::Impl {
     struct Merge { size_t rank; uint32_t result; };
     struct TrieNode { std::unordered_map<unsigned char, size_t> edges; int64_t id = -1; };
-    using Regex = std::unique_ptr<pcre2_code, decltype(&pcre2_code_free)>;
     TokenizerInfo info;
     bool byteLevel = false;
     bool prefixSpace = false;
@@ -86,7 +85,7 @@ struct JsonBpeTokenizer::Impl {
     std::array<std::string, 256> byteChars;
     std::unordered_map<std::string, unsigned char> charBytes;
     std::array<uint32_t, 256> fallback;
-    std::vector<Regex> splits;
+    std::vector<TokenizerRegex> splits;
     std::vector<int64_t> prefix, suffix;
 
     void InitBytes() {
@@ -168,21 +167,9 @@ struct JsonBpeTokenizer::Impl {
         std::vector<std::string> parts{std::move(text)};
         for (const auto& regex : splits) {
             std::vector<std::string> next;
-            auto match = std::unique_ptr<pcre2_match_data, decltype(&pcre2_match_data_free)>(
-                pcre2_match_data_create_from_pattern(regex.get(), nullptr), pcre2_match_data_free);
-            if (!match) throw std::bad_alloc();
             for (const auto& part : parts) {
-                size_t p = 0;
-                while (p < part.size()) {
-                    const int rc = pcre2_match(regex.get(), reinterpret_cast<PCRE2_SPTR>(part.data()), part.size(), p, 0, match.get(), nullptr);
-                    if (rc == PCRE2_ERROR_NOMATCH) break;
-                    Require(rc >= 0, "regex matching failed");
-                    auto* range = pcre2_get_ovector_pointer(match.get());
-                    Require(range[1] > range[0], "zero-length regex split");
-                    if (range[0] > p) next.push_back(part.substr(p, range[0] - p));
-                    next.push_back(part.substr(range[0], range[1] - range[0])); p = range[1];
-                }
-                if (p < part.size()) next.push_back(part.substr(p));
+                auto split=regex.SplitIsolated(part);
+                next.insert(next.end(),std::make_move_iterator(split.begin()),std::make_move_iterator(split.end()));
             }
             parts = std::move(next);
         }
@@ -243,10 +230,7 @@ bool JsonBpeTokenizer::LoadFromFolder(const std::string& folder, std::string* er
                 } else {
                     Require(!mapped && type == "Split" && stage.at("behavior") == "Isolated" && !stage.at("invert").get<bool>(), "regex Split ordering/behavior");
                     auto pattern = stage.at("pattern").at("Regex").get<std::string>();
-                    int code; PCRE2_SIZE offset;
-                    auto regex = pcre2_compile(reinterpret_cast<PCRE2_SPTR>(pattern.data()), pattern.size(), PCRE2_UTF | PCRE2_UCP, &code, &offset, nullptr);
-                    Require(regex != nullptr, "regex cannot be compiled at byte " + std::to_string(offset));
-                    impl->splits.emplace_back(regex, pcre2_code_free);
+                    impl->splits.emplace_back(pattern);
                 }
             }
             Require(mapped, "missing final ByteLevel mapping");

@@ -1,0 +1,186 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -1223,0 +1224,8 @@
++option(GARNET_METAL_MISTRAL_DOWN_TENSOR512 "Opt-in Apple10 dense512 Mistral down projection with tensor operands" OFF)
++if(GARNET_METAL_MISTRAL_DOWN_TENSOR512)
++    if(NOT GARNET_METAL_MISTRAL_PACKED_PREFILL OR NOT GARNET_METAL_AFFINE_FP16_COEFFICIENTS OR NOT GARNET_METAL_AFFINE_PROFILE_INDEX32)
++        message(FATAL_ERROR "Tensor down512 requires packed prefill, FP16 coefficients and bounded affine indexes")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_MISTRAL_DOWN_TENSOR512=1)
++endif()
++
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -414,0 +415,6 @@
++    size_t LastPackedTensorDownDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastPackedTensorDownDispatches():0;}
++    bool PrefillSetTensorDown(bool enabled) {
++        std::lock_guard<std::mutex> lock(mutex_);
++        if(!gpu_||poisoned_)throw std::logic_error("Ready session required for tensor down selection");
++        gpu_->SetPackedTensorDownEnabled(enabled);return true;
++    }
+@@ -667,0 +674,2 @@
++        APISET().AddFunc<1>("prefill_set_tensor_down",&MetalDecoderSession::PrefillSetTensorDown);
++        APISET().AddProp("packed_tensor_down_dispatches",&MetalDecoderSession::LastPackedTensorDownDispatches);
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -217,0 +218,3 @@
++    void SetPackedTensorDownEnabled(bool enabled);
++    bool PackedTensorDownEnabled() const;
++    size_t LastPackedTensorDownDispatches() const;
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -43,0 +44,3 @@
++#ifdef GARNET_METAL_MISTRAL_DOWN_TENSOR512
++#include "packed_down_tensor_shader.h"
++#endif
+@@ -645,0 +649 @@
++        id<MTLComputePipelineState> tensorDown=nil;
+@@ -660,0 +665,11 @@
++#ifdef GARNET_METAL_MISTRAL_DOWN_TENSOR512
++    bool packedTensorDownEnabled=true;
++#else
++    bool packedTensorDownEnabled=false;
++#endif
++    size_t packedTensorDownDispatches=0;
++    bool UsePackedTensorDown(const PackedPlan& plan,size_t rows,const std::vector<uint32_t>& indices) const {
++        if(!packedTensorDownEnabled||!plan.tensorDown||rows!=512||indices.size()!=512)return false;
++        for(size_t i=0;i<512;++i)if(indices[i]!=i)return false;
++        return true;
++    }
+@@ -2963,0 +2979,17 @@
++void MetalContext::SetPackedTensorDownEnabled(bool enabled) {
++    if(impl_->command||impl_->submitted.count)throw std::logic_error("Select tensor down between drained command batches");
++#ifdef GARNET_METAL_MISTRAL_DOWN_TENSOR512
++    if(enabled&&![impl_->device supportsFamily:MTLGPUFamilyApple10])throw std::logic_error("Tensor down requires Apple10");
++#else
++    if(enabled)throw std::logic_error("Tensor down requires its compiled native extension");
++#endif
++    impl_->packedTensorDownEnabled=enabled;
++}
++bool MetalContext::PackedTensorDownEnabled() const {
++#ifdef GARNET_METAL_MISTRAL_DOWN_TENSOR512
++    return impl_->packedTensorDownEnabled&&[impl_->device supportsFamily:MTLGPUFamilyApple10];
++#else
++    return false;
++#endif
++}
++size_t MetalContext::LastPackedTensorDownDispatches() const {return impl_->packedTensorDownDispatches;}
+@@ -2986,0 +3019,3 @@
++#ifdef GARNET_METAL_MISTRAL_DOWN_TENSOR512
++            if([impl_->device supportsFamily:MTLGPUFamilyApple10])source=[source stringByAppendingString:[NSString stringWithUTF8String:kPackedDownTensorShader]];
++#endif
+@@ -3030,0 +3066,10 @@
++#ifdef GARNET_METAL_MISTRAL_DOWN_TENSOR512
++        if(a.columns==14336&&o.columns==4096&&[impl_->device supportsFamily:MTLGPUFamilyApple10]) {
++            auto function=[impl_->packedLibrary newFunctionWithName:@"packed_down_tensor_m256" constantValues:constants error:&error];
++            if(!function)throw std::runtime_error("Cannot specialize tensor down profile");
++            auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
++            if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<256||pipeline.staticThreadgroupMemoryLength!=17408)
++                throw std::runtime_error("Tensor down pipeline resource mismatch");
++            plan.tensorDown=pipeline;
++        }
++#endif
+@@ -3096,0 +3142,2 @@
++  const bool tensorDown=downTile==256&&impl_->UsePackedTensorDown(dp->second,a.rows,indices);
++  if(tensorDown)downPipeline=dp->second.tensorDown;
+@@ -3126,0 +3174 @@
++  if(tensorDown)++impl_->packedTensorDownDispatches;
+@@ -3166,0 +3215,2 @@
++    const bool tensorDown=tile==256&&impl_->UsePackedTensorDown(found->second,a.rows,indices);
++    if(tensorDown)pipeline=found->second.tensorDown;
+@@ -3173,0 +3224 @@
++    if(tensorDown)++impl_->packedTensorDownDispatches;
+@@ -4669 +4720 @@
+-    impl_->packedDispatches=0;impl_->diagnosticBulkDispatches=0;
++    impl_->packedDispatches=0;impl_->packedTensorDownDispatches=0;impl_->diagnosticBulkDispatches=0;
+@@ -6630 +6681 @@
+-    impl_->packedDispatches=0;impl_->diagnosticBulkDispatches=0;
++    impl_->packedDispatches=0;impl_->packedTensorDownDispatches=0;impl_->diagnosticBulkDispatches=0;
+--- /dev/null
++++ b/src/backends/metal/packed_down_tensor_shader.h
+@@ -0,0 +1,47 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++namespace Garnet {
++inline constexpr const char* kPackedDownTensorShader=R"METAL(
++// Direct tensor operands over the original bounded Q4 shared-memory tile.
++kernel void packed_down_tensor_m256(device half* input [[buffer(0)]],
++ device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
++ device const ushort* biases [[buffer(3)]],device float* output [[buffer(4)]],
++ constant VectorQ4Params& runtime [[buffer(5)]],constant uint* indices [[buffer(6)]],
++ uint2 block [[threadgroup_position_in_grid]],uint tid [[thread_index_in_threadgroup]],
++ uint simd [[simdgroup_index_in_threadgroup]]) {
++ GARNET_AFFINE_PARAMETERS(VectorQ4Params);
++ // Dense identity row map only. The host retains the original route for
++ // sparse/permuted/partial profiles; no request is padded to enter this path.
++ constexpr uint BK=128,STRIDE=136,PACKET=32;
++ threadgroup half decoded[64*STRIDE];
++ const uint row=block.y*256+simd*32,column=block.x*64;
++ const uint localN=tid/4,localK=(tid%4)*PACKET,n=column+localN;
++ auto a=tensor(input,dextents<int,2>{int(p.inner),int(p.rows)},array<int,2>{1,int(p.inner)});
++ auto b=tensor(decoded,extents<int,BK,64>{},array<int,2>{1,int(STRIDE)});
++ auto d=tensor(output,dextents<int,2>{int(p.columns),int(p.rows)},array<int,2>{1,int(p.oStride)});
++ constexpr auto spec=matmul2d_descriptor(32,64,128,false,true,false,
++  matmul2d_descriptor::mode::multiply_accumulate);
++ matmul2d<spec,execution_simdgroup> multiply;
++ auto accumulator=multiply.get_destination_cooperative_tensor<decltype(a),decltype(b),float>();
++ #pragma clang loop unroll(full)
++ for(ushort i=0;i<accumulator.get_capacity();++i)accumulator[i]=0.0f;
++ for(uint base=0;base<p.inner;base+=BK) {
++  const uint offset=n*(p.inner/8)+(base+localK)/8;
++  const uint coefficient=n*(p.inner/64)+(base+localK)/64;
++  const float scale=garnet_affine_coefficient(scales[coefficient]),bias=garnet_affine_coefficient(biases[coefficient]);
++  const uint4 words=*reinterpret_cast<device const uint4*>(packed+offset);
++  #pragma clang loop unroll(full)
++  for(uint i=0;i<PACKET/4;++i) {
++   const uint4 codes=(uint4(words[i/2])>>(uint4(0,4,8,12)+(i%2)*16))&15u;
++   *reinterpret_cast<threadgroup half4*>(decoded+localN*STRIDE+localK+4*i)=half4(fma(float4(codes),float4(scale),float4(bias)));
++  }
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++  auto left=a.slice<128,32>(int(base),int(row));
++  multiply.run(left,b,accumulator);
++  threadgroup_barrier(mem_flags::mem_threadgroup);
++ }
++ auto destination=d.slice<64,32>(int(column),int(row));
++ accumulator.store(destination);
++}
++)METAL";
++}
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -232,0 +233,3 @@
++#ifdef GARNET_METAL_MISTRAL_DOWN_TENSOR512
++    info+="; native_mistral_down_tensor512_optional_v1";
++#endif
+--- a/test2026/metal/packed_affine_test.cpp
++++ b/test2026/metal/packed_affine_test.cpp
+@@ -16,0 +17 @@
++size_t tensorCells=0;bool tensorCapable=false;
+@@ -32 +33 @@
+-        eligible=gpu.PreparePackedAffineProfile(a,weight,out,m);
++        eligible=gpu.PreparePackedAffineProfile(a,weight,out,m);tensorCapable=tensorCapable||gpu.PackedTensorDownEnabled();
+@@ -47,0 +49,3 @@
++            const bool expectedTensor=v&&gpu.PackedTensorDownEnabled()&&m==512&&k==14336&&n==4096&&count==512&&dense;
++            Need(gpu.LastPackedTensorDownDispatches()==size_t(expectedTensor),"Wrong actual tensor down route");
++            if(rep>=0&&expectedTensor)++tensorCells;
+@@ -68 +72 @@
+-        gpu.Begin();Reject([&]{gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,bad);});Reject([&]{gpu.SetPackedAffineEnabled(false);});Reject([&]{gpu.PreparePackedAffineProfile(a,weight,out,m);});gpu.Abort();Need(gpu.Download(out)==before,"Invalid call wrote output");
++        gpu.Begin();Reject([&]{gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,bad);});Reject([&]{gpu.SetPackedAffineEnabled(false);});Reject([&]{gpu.SetPackedTensorDownEnabled(false);});Reject([&]{gpu.PreparePackedAffineProfile(a,weight,out,m);});gpu.Abort();Need(gpu.LastPackedTensorDownDispatches()==0,"Tensor counter retained after Abort");Need(gpu.Download(out)==before,"Invalid call wrote output");
+@@ -69,0 +74,3 @@
++        if(gpu.PackedTensorDownEnabled()) {
++            gpu.SetPackedTensorDownEnabled(false);gpu.Begin();gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);gpu.SubmitAndWait();Need(gpu.LastPackedTensorDownDispatches()==0,"Disabled tensor route executed");gpu.SetPackedTensorDownEnabled(true);
++        }else Reject([&]{gpu.SetPackedTensorDownEnabled(true);});
+@@ -74 +81 @@
+-        gpu.Begin();gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);gpu.Flush();Reject([&]{gpu.SetPackedAffineEnabled(false);});Reject([&]{gpu.PreparePackedAffineProfile(a,weight,out,m);});gpu.SubmitAndWait();
++        gpu.Begin();gpu.EncodeAffineInt4IndexedMatMul(a,weight,out,ids);gpu.Flush();Reject([&]{gpu.SetPackedAffineEnabled(false);});Reject([&]{gpu.SetPackedTensorDownEnabled(false);});Reject([&]{gpu.PreparePackedAffineProfile(a,weight,out,m);});gpu.SubmitAndWait();
+@@ -84 +91,7 @@
+-        report["cases"].push_back(f.Cell(512,true,false,false));report["cases"].push_back(f.Cell(512,false,true,benchmark));f.Guards();
++        report["cases"].push_back(f.Cell(512,true,false,false));report["cases"].push_back(f.Cell(512,false,true,benchmark));
++        if(!benchmark&&shape[0]==4096&&shape[1]==14336)for(int pattern=0;pattern<2;++pattern){
++            auto saved=f.input;
++            for(size_t i=0;i<f.input.size();++i){float x=pattern?std::nextafter(0x1.002p0f,(i%3==0)?0.f:2.f):float(int(i%23)-11)*128.f;f.input[i]=(i&1)?x:-x;}
++            f.gpu.Update(f.a,f.input);report["cases"].push_back(f.Cell(512,false,true,false));f.input=std::move(saved);f.gpu.Update(f.a,f.input);
++        }
++        f.Guards();
+@@ -87,0 +101 @@
++    Need(!tensorCapable||tensorCells>=3,"No qualified tensor down cells");report["tensor_down_cells"]=tensorCells;report["tensor_down_capable"]=tensorCapable;

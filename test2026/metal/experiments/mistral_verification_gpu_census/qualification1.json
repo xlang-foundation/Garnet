@@ -1,0 +1,282 @@
+{
+  "scope": "Current verifier timing census and rejected centered-group64 operator prototypes; identifies next real2K draft admission gap.",
+  "profile_study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-gpu-census1",
+  "pilot_study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-q4-centered-group64-pilot1",
+  "profile_audit_sha256": "1d1f78d34ab9c96aed9e57ad4ccea457b27aaa230b27b4b53913640043b45c39",
+  "pilot_audit_sha256": "5fce9f5b6a6d03a150b2946f7a3af7baf1541f904cc48d745f9cf50ea27dc4f1",
+  "draft_admission_sha256": "6f933bf1f559f5dc8b6dd6e5c9461951f36debe23fe695d5660c2b49593c3425",
+  "source_dependencies_provenance_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-native1": "a24b9df29897b392cf94556ecf38fee8eb112424e491c3e46fe2cad82f340c3c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-coder1": "0c54f4d738af0c8485a31bf20b75085e4a0dd54267a954de3a181c1eb95d3485",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-trained1": "191c7098368d3a1d2fdfdac3bafad93c3f897d8c8674cba96e8e4c83b843b04a",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-decode-threadgroup-screen1": "999a6bcba1d642682e5c5cde6e28ad475d77b6892c53ef7275b8a4ae6802789c"
+  },
+  "profile_summary": {
+    "cases": 8,
+    "output_tokens": 3052,
+    "verification_frames": 1125,
+    "ordinary_fallback_frames": 54,
+    "direct_coverage": 0.9527318928034282,
+    "target_gpu_ms": 73214.68687350008,
+    "target_direct_union_ms": 69753.96720600003,
+    "graph_fusions_and_batch_boundaries_preserved": true,
+    "counter_overhead_measured": false
+  },
+  "mlp_summed_region_union_percent": 50.965854645355215,
+  "attention_region_union_percent": 17.12895555323224,
+  "region_unions_may_overlap": true,
+  "pilot_summaries": {
+    "1": [
+      {
+        "shape": "gate",
+        "rows": 1,
+        "median_command_ms": {
+          "0": 0.2563751768320799,
+          "1": 0.24512503296136856,
+          "4": 0.25891675613820553
+        },
+        "control_over_candidate_ratio": {
+          "1": 1.0458955323118073,
+          "4": 0.9901837975106988
+        }
+      },
+      {
+        "shape": "gate",
+        "rows": 4,
+        "median_command_ms": {
+          "0": 0.2827499993145466,
+          "1": 0.5706248339265585,
+          "4": 0.3029999788850546
+        },
+        "control_over_candidate_ratio": {
+          "1": 0.49550945297788695,
+          "4": 0.9331683795985016
+        }
+      },
+      {
+        "shape": "down",
+        "rows": 1,
+        "median_command_ms": {
+          "0": 0.27525005862116814,
+          "1": 0.26599992997944355,
+          "4": 0.301166670396924
+        },
+        "control_over_candidate_ratio": {
+          "1": 1.034774928859716,
+          "4": 0.9139459497905298
+        }
+      },
+      {
+        "shape": "down",
+        "rows": 4,
+        "median_command_ms": {
+          "0": 0.3334584180265665,
+          "1": 0.7488334085792303,
+          "4": 0.42487517930567265
+        },
+        "control_over_candidate_ratio": {
+          "1": 0.4453038742745743,
+          "4": 0.7848385461619607
+        }
+      }
+    ],
+    "2": [
+      {
+        "shape": "gate",
+        "rows": 1,
+        "median_command_ms": {
+          "0": 0.27283327654004097,
+          "1": 0.25041657499969006,
+          "4": 0.2797916531562805
+        },
+        "control_over_candidate_ratio": {
+          "1": 1.0895176429131286,
+          "4": 0.9751301493888638
+        }
+      },
+      {
+        "shape": "gate",
+        "rows": 4,
+        "median_command_ms": {
+          "0": 0.28900010511279106,
+          "1": 0.49687502905726433,
+          "4": 0.9690416045486927
+        },
+        "control_over_candidate_ratio": {
+          "1": 0.5816353976594869,
+          "4": 0.2982329177160415
+        }
+      },
+      {
+        "shape": "down",
+        "rows": 1,
+        "median_command_ms": {
+          "0": 0.2495415974408388,
+          "1": 0.2545833121985197,
+          "4": 0.27495832182466984
+        },
+        "control_over_candidate_ratio": {
+          "1": 0.9801962088004046,
+          "4": 0.9075615379990635
+        }
+      },
+      {
+        "shape": "down",
+        "rows": 4,
+        "median_command_ms": {
+          "0": 0.3226250410079956,
+          "1": 0.6784999277442694,
+          "4": 1.078041736036539
+        },
+        "control_over_candidate_ratio": {
+          "1": 0.4754975318576524,
+          "4": 0.29926952753623315
+        }
+      }
+    ]
+  },
+  "pilot_selected_for_integration": false,
+  "pilot_raw_output_word_parents_retained": false,
+  "pilot_independent_saved_fp64_replay": false,
+  "draft_admission_rows": [
+    {
+      "case": "p2048-c1-o128",
+      "request": 0,
+      "full_draft_prompt_tokens": 1664,
+      "full_prompt_admitted_by_existing_profile": false,
+      "bounded_draft_prompt_tokens": 221,
+      "bounded_initial_admission": true,
+      "draft_capacity": 512,
+      "maximum_draft_tokens": 8,
+      "target_output_limit": 128,
+      "original_messages_sha256": "ec1b9b40748d73b4bd60c8a65a2f17b5e9ef7525bb046223a69452c47883d12b",
+      "draft_prompt_sha256": "37080c63a98485b862c5425284c0f270c88480ba4d52c7ca3615eb445a137e7f",
+      "bounded_draft_prompt_sha256": "bbfef18dc0915bcf7cb1844db2c861cb5c72c8a8a073207a8c571c942e1dfb50"
+    },
+    {
+      "case": "p2048-c4-o128",
+      "request": 0,
+      "full_draft_prompt_tokens": 1664,
+      "full_prompt_admitted_by_existing_profile": false,
+      "bounded_draft_prompt_tokens": 221,
+      "bounded_initial_admission": true,
+      "draft_capacity": 512,
+      "maximum_draft_tokens": 8,
+      "target_output_limit": 128,
+      "original_messages_sha256": "ec1b9b40748d73b4bd60c8a65a2f17b5e9ef7525bb046223a69452c47883d12b",
+      "draft_prompt_sha256": "37080c63a98485b862c5425284c0f270c88480ba4d52c7ca3615eb445a137e7f",
+      "bounded_draft_prompt_sha256": "bbfef18dc0915bcf7cb1844db2c861cb5c72c8a8a073207a8c571c942e1dfb50"
+    },
+    {
+      "case": "p2048-c4-o128",
+      "request": 1,
+      "full_draft_prompt_tokens": 1667,
+      "full_prompt_admitted_by_existing_profile": false,
+      "bounded_draft_prompt_tokens": 221,
+      "bounded_initial_admission": true,
+      "draft_capacity": 512,
+      "maximum_draft_tokens": 8,
+      "target_output_limit": 128,
+      "original_messages_sha256": "565992415b5948f433c8202d6751d27448be73e45dbef1576a5ecf82604be3da",
+      "draft_prompt_sha256": "62c645f1d0e385a767853473c4a88582f6f26042ffd3a30d1f71638f42a6544d",
+      "bounded_draft_prompt_sha256": "e8423b42c83dca495921e20906f115f7d37789fdf3afa195c1aa3a5467102c5a"
+    },
+    {
+      "case": "p2048-c4-o128",
+      "request": 2,
+      "full_draft_prompt_tokens": 1666,
+      "full_prompt_admitted_by_existing_profile": false,
+      "bounded_draft_prompt_tokens": 221,
+      "bounded_initial_admission": true,
+      "draft_capacity": 512,
+      "maximum_draft_tokens": 8,
+      "target_output_limit": 128,
+      "original_messages_sha256": "d3fd2f9dac5f6a526143f27663a793d4922494a0f0678c51ef913eecfa90034d",
+      "draft_prompt_sha256": "a824b9b086eb34133dc5868de593c303e395ae9003bb7845d2673aad13c796e9",
+      "bounded_draft_prompt_sha256": "70fcebc4e68db35dd1a42d94911600b0fbb13069b01b096b24463ee8d355ac5a"
+    },
+    {
+      "case": "p2048-c4-o128",
+      "request": 3,
+      "full_draft_prompt_tokens": 1666,
+      "full_prompt_admitted_by_existing_profile": false,
+      "bounded_draft_prompt_tokens": 221,
+      "bounded_initial_admission": true,
+      "draft_capacity": 512,
+      "maximum_draft_tokens": 8,
+      "target_output_limit": 128,
+      "original_messages_sha256": "471a3e55f19e865f0dba212b161ca1ae848b5ffcc7d32a393f1f0d28b11b8946",
+      "draft_prompt_sha256": "745ce8865f12fe4e9a7ec6ed2a00e4d36407b490198933e666f8d40c890d5414",
+      "bounded_draft_prompt_sha256": "ae6368624216a1108db3290d5cb9f251481f2f0639f6ebbd396ba985413b89d2"
+    }
+  ],
+  "bounded_draft_policy_measured": false,
+  "next_action": "Qualify bounded draft context on actual matched2K prompts, keeping full target context and native verification unchanged. Original full-prompt draft currently fails all five initial512-token input admission checks.",
+  "no_native_runtime_change": true,
+  "no_comparator_execution": true,
+  "production_runtime_integrated": false,
+  "serving_speed_claim": false,
+  "coding_quality_qualified": false,
+  "goal_complete": false,
+  "packaged_sources_sha256": {
+    "profile": {
+      "audit-repair2.json": "a740b80a0a4f5b0139dbc8313c86b79d5e385020d64c4fa57b623426a187d7a4",
+      "audit1.py": "abc3aa3ab91219b021694b0e7c4dc4f2f6b2cf980e442132f5fd882b1daca4a4",
+      "audit2.py": "8b17505c445bfcbac1c218382ccd6a3b436ab827d4ff85743de967f3b5323245",
+      "diagnose_draft_profile1.py": "0571d7ec2a53a90bfa7227ff337064c32656fcd72147236ee7853806c41ca7ff",
+      "launch1.py": "a78a57ee035170ba84cf7047c1963b3258173ba3489c3ebd144b5ecd308c011c",
+      "plan1.json": "b3bf44d3b300adf43b96f49a477cc14e70c97fbadb3fa8b8682e3c5db5d656e1",
+      "worker1.py": "a6f189d6feffdc799df6bf2cfedf34e563932e4e69caea9aa29d15952b6b871d"
+    },
+    "pilot": {
+      "audit1.py": "4b9f32c6e746fd6038e36bef6e20428068e5e09bfdeeac1087804c0d8e24ff0d",
+      "compile2-command.json": "3ce39e6ea14b26a458371d94fbe99a012c2f410245b07e32f5d297a1e26a2c5e",
+      "compile3-command.json": "43c39612181b1504b3220d069200c3c6d7615fe66ad632910914b5c5ab45e2fd",
+      "group64-vector2.metal": "531317acb077e99d3457ca9b27ecf0bde9c852cc2b81ed8125fe46290d2c1e3b",
+      "group64.metal": "637224d4fc9dfc7dd406ee28cda463efa52a1e8cc9ac0ed73af2efde790c24e2",
+      "host-name-repair2.json": "6545174f8157c9d9ebf4dd216401826be5cfb46895eaeeaa35739b90f51101b0",
+      "indexed1.metal": "ce2d06d3d74b44f3b1628f15e5c418ab6c24eaf8483e8fcd4a86e21b6e990cdb",
+      "indexed2.metal": "3d2fb257710e558c7eb51fcb8b43fbcd4cd024ee8aaef4746d9997563c8f4ba4",
+      "ordinary1.metal": "612084cb8258b71f7a650afb86cf377aaa12c3f7960e426af892cc34e754f433",
+      "ordinary2.metal": "8fb089af6252249e336b52c7c056f73e5424a6bc1c248f77433c1f3f0ff99e88",
+      "pilot2.mm": "764b5ac9596189db6609766db47e43fc102a7266a499e4f29f948de23ae77968",
+      "pilot3.mm": "a4da011dd90e72c0f3c96e2f442bc01cb2488acf8b9d3774fd9fd4bdb716742c",
+      "plan1.json": "34d980f6dabda0a80374c448c311ff00039a8c7ddc36deed1a7098f0e2a0b416",
+      "plan2.json": "7e1b9c76b73b03280306bf094b6eebd60f7bde461df278021c4620a952385298",
+      "run1.py": "345315c6cad96edc6e8a5f3e9a3640585d6d5b963c76c0e3e6b8505c8cad6479",
+      "run2.py": "755a4f860bda2dff7bef1865ad3753c7aeeef519b0c7d10d3f2d865411f13e43"
+    }
+  },
+  "evidence_sha256": {
+    "evidence/profile-audit2.json": "1d1f78d34ab9c96aed9e57ad4ccea457b27aaa230b27b4b53913640043b45c39",
+    "evidence/profile-draft-long-context-admission1.json": "6f933bf1f559f5dc8b6dd6e5c9461951f36debe23fe695d5660c2b49593c3425",
+    "evidence/pilot-audit1.json": "5fce9f5b6a6d03a150b2946f7a3af7baf1541f904cc48d745f9cf50ea27dc4f1"
+  },
+  "frozen_evidence": [
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-gpu-census1",
+      "files": 26,
+      "provenance_sha256": "b57615dcab15bac644198caaf03a405a93e87bd7b4f84796c28a83114fd4f23e"
+    },
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-q4-centered-group64-pilot1",
+      "files": 52,
+      "provenance_sha256": "d655282b53537f9b4fd17162afdd04b323596e8acc4b006e18d1dae2eb5bb084"
+    },
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-gpu-census-source-replay1",
+      "files": 8,
+      "provenance_sha256": "c547286dae2428868672dfa39724b8b4c8a8f99ac8180a2d169201c99139b100"
+    },
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-centered-group64-source-replay1",
+      "files": 17,
+      "provenance_sha256": "78801e4b64a832bf3b1d22205e1f954566090c6fd01f0c7599e9f00743e25d4d"
+    },
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-gpu-audit-replay1",
+      "files": 4,
+      "provenance_sha256": "2a8de2271e2f90c6fc8ff50b8a98e7757ce20766f273d8c4efdb49fd07c1f69b"
+    }
+  ]
+}

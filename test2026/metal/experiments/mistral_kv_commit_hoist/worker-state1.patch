@@ -1,0 +1,18 @@
+--- softmax-native-worker-state1.py
++++ kv-hoist-worker-state1.py
+@@ -568,11 +568,11 @@
+                 if count!=expected:raise ValueError('Active FP32 '+stage+' projection coverage '+str(count)+' differs from expected '+str(expected))
+             # Research-only state/route witness, after all ordinary route counters.
+             diagnostic_forward[0]+=1
+-            specialized=decoder.session.chunk_attention_contiguous_softmax_dispatches
++            specialized=decoder.session.chunk_kv_hoisted_commits
+             mps=decoder.session.chunk_attention_mps_dispatches
+-            wanted=mps if profile['diagnostic_variant']=='on' else 0
+-            if specialized!=wanted:raise ValueError('Native contiguous softmax route differs from admitted controls')
+-            emit(dict(event='diagnostic_native_softmax',invocation=diagnostic_forward[0],dispatches=specialized,mps_dispatches=mps,
++            wanted=64 if profile['diagnostic_variant']=='on' and len(ids)>batch else 0
++            if specialized!=wanted:raise ValueError('Native KV commit hoist route '+str(specialized)+' differs from expected '+str(wanted))
++            emit(dict(event='diagnostic_native_kv_hoist',invocation=diagnostic_forward[0],dispatches=specialized,mps_dispatches=mps,
+                 ids=ids,slots=slots.tolist(),active=active.tolist(),epochs=epochs))
+             if diagnostic_forward[0] in [1,16,18,25]:
+                 hashes=[]

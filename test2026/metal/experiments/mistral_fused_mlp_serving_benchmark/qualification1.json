@@ -1,0 +1,332 @@
+{
+  "scope": "Mistral7B 4bit,~2048 frozen prompt tokens (C1:2048; C4:2048/2051/2048/2049),128 output tokens; C1 and C4, no prefix retention. Native2 fresh engines/cell:2 first rounds and4 warmed rounds. Frozen references15 warmed measured waves/cell, never rerun. Thermal/OS conditions uncontrolled; native FP32 canonical KV/decode with half prefill and fused gate/up-SiLU-half-down MLP, references FP16 state. Cold is fresh process, not hardware cold. Observational, no causal speedup or coding-quality qualification.",
+  "comparison": {
+    "scope": "Mistral7B 4bit,~2048 frozen prompt tokens (C1:2048; C4:2048/2051/2048/2049),128 output tokens; C1 and C4, no prefix retention. Native2 fresh engines/cell:2 first rounds and4 warmed rounds. Frozen references15 warmed measured waves/cell, never rerun. Thermal/OS conditions uncontrolled; native FP32 canonical KV/decode with half prefill and fused gate/up-SiLU-half-down MLP, references FP16 state. Cold is fresh process, not hardware cold. Observational, no causal speedup or coding-quality qualification.",
+    "native": {
+      "p2048-c1-o128": {
+        "cold": {
+          "measured_waves": 2,
+          "median": {
+            "ttft_median_seconds": 3.8026956454850733,
+            "decode_median_tps": 17.74194472250354,
+            "aggregate_tps": 11.66332590413407
+          },
+          "range": {
+            "ttft_median_seconds": [
+              3.6302845829632133,
+              3.9751067080069333
+            ],
+            "decode_median_tps": [
+              17.340820850060446,
+              18.143068594946637
+            ],
+            "aggregate_tps": [
+              11.306394104718121,
+              12.020257703550016
+            ]
+          }
+        },
+        "warmed": {
+          "measured_waves": 4,
+          "median": {
+            "ttft_median_seconds": 3.829343708464876,
+            "decode_median_tps": 17.535615408367835,
+            "aggregate_tps": 11.55199574784774
+          },
+          "range": {
+            "ttft_median_seconds": [
+              3.518258084077388,
+              4.102545333094895
+            ],
+            "decode_median_tps": [
+              17.213794531466014,
+              18.03526818113477
+            ],
+            "aggregate_tps": [
+              11.128866821992458,
+              12.092474601630991
+            ]
+          }
+        }
+      },
+      "p2048-c4-o128": {
+        "cold": {
+          "measured_waves": 2,
+          "median": {
+            "ttft_median_seconds": 13.824386708263773,
+            "decode_median_tps": 12.9061050672885,
+            "aggregate_tps": 21.575436114743543
+          },
+          "range": {
+            "ttft_median_seconds": [
+              13.375645666499622,
+              14.273127750027925
+            ],
+            "decode_median_tps": [
+              12.611210310874482,
+              13.20099982370252
+            ],
+            "aggregate_tps": [
+              20.96409047816873,
+              22.186781751318357
+            ]
+          }
+        },
+        "warmed": {
+          "measured_waves": 4,
+          "median": {
+            "ttft_median_seconds": 14.542177093739156,
+            "decode_median_tps": 12.531272934083216,
+            "aggregate_tps": 20.694634793595924
+          },
+          "range": {
+            "ttft_median_seconds": [
+              14.08161506196484,
+              14.81641624995973
+            ],
+            "decode_median_tps": [
+              12.369078385660941,
+              12.79644848760141
+            ],
+            "aggregate_tps": [
+              20.357879426432916,
+              21.266525908444446
+            ]
+          }
+        }
+      }
+    },
+    "references": {
+      "vllm-metal": {
+        "p2048-c1-o128": {
+          "measured_waves": 15,
+          "median": {
+            "ttft_median_seconds": 4.2186499170493335,
+            "decode_median_tps": 20.751221590240995,
+            "aggregate_tps": 12.345161851581897
+          },
+          "range": {
+            "ttft_median_seconds": [
+              3.732310666004196,
+              5.010484082857147
+            ],
+            "decode_median_tps": [
+              17.228530127120674,
+              24.748229996574867
+            ],
+            "aggregate_tps": [
+              10.575633558810472,
+              14.4401600033898
+            ]
+          }
+        },
+        "p2048-c4-o128": {
+          "measured_waves": 15,
+          "median": {
+            "ttft_median_seconds": 11.569546042010188,
+            "decode_median_tps": 10.483987284770734,
+            "aggregate_tps": 21.178787200642738
+          },
+          "range": {
+            "ttft_median_seconds": [
+              11.329999249894172,
+              15.08056747901719
+            ],
+            "decode_median_tps": [
+              8.153958581124481,
+              10.594494997535293
+            ],
+            "aggregate_tps": [
+              16.88769616382055,
+              21.469306502411523
+            ]
+          }
+        }
+      },
+      "sglang-mlx": {
+        "p2048-c1-o128": {
+          "measured_waves": 15,
+          "median": {
+            "ttft_median_seconds": 4.158831042004749,
+            "decode_median_tps": 20.73700076281581,
+            "aggregate_tps": 12.518221714237225
+          },
+          "range": {
+            "ttft_median_seconds": [
+              3.920264458982274,
+              4.77910566679202
+            ],
+            "decode_median_tps": [
+              18.817042311998836,
+              22.258359925350092
+            ],
+            "aggregate_tps": [
+              11.418533314420394,
+              13.110462806078342
+            ]
+          }
+        },
+        "p2048-c4-o128": {
+          "measured_waves": 15,
+          "median": {
+            "ttft_median_seconds": 10.884484875015914,
+            "decode_median_tps": 6.306760478301644,
+            "aggregate_tps": 16.336590125923106
+          },
+          "range": {
+            "ttft_median_seconds": [
+              10.231152500142343,
+              12.761449333629571
+            ],
+            "decode_median_tps": [
+              5.685331515519856,
+              6.8421927767972495
+            ],
+            "aggregate_tps": [
+              14.47849542886359,
+              17.573845052242234
+            ]
+          }
+        }
+      }
+    },
+    "warmed_ratios": {
+      "vllm-metal": {
+        "p2048-c1-o128": {
+          "ttft_native_over_reference": 0.9077178205730919,
+          "decode_native_over_reference": 0.8450401501478152,
+          "aggregate_native_over_reference": 0.9357508541994108
+        },
+        "p2048-c4-o128": {
+          "ttft_native_over_reference": 1.2569358418156638,
+          "decode_native_over_reference": 1.195277387667802,
+          "aggregate_native_over_reference": 0.9771397482556451
+        }
+      },
+      "sglang-mlx": {
+        "p2048-c1-o128": {
+          "ttft_native_over_reference": 0.9207740515995944,
+          "decode_native_over_reference": 0.8456196539188789,
+          "aggregate_native_over_reference": 0.9228144389477799
+        },
+        "p2048-c4-o128": {
+          "ttft_native_over_reference": 1.3360464239441459,
+          "decode_native_over_reference": 1.9869587527855155,
+          "aggregate_native_over_reference": 1.2667658693816048
+        }
+      }
+    },
+    "quality_gate_passed": false,
+    "strict_coding": "0/8",
+    "goal_complete": false
+  },
+  "audit": {
+    "passed": true,
+    "requests": 30,
+    "output_tokens": 3840,
+    "all_native_ids_and_text_exact_frozen_fp32": true,
+    "negative_controls_rejected": [
+      "missing_fused_dispatch",
+      "wrong_fused_blocks",
+      "wrong_fused_site",
+      "wrong_token",
+      "wrong_prompt",
+      "fake_cache_hit",
+      "wrong_epoch",
+      "missing_half_dispatch",
+      "mps_fallback",
+      "owner_leak",
+      "false_ttft",
+      "false_decode",
+      "false_occupancy"
+    ],
+    "complete_report_sha256": "3938d29a121ec4c1229653d56f640dec0d67f92aeeeb237a6b386e6c40b768f8",
+    "packaged_report_exact": true
+  },
+  "waves": [
+    {
+      "label": "wave-1-p2048-c1-o128",
+      "case": "p2048-c1-o128",
+      "fused_mlp": {
+        "blocks": 1536,
+        "producer_kernels": 1536,
+        "down_kernels": 1536
+      },
+      "half_dispatches": 1536,
+      "maximum_active_rows": 1,
+      "close_allocation_bytes": 1769472
+    },
+    {
+      "label": "wave-2-p2048-c4-o128",
+      "case": "p2048-c4-o128",
+      "fused_mlp": {
+        "blocks": 1536,
+        "producer_kernels": 1536,
+        "down_kernels": 1536
+      },
+      "half_dispatches": 1632,
+      "maximum_active_rows": 4,
+      "close_allocation_bytes": 2293760
+    },
+    {
+      "label": "wave-3-p2048-c4-o128",
+      "case": "p2048-c4-o128",
+      "fused_mlp": {
+        "blocks": 1536,
+        "producer_kernels": 1536,
+        "down_kernels": 1536
+      },
+      "half_dispatches": 1632,
+      "maximum_active_rows": 4,
+      "close_allocation_bytes": 2293760
+    },
+    {
+      "label": "wave-4-p2048-c1-o128",
+      "case": "p2048-c1-o128",
+      "fused_mlp": {
+        "blocks": 1536,
+        "producer_kernels": 1536,
+        "down_kernels": 1536
+      },
+      "half_dispatches": 1536,
+      "maximum_active_rows": 1,
+      "close_allocation_bytes": 1769472
+    }
+  ],
+  "targets": {
+    "vllm-metal": {
+      "single_decode_2x": false,
+      "aggregate_2x": false,
+      "half_TTFT_C1": false,
+      "half_TTFT_C4": false
+    },
+    "sglang-mlx": {
+      "single_decode_2x": false,
+      "aggregate_2x": false,
+      "half_TTFT_C1": false,
+      "half_TTFT_C4": false
+    }
+  },
+  "preflight_bound_inputs": 55340,
+  "frozen_studies": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-serving1": {
+      "provenance_sha256": "0ae9d716752330deee4f5d5ebc4eabf45825e5f03963ff0ad8fc14262d265a9a",
+      "files": 172
+    },
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-serving-preparation1": {
+      "provenance_sha256": "003cf5ce42e443c73e43fb57f78b2708af629879d25f8f84e1ef3c9364926835",
+      "files": 5
+    },
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-serving-replay-preparation1": {
+      "provenance_sha256": "558962bce218d42b3234a2b3ef133708eeab1b1bba375073bc45fb8c8c3c8a0e",
+      "files": 35
+    }
+  },
+  "native_library_sha256": "928a07351eb25b0c81217bab783e3c7e88f35848b9a629407b750cd365265aa5",
+  "unprofiled_worker_sha256": "2f2bd1c0a3ad6fdd5c15ed1ce210f301049b81a3a43a880653802655eb8f37e8",
+  "original_files_preserved": 11,
+  "production_runtime_integrated": false,
+  "quality_gate_passed": false,
+  "comparator_inference_rerun": false,
+  "goal_complete": false
+}

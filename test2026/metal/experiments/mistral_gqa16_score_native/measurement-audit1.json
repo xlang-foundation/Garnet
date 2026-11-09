@@ -1,0 +1,121 @@
+{
+  "passed": true,
+  "scope": "Audit actual causal-helper stage rates; no HTTP or comparator speed admission.",
+  "sequence": [
+    [
+      1,
+      "off"
+    ],
+    [
+      1,
+      "on"
+    ],
+    [
+      2,
+      "on"
+    ],
+    [
+      2,
+      "off"
+    ]
+  ],
+  "stages": [
+    {
+      "cohort": 1,
+      "mode": "off",
+      "prefill_seconds": 3.3605422920081764,
+      "decode_seconds": 5.066793040838093,
+      "decode_tps": 25.065164291571907,
+      "target_seconds": 4.032925958512351,
+      "draft_seconds": 1.032008879352361,
+      "accepted": 80,
+      "proposed": 138,
+      "target_calls": 47
+    },
+    {
+      "cohort": 1,
+      "mode": "on",
+      "prefill_seconds": 3.367340249940753,
+      "decode_seconds": 3.9530843750108033,
+      "decode_tps": 32.12681237031601,
+      "target_seconds": 2.97309958236292,
+      "draft_seconds": 0.9786719980183989,
+      "accepted": 80,
+      "proposed": 138,
+      "target_calls": 47
+    },
+    {
+      "cohort": 2,
+      "mode": "on",
+      "prefill_seconds": 3.408003124874085,
+      "decode_seconds": 3.9770234159659594,
+      "decode_tps": 31.93343028611603,
+      "target_seconds": 2.982247958192602,
+      "draft_seconds": 0.993189460830763,
+      "accepted": 80,
+      "proposed": 138,
+      "target_calls": 47
+    },
+    {
+      "cohort": 2,
+      "mode": "off",
+      "prefill_seconds": 3.4480959998909384,
+      "decode_seconds": 5.174081749981269,
+      "decode_tps": 24.545418131528315,
+      "target_seconds": 4.169949748553336,
+      "draft_seconds": 1.00242904224433,
+      "accepted": 80,
+      "proposed": 138,
+      "target_calls": 47
+    }
+  ],
+  "paired_ratios": [
+    {
+      "cohort": 1,
+      "decode_ratio": 1.2817315696238447,
+      "off_decode_tps": 25.065164291571907,
+      "on_decode_tps": 32.12681237031601,
+      "off_prefill_seconds": 3.3605422920081764,
+      "on_prefill_seconds": 3.367340249940753
+    },
+    {
+      "cohort": 2,
+      "decode_ratio": 1.300993534312536,
+      "off_decode_tps": 24.545418131528315,
+      "on_decode_tps": 31.93343028611603,
+      "off_prefill_seconds": 3.4480959998909384,
+      "on_prefill_seconds": 3.408003124874085
+    }
+  ],
+  "median_decode_tps": {
+    "on": 32.03012132821602,
+    "off": 24.805291211550113
+  },
+  "native_stage_gate_passed": true,
+  "negative_controls_rejected": [
+    "false_decode_rate",
+    "wrong_full_kv",
+    "false_gqa_route",
+    "future_helper_prefix",
+    "changed_accepted_count"
+  ],
+  "output_ids_exact_qualified_current_ordinary": true,
+  "full_kv_hidden_exact_qualified_current_ordinary": true,
+  "proposals_and_helper_trace_exact": true,
+  "serving_ttft_measured": false,
+  "matched_maximum_concurrency_profile": false,
+  "full_serving_comparison_promoted": false,
+  "coding_quality_qualified": false,
+  "no_comparator_execution": true,
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/audit_measurement1.py": "eb2a9a86ac4390274a23ee540a339e3bdeb9690c4f6e0fa376b986ef0af2702b",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/measurement-plan1.json": "ed3c5ecc67ee6bacf2952571ec8a08cae52960d569ee150b028db0fa7ab71faf",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/measurement1-preflight.json": "9bc650e0d36992cd670f27392d1e048bcfc8e35887c98e5196244d6010806496",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/measurement1-postflight.json": "782ab365c8941e80d74ae6ac715f09a4da366cc1a4be198b2575d3451ef74f36",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/cohort1-off-result1.json": "fcd012f6b87deffc53e27eae70cc6d138f6fd6e684a7fda152e15b0e450cae1c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/cohort1-on-result1.json": "218a28f187917f437cb84414fe5d18b743faaf6c300042e88936c5fa50cf4842",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/cohort2-on-result1.json": "6f0fac7f3db993407ae099cca442fda1bcfa3a265a8043257aa4bb4338fc3e49",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/cohort2-off-result1.json": "9410d2e23b0429d8951d06ca6bd1741cca0678bc7b4d10e8943cce310dcbe37f"
+  }
+}

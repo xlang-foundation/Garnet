@@ -1,0 +1,274 @@
+{
+  "scope": "Default-off native prepared-profile coexistence and C4/T1 correctness; no new speed or C4/T4 admission",
+  "c4_study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-c4-ownership2",
+  "native_study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1",
+  "study_provenance_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-c4-ownership1": "da02c29fb9b109521b26850162b1c7f297aff2cd031e33fbfe31e3d77ed53903",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-c4-ownership2": "595c8c3f557b41c9e5c2720254306459b0c4ec1afab79c9b174b08cc9fdc621d",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1": "981c47c2da755e77cf7c4264c3230ec24a6fb23272591bae8a899d43fdb23790"
+  },
+  "source_replay": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-source-replay1",
+  "source_replay_provenance_sha256": "c784d01332f9abcca78504c01fdf99a2caae946edc4f287da5411e306a87759a",
+  "audit_replay": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-audit-replay1",
+  "audit_replay_provenance_sha256": "8bb7cd0912c78d79f92726ab958ac993ee42b8747d6f3e76fc4c205ab8aad16b",
+  "raw_replay_script": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/replay_compact_verification1.py",
+  "source_reconstruction": {
+    "passed": true,
+    "base_source": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-dense-verification1/source1",
+    "base_binding_sha256": "efb2960049c87824137862b0a62a9caea94544f7ac29ee7db0babc9428d9eeca",
+    "source_files": 26300,
+    "changed_files": [
+      "cmake/GarnetMetal.cmake",
+      "src/backends/metal/compact_prefill_session.cpp",
+      "src/backends/metal/decoder_session.h",
+      "src/backends/metal/verification_session.cpp",
+      "src/entry/metal_main.cpp"
+    ],
+    "native_patch_sha256": "116148497a8f62120f7e14e5451a268e71878a3c52bca6d683e149b08bdb3015",
+    "all_source_content_reconstructed": true,
+    "canonical_source_sha256": "6296f08ef6428746b6f13e6d11c8edd2d9f57d6b13769d4034eed2b82d34d8e1",
+    "no_shader_or_xmodel_operator_content_change": true,
+    "build_or_inference_executed": false,
+    "goal_complete": false
+  },
+  "c4_ownership": {
+    "passed": true,
+    "scope": "Audit exact C4/T1 current-ordinary parity and independent native row lifecycle.",
+    "summary": {
+      "native_decode_calls": 44,
+      "active_decode_occupancies": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "mixed_ticks": 25,
+      "full_four_row_state_digest_pairs": 2340,
+      "rejected_call_state_digest_pairs": 260,
+      "exact_output_ids": 104
+    },
+    "all_output_ids_and_full_kv_hidden_exact_current_ordinary": true,
+    "independent_budgets_refill_cancel_and_survivors_qualified": true,
+    "native_api_rejections": 3,
+    "negative_controls_rejected": [
+      "wrong_survivor_kv",
+      "wrong_survivor_hidden",
+      "wrong_output",
+      "fake_native_budget",
+      "fake_epoch",
+      "false_finish",
+      "missing_row_reuse",
+      "mutated_rejected_call",
+      "live_owner"
+    ],
+    "files_sha256": {
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-c4-ownership2/audit1.py": "1861bba2b753f734d42d2bc45128c2eb2244e940e76c359c142cdb6e3180c5c2",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-c4-ownership2/ordinary-result1.json": "f70c6c22bb0abd4530a8fa6c8739af512bb802ae19c8df7854d0ae5a922a891f",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-c4-ownership2/verify-result1.json": "3288ea688df5890522a8c866de61a0648cfdda75c87f275f463be95c34c1b401",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-scheduled-c4-ownership2/preflight1.json": "86b37e1b536310e8351e055167e4407e91f6ace453d449a3d5812bcf3769e8f2"
+    },
+    "c4t1_qualified": true,
+    "c4t4_qualified": false,
+    "compact_prefill_qualified": false,
+    "performance_measured": false,
+    "no_comparator_execution": true,
+    "goal_complete": false
+  },
+  "native_qualification": {
+    "passed": true,
+    "scope": "Audit prepared compact/verification coexistence, fixed profiles and lifecycle.",
+    "forward_summary": {
+      "native_decode_calls": 45,
+      "active_decode_occupancies": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "mixed_ticks": 17,
+      "full_four_row_state_digest_pairs": 2600,
+      "rejected_call_state_digest_pairs": 260,
+      "exact_output_ids": 102
+    },
+    "reverse_summary": {
+      "native_decode_calls": 45,
+      "active_decode_occupancies": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "mixed_ticks": 17,
+      "full_four_row_state_digest_pairs": 2600,
+      "rejected_call_state_digest_pairs": 260,
+      "exact_output_ids": 102
+    },
+    "full_four_row_state_digest_pairs": 5200,
+    "rejected_api_state_digest_pairs": 520,
+    "preparation_guard_state_digest_pairs": 1300,
+    "guards": [
+      {
+        "mode": "off-forward",
+        "rejections": [
+          "verification_after_compact_default_off"
+        ]
+      },
+      {
+        "mode": "off-reverse",
+        "rejections": [
+          "compact_after_verification_default_off"
+        ]
+      },
+      {
+        "mode": "on-owned",
+        "rejections": [
+          "late_verification_after_claim",
+          "late_compact_after_claim"
+        ]
+      },
+      {
+        "mode": "on-capacity",
+        "rejections": [
+          "unsupported_capacity"
+        ]
+      }
+    ],
+    "actual_profile_routes": [
+      [
+        4,
+        0
+      ],
+      [
+        128,
+        0
+      ],
+      [
+        256,
+        1
+      ],
+      [
+        512,
+        1
+      ]
+    ],
+    "b1_compact_calls_all_three_arms": 36,
+    "initial_full_batch_state_exact_prior_profile": true,
+    "all_full_state_and_outputs_exact_current_ordinary": true,
+    "preparation_orders": [
+      "compact_then_verification",
+      "verification_then_compact"
+    ],
+    "native_api_rejections_per_verifier_arm": 3,
+    "negative_controls_rejected": [
+      "survivor_kv",
+      "survivor_hidden",
+      "wrong_epoch",
+      "fake_budget",
+      "fake_compact_span",
+      "wrong_target_id",
+      "live_owner"
+    ],
+    "files_sha256": {
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/audit_qualification1.py": "63ec9ad526b2765f7f27ac8f4d326b7f2cd1afc43c30df9492b46b201d687fb5",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/audit_core1.py": "566708846c0677d5aa4fba7088d8c929a3ce1a45b16b76c641ff1b78c96d02ce",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/ordinary-result1.json": "c916b73a257223f429d059573ec9e8fecfed7442ade1850846eec7179331248d",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/verify-result1.json": "9803962be003d7d060dc242e37e6d9b0826a0a60ed3c2e4e205082d4a1796579",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/reverse-result1.json": "fc9de2f78c05dd43bc21f14a670acf4e03ad4a5e6aaa754fe1d470d99ed0594d",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/qualification1-preflight.json": "8aa8063938ade5a271aa5155556eaee8c9faee8f5902d77d74cb766d6385be3c"
+    },
+    "b2_compact_interleave_qualified": false,
+    "c4t4_qualified": false,
+    "performance_measured": false,
+    "no_comparator_execution": true,
+    "goal_complete": false
+  },
+  "b2_qualification": {
+    "passed": true,
+    "scope": "Audit B2 compact spans interleaved with an independent native decoder row.",
+    "summary": {
+      "output_ids": 12,
+      "full_four_row_state_digest_pairs": 780,
+      "rejected_call_state_digest_pairs": 260,
+      "native_verification_calls": 8,
+      "b2_mixed_ticks": 7,
+      "actual_routes": [
+        [
+          128,
+          0,
+          4
+        ],
+        [
+          128,
+          2,
+          1
+        ],
+        [
+          256,
+          2,
+          1
+        ]
+      ]
+    },
+    "all_output_ids_full_kv_hidden_exact_current_ordinary": true,
+    "b2_compact_interleave_qualified": true,
+    "stop_policy": "Empty stop list only in this geometry probe; output budgets govern termination. Primary qualification uses EOS2.",
+    "negative_controls_rejected": [
+      "survivor_hidden",
+      "b2_cache",
+      "wrong_native_budget",
+      "wrong_compact_span",
+      "wrong_target_id"
+    ],
+    "files_sha256": {
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/audit_probe1.py": "afa215714a316b741e498b4ce93ffe0af2755e2d199243aa4726a10444e744ae",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/probe-ordinary-result1.json": "9f12a1febbbb3852171a604fda241acce558eeb201777eda61a56cd8d28f4b97",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/probe-verify-result1.json": "745a65c35ee292ff2842b15adee44d1e871ced7c4a274a1905f1a6d2c54ef377",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-compact-verification-coexist1/probe1-preflight.json": "6fa244a4c005c9d1bdc4e05377ae9ff03ce3180592cea91a0b1b81f4c4755552"
+    },
+    "performance_measured": false,
+    "no_comparator_execution": true,
+    "c4t4_qualified": false,
+    "goal_complete": false
+  },
+  "packaged_files_sha256": {
+    "README.md": "b03fda7ce49d15c62c19609a5d8f06ed39e792db7f80263ae62aec70b69d71ca",
+    "b2/audit_probe1.py": "afa215714a316b741e498b4ce93ffe0af2755e2d199243aa4726a10444e744ae",
+    "b2/probe-audit1.json": "6a2a10dede3bb15729ed25f62737af8b92ab11082f39f0e1b7c8c9c6946ae8cc",
+    "b2/probe-input1.json": "7c9de5d76eca6252e259fe27d15b2f5c1f42f7048a375a854d5c83771d863e01",
+    "b2/probe-plan1.json": "1a09d99ecb736b28d623a1c679e0cca81dad3fb7273c31ee126b03eaa3cc346d",
+    "b2/probe_worker1.py": "55a49c402c672b41dab9586c0b82a9a4eecbe9756d196d36aa1f72dade0bd43f",
+    "b2/run_probe1.py": "8c7c5e2f9bcfd5f196cd0ef3d02a0a8ea4a8ba6989c18ef14c6b4a4c5e77cd58",
+    "c4/audit1.json": "8239b5e85d7d082b996d22d7eed105130813f63e30731035eeb6de5e93d31a5a",
+    "c4/audit1.py": "1861bba2b753f734d42d2bc45128c2eb2244e940e76c359c142cdb6e3180c5c2",
+    "c4/decision1.json": "f62492d46dcc81578282ad7e0575b57da0a9f01f29a45be576298f71b9879478",
+    "c4/input1.json": "3ec954e06fd8bee37f18eeb67837c76850cb84a8ed8e8532fc1086f8eed67527",
+    "c4/plan1.json": "28f966d9bad4d8dfb1a9ceaf48dc719eafac51a3d5979a09d1f2e22b400d5e48",
+    "c4/repair1.json": "3e03052c1ff6ed6af8b1fce1c422fdcb2c1c01dd8bf86e2338332ab707fcd550",
+    "c4/run1.py": "fd660e94f736717a516ead01d9df64c2dd52d772c8b0fc0b06e454d0ab5edc40",
+    "c4/worker1.py": "b326c11e277ec6dc231b0920176f93ceb95f079c5306f2a6585926bdbdc58b02",
+    "freeze1.py": "34bbc17aaed9ea78227b190e7a92a4059aa6e2f07c5e2acee88486ebe0baad0f",
+    "native/audit_core1.py": "566708846c0677d5aa4fba7088d8c929a3ce1a45b16b76c641ff1b78c96d02ce",
+    "native/audit_qualification1.py": "63ec9ad526b2765f7f27ac8f4d326b7f2cd1afc43c30df9492b46b201d687fb5",
+    "native/build-audit1.json": "df80080594f9e750cf55c8d69ee099f1b2c417b01ceb2b93469458f321f20bb5",
+    "native/build1.py": "2ae819f58149988293352271952d2d1d76b7a2ca50fbcb1189dc1b2fed676a70",
+    "native/decision1.json": "7c983528c482dc314d5c7c79ed8fb4b65d544593b0395b412dfd9c5123bbdbdb",
+    "native/guard_worker1.py": "89e3ccb3ed5b0d6f1dead21a1b56535c9d04f5970f833ef8936ada1d6308b781",
+    "native/input1.json": "e21f003399a7f969e1dca02989766a49e10b12268a57a30806dfbd888ba1429d",
+    "native/native1.patch": "116148497a8f62120f7e14e5451a268e71878a3c52bca6d683e149b08bdb3015",
+    "native/plan1.json": "51955d3d3290ab52c9d005974c8ddc294ea2bb50b3034e1e124791dd85b011fc",
+    "native/prepare1.py": "6b518d8c707cce645edbbf580bb2718f49cfdc00e146bb92de22ffdfb9f9d879",
+    "native/qualification-audit1.json": "24dd7a5bcd0e6b28a880d17fa089888c280bb28ca7511d5a51c15bb266055d91",
+    "native/run_qualification1.py": "b0c3ce2076cb6fb51529d6aa0c12aef3b4b7bb3384dc1d487c510243cc456636",
+    "native/source-audit1.json": "0da16c99630c50995c5d490761b1df634060779b4f92ebea453ba656c792af55",
+    "native/worker1.py": "5d3b1d2d795e26ead51c53a6485de9ec2bf9febabc955a7e13a74fe1ec40a665",
+    "raw_replay1.py": "c77986b1de2c12de80982ffb14a17503c15ee8ea96481ae473dce097894b40df",
+    "replay_saved1.py": "cb541b7fdf255dbd0175ce070189eaf8ff9b4431805a4cd655cb3035d3a5105e"
+  },
+  "default_option_on": false,
+  "c4t1_qualified": true,
+  "c4t4_qualified": false,
+  "prefix_retention_qualified": false,
+  "performance_measured": false,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

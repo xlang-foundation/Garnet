@@ -1,0 +1,270 @@
+{
+  "scope": "Native four-row FP32 fusion prefix lifecycle and learned-coder draft stage: correctness qualified within current producer, no repeatable performance gain.",
+  "prefix_study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-prefix-http1",
+  "coder_study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-coder1",
+  "base_provenances_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-native1": "a24b9df29897b392cf94556ecf38fee8eb112424e491c3e46fe2cad82f340c3c",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-half-prefix-http1": "70e77981e3421ad5ca6e997d0d1d10dbcc773023693832858f5abc6d05e06cd9",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-coder-draft-native1": "80a24ab1d8d7e37536c4ca8058c84e92da13aaf0caee8a1e508557370a134c32"
+  },
+  "prefix_worker_sha256": "6f114ea57ecb03fdae327884db25631c1e30f5b823125dfc47e6ae534d848f6f",
+  "coder_worker_sha256": "1ade4ae51e9d4cf690622ed6918e87057b0039c8f835757b2a46920edd4ddf5b",
+  "input_sha256": "e254d5b5877e6b23b8f1c959b0275b4b8690d9afed20ceda0a6b306de2de3cd4",
+  "reports_sha256": {
+    "prefix": "4d30d8f7c397733c10a64ff842e2a8c7362484a1af9e67e75dca368831fa6a5a",
+    "coder": "ee962e1a7c55151e11f849e128f0a1a7711b89c2a7bba1858b625c97eea9581c"
+  },
+  "prefix_summary": {
+    "full_target_digest_pairs": 1170,
+    "hidden_values_compared": 73728,
+    "output_tokens_per_arm": 720,
+    "prefix_cache_lineage_qualified": true,
+    "hybrid_recurrent_model_tested": false
+  },
+  "prefix_cached_tokens": {
+    "B": 0,
+    "C": 0,
+    "D": 0,
+    "A": 0,
+    "E": 0,
+    "A-return": 2048,
+    "append": 1792,
+    "changed-tail": 1792,
+    "changed-head": 0
+  },
+  "coder_summaries": [
+    {
+      "cohort": 1,
+      "role": "control",
+      "tokens": 3044,
+      "seconds": 85.1530090412125,
+      "tokens_per_second": 35.74741555552969,
+      "draft_seconds": 23.04536022641696,
+      "target_seconds": 62.07384911039844,
+      "target_calls": 1179,
+      "accepted": 1865,
+      "proposed": 3369,
+      "prepared_metal_bytes": 5744803840,
+      "route": {
+        "full_frames": 1121,
+        "partial_frames": 4,
+        "fallback_frames": 54,
+        "fused_blocks": 0,
+        "input_copies": 0,
+        "covered_target_gpu_seconds": 57.91258766874671
+      }
+    },
+    {
+      "cohort": 1,
+      "role": "candidate",
+      "tokens": 3044,
+      "seconds": 87.39151908364147,
+      "tokens_per_second": 34.831755208267076,
+      "draft_seconds": 23.690640936838463,
+      "target_seconds": 63.66544838156551,
+      "target_calls": 1179,
+      "accepted": 1865,
+      "proposed": 3369,
+      "prepared_metal_bytes": 5744869376,
+      "route": {
+        "full_frames": 1121,
+        "partial_frames": 4,
+        "fallback_frames": 54,
+        "fused_blocks": 35872,
+        "input_copies": 0,
+        "covered_target_gpu_seconds": 59.49783513159491
+      }
+    },
+    {
+      "cohort": 2,
+      "role": "candidate",
+      "tokens": 3044,
+      "seconds": 88.80833483557217,
+      "tokens_per_second": 34.27606210200809,
+      "draft_seconds": 24.021057802718133,
+      "target_seconds": 64.75190311367624,
+      "target_calls": 1179,
+      "accepted": 1865,
+      "proposed": 3369,
+      "prepared_metal_bytes": 5744869376,
+      "route": {
+        "full_frames": 1121,
+        "partial_frames": 4,
+        "fallback_frames": 54,
+        "fused_blocks": 35872,
+        "input_copies": 0,
+        "covered_target_gpu_seconds": 60.56615608232096
+      }
+    },
+    {
+      "cohort": 2,
+      "role": "control",
+      "tokens": 3044,
+      "seconds": 92.49709178996272,
+      "tokens_per_second": 32.90914277512797,
+      "draft_seconds": 24.892073906725273,
+      "target_seconds": 67.56589702377096,
+      "target_calls": 1179,
+      "accepted": 1865,
+      "proposed": 3369,
+      "prepared_metal_bytes": 5744803840,
+      "route": {
+        "full_frames": 1121,
+        "partial_frames": 4,
+        "fallback_frames": 54,
+        "fused_blocks": 0,
+        "input_copies": 0,
+        "covered_target_gpu_seconds": 63.292080293409526
+      }
+    }
+  ],
+  "coder_comparisons": [
+    {
+      "cohort": 1,
+      "speed_ratio": 0.9743852714096145,
+      "per_case": [
+        {
+          "case_id": "merge-closed-intervals",
+          "ratio": 0.940646857888951
+        },
+        {
+          "case_id": "stable-unique-generator",
+          "ratio": 0.956919237837144
+        },
+        {
+          "case_id": "deterministic-toposort",
+          "ratio": 0.9689412755929805
+        },
+        {
+          "case_id": "half-open-subtraction",
+          "ratio": 0.9756104837245263
+        },
+        {
+          "case_id": "incremental-length-frames",
+          "ratio": 0.9829224648632848
+        },
+        {
+          "case_id": "bounded-lru",
+          "ratio": 0.9894098734111637
+        },
+        {
+          "case_id": "patch-json-pointer",
+          "ratio": 0.9911572946243452
+        },
+        {
+          "case_id": "repair-bisect-left",
+          "ratio": 0.9981262035746971
+        }
+      ],
+      "stage_gate_passed": false
+    },
+    {
+      "cohort": 2,
+      "speed_ratio": 1.041536157177367,
+      "per_case": [
+        {
+          "case_id": "merge-closed-intervals",
+          "ratio": 1.0378630079232636
+        },
+        {
+          "case_id": "stable-unique-generator",
+          "ratio": 1.0231835262286872
+        },
+        {
+          "case_id": "deterministic-toposort",
+          "ratio": 1.052352161939714
+        },
+        {
+          "case_id": "half-open-subtraction",
+          "ratio": 1.0406677364036172
+        },
+        {
+          "case_id": "incremental-length-frames",
+          "ratio": 1.0361068247581215
+        },
+        {
+          "case_id": "bounded-lru",
+          "ratio": 1.0618389133679862
+        },
+        {
+          "case_id": "patch-json-pointer",
+          "ratio": 1.0319386222989655
+        },
+        {
+          "case_id": "repair-bisect-left",
+          "ratio": 1.0320496256381098
+        }
+      ],
+      "stage_gate_passed": true
+    }
+  ],
+  "declared_stage_gate_passed": false,
+  "current_ordinary_full_state_qualified": true,
+  "historical_frozen_internal_state_gate_passed": false,
+  "historical_frozen_output_ids_unchanged": true,
+  "ordinary_reference_sha256": "55134a4e55166b9b7f266e77ad32470a20684cc152f93e52da821c3607c08570",
+  "independent_state_digest_pairs_to_current_ordinary": 2080,
+  "strict_coding_score_unchanged": "0/8",
+  "new_default_enabled": false,
+  "production_runtime_integrated": false,
+  "matched_http_speedup_admitted": false,
+  "no_comparator_execution": true,
+  "goal_complete": false,
+  "packaged_sources_sha256": {
+    "prefix": {
+      "audit-tools1/audit_decode_route1.py": "3280e922d611ea220dbc048d9ef92786633bd836f18676c3b67ae7b7011b4e09",
+      "audit-tools1/audit_fused_route1.py": "828c32ed351c3d5d320ab9b668ef3094f33c03b28d8c6c4545f9d90746bb3fb4",
+      "audit-tools1/audit_half_transport1.py": "9dcd312fd922a365627977b6ac0be9aa16bf0c82567c7131c432a38f2bef377a",
+      "audit-tools1/audit_policies1.py": "a4753bb4386086adab92c10dfe133038c116dadfe19d279dd98ca0cb65bf7774",
+      "audit_lifecycle1.py": "792ee187a8bdc2ea3cea65e0d9f5573ebe8597df434e6116031d555ebe955430",
+      "launch1.py": "d68984177ff73660903b61b6249e37223410dfe49a5786ba56bc84f7da46ffab",
+      "prepare1.py": "da15bc6c7322f3fe3efa799b58871245bee0e3a7a36b5fa51327525785da76bc",
+      "run_http1.py": "f5cfbdee90731fca18e5611cfef1eafcaa47deffb8571ece4f5c21db9810ccf1"
+    },
+    "coder": {
+      "audit-repair2.json": "36f07990ee2b146d1dbe61f2a367f8bc98c4947c5e05c8db04810a461d7b1a32",
+      "audit1.py": "a59bb53ec115e2134a53be4b948c2a581213c98ac80f44024b38e1ba13933459",
+      "audit2.py": "1cd888edc6636b9dbe975abd76c47a6a2e1fc6ddc63d207b43fb3da441aaea73",
+      "audit3.py": "ca4c8ca637dacee398845eac1a0d7f1100add2ddc96260e25db2ab05c83e404a",
+      "audit_mistral_prediction_confidence.py": "322b224cdb756d128cb92a8c95d40caf96ee4daa3ddffa4e74747506390b1bc3",
+      "input1.json": "e254d5b5877e6b23b8f1c959b0275b4b8690d9afed20ceda0a6b306de2de3cd4",
+      "launch1.py": "f2b7d6f1824adcb6c34d31fd31ed0fbf1655f0bce1de1260e25c8eeaa177ce9f",
+      "plan1.json": "e9309a9d5f12c926df4595f1ff0bd9f01234f51cd565ee3133af49911f8c6c0c",
+      "reference-plan3.json": "6068e305901af09acf2db14ca9262c506cd30f1421c25f4159d642a23b50b8e0",
+      "run_reference3.py": "354cb906bed54431bbc694513545c9b8bbf28043d7faefe6fab4e83cc164826b",
+      "worker-reference3.py": "d50119fe26dd22888b1b5a50c6657e66c2d25975a28b34f6c015b8aa4f76a963",
+      "worker1.py": "1ade4ae51e9d4cf690622ed6918e87057b0039c8f835757b2a46920edd4ddf5b"
+    }
+  },
+  "evidence_sha256": {
+    "evidence/cost-census1.json": "333448d8e56e9f5a1c1d7b8944e568e3799821a887bef0a77c85eee54335f56f",
+    "evidence/reference-admission3.json": "6817d36e8e782a308adfef66770a82cc1cf532e8199802d9a129037e4b423386"
+  },
+  "frozen_evidence": [
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-prefix-http1",
+      "files": 103,
+      "provenance_sha256": "f5695c0d66b77d1778ae5d3e676ccd44deb0a10776acc60b542b70b33cbc9a73"
+    },
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-coder1",
+      "files": 56,
+      "provenance_sha256": "0c54f4d738af0c8485a31bf20b75085e4a0dd54267a954de3a181c1eb95d3485"
+    },
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-validation-prefix-replay1",
+      "files": 21,
+      "provenance_sha256": "8bcdb1d01e2e5a0fc69ebede2ce1ee58bddd9b1eb54f2d2e727f3a7d8c41bc0f"
+    },
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-validation-coder-replay1",
+      "files": 13,
+      "provenance_sha256": "b519a62f309d53e5567e142463ab639c638daf68c3a55f40c538120887c1ead8"
+    },
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-validation-audit-replay1",
+      "files": 3,
+      "provenance_sha256": "c001b464066f649a154980846052b90b34508845349974d5333ae1fc3e2e6c77"
+    }
+  ]
+}

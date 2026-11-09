@@ -1,0 +1,49 @@
+{
+  "source": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/source1",
+  "libraries": {
+    "on": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/build-on1",
+    "off": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/build-default-off1"
+  },
+  "b1_input": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/input1.json",
+  "c4_input": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/input2.json",
+  "sequence": [
+    [
+      "b1-on",
+      "b1_worker1.py",
+      "on",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/input1.json",
+      "qualify"
+    ],
+    [
+      "b1-off",
+      "b1_worker1.py",
+      "off",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/input1.json",
+      "qualify"
+    ],
+    [
+      "c4-ordinary",
+      "c4_worker1.py",
+      "on",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/input2.json",
+      "ordinary"
+    ],
+    [
+      "c4-verify",
+      "c4_worker1.py",
+      "on",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/input2.json",
+      "verify"
+    ],
+    [
+      "c4-reverse",
+      "c4_worker1.py",
+      "on",
+      "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-gqa16-score-native1/input2.json",
+      "reverse"
+    ]
+  ],
+  "scope": "Correctness qualification only; B1 uses actual causal helper; C4 zero proposals disclosed; no serving claim",
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

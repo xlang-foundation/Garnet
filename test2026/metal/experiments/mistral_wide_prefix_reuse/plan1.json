@@ -1,0 +1,46 @@
+{
+  "scope": "Native C++ token-prefix lineage and batch-layout reuse on the wide prepared profile.",
+  "source": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/source1",
+  "library": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-wide-lifecycle1/build-on1/libgarnet.dylib",
+  "arms": [
+    "ordinary-off",
+    "ordinary-cache",
+    "verify-cache",
+    "reverse-cache"
+  ],
+  "owner_checkpoints": [
+    "prefill",
+    "before_terminal"
+  ],
+  "survivor_admissions": [
+    "A_exact",
+    "B_exact",
+    "A_append",
+    "A_suffix",
+    "A_early"
+  ],
+  "survivor_rows_required": [
+    "B",
+    "C",
+    "D"
+  ],
+  "required_full_hits": {
+    "A_exact": 2048,
+    "B_exact": 2051
+  },
+  "required_partial_hits": {
+    "A_append": 2048,
+    "A_suffix": 1792,
+    "A_early": 384
+  },
+  "twin_reuse_minimum": 2048,
+  "twin_full_hit_if_retained": 2052,
+  "twin_reason": "A_append first uses one active prefill row with a full four-token tail; the two twins later use two rows. Verify semantic prefix identity does not reuse numerically incompatible states across those layouts.",
+  "expected_output_ids": 224,
+  "full_state_digest_equality": true,
+  "host_entries": 64,
+  "host_bytes": 2147483648,
+  "no_comparator_execution": true,
+  "performance_measured": false,
+  "goal_complete": false
+}

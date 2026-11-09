@@ -1,0 +1,169 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -1277,0 +1278,14 @@
++
++option(GARNET_METAL_FUSED_Q4_DECODE "Opt-in exact FP32 Mistral gate/up/SiLU fusion at four active rows" OFF)
++if(GARNET_METAL_FUSED_Q4_DECODE)
++    if(NOT GARNET_METAL_AFFINE_PROFILE_INDEX32 OR NOT GARNET_METAL_AFFINE_FP16_COEFFICIENTS OR NOT GARNET_METAL_MISTRAL_DECODE_REUSE OR NOT GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)
++        message(FATAL_ERROR "Fused Q4 decode requires bounded FP16 coefficients, native four-row reuse and active FP32 decode")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_FUSED_Q4_DECODE=1)
++    if(GARNET_METAL_DIAGNOSTIC_LAYER_BULK AND GARNET_METAL_MISTRAL_PACKED_PREFILL)
++    add_executable(garnet_fused_q4_decode_test test2026/metal/fused_q4_decode_test.cpp)
++    target_include_directories(garnet_fused_q4_decode_test PRIVATE third_party)
++    target_link_libraries(garnet_fused_q4_decode_test PRIVATE garnet_metal)
++    add_test(NAME metal_fused_q4_decode_reference COMMAND garnet_fused_q4_decode_test)
++    endif()
++endif()
+--- a/src/backends/metal/compiled_graph.cpp
++++ b/src/backends/metal/compiled_graph.cpp
+@@ -3 +3 @@
+-#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
++#if defined(GARNET_METAL_FUSED_MISTRAL_MLP)||defined(GARNET_METAL_FUSED_Q4_DECODE)
+@@ -306,0 +307,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++    fusedDecodeSites_.clear();
++#endif
+@@ -1343,0 +1347,18 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++        // Preserve immutable logical aliases before any physical arena reuse.
++        // Four rows can be B4 decode or a B1/T4 FP32 verification profile.
++        fusedDecodeSites_.assign(ops_.size(),0);
++        if(!mtpProgram_&&inputs_.size()==6&&!inputShapes_[0].empty()&&inputShapes_[0].back()==4096&&
++           outputParts_.size()==3&&residentOps_.size()==ops_.size()) {
++            std::vector<FusedMlpUseNode> uses;uses.reserve(ops_.size());
++            for(const auto& op:ops_){FusedMlpUseNode n;n.reads={canonical(op.a),canonical(op.b)};for(auto id:op.arguments)n.reads.push_back(canonical(id));n.writes={canonical(op.out)};if(op.auxiliaryOutput!=SIZE_MAX)n.writes.push_back(canonical(op.auxiliaryOutput));uses.push_back(std::move(n));}
++            std::vector<size_t> observable{canonical(output_)};for(auto id:inputs_)observable.push_back(canonical(id));for(auto id:outputParts_)observable.push_back(canonical(id));
++            auto projection=[&](const Op& op,size_t inner,size_t columns){return op.kind==Kind::MatMul&&op.transpose&&slots_[op.b].affineInt4.Valid()&&slots_[op.a].columns==inner&&slots_[op.out].columns==columns&&slots_[op.a].rows==4&&op.indexedDecodeProjection&&!op.indexedTokenProjection;};
++            for(size_t i=0;i+3<ops_.size();++i){const auto& gate=ops_[i];const auto& up=ops_[i+1];const auto& silu=ops_[i+2];const auto& down=ops_[i+3];
++                if(!projection(gate,4096,14336)||!projection(up,4096,14336)||!projection(down,14336,4096)||gate.a!=up.a||silu.kind!=Kind::Silu||silu.a!=gate.out||silu.b!=up.out||down.a!=silu.out||!residentOps_[i]||!residentOps_[i+1]||!residentOps_[i+2]||!residentOps_[i+3])continue;
++                auto protectedIds=observable;protectedIds.push_back(canonical(gate.a));protectedIds.push_back(canonical(down.out));
++                if(ProveFusedMlpUses(uses,i,{canonical(gate.out),canonical(up.out),canonical(silu.out)},protectedIds))fusedDecodeSites_[i]=1;
++            }
++        }
++#endif
++
+@@ -1714,0 +1736,7 @@
++        }
++#endif
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++        if(!profileOps&&i<fusedDecodeSites_.size()&&fusedDecodeSites_[i]) {
++            const auto& up=ops_[i+1];const auto& silu=ops_[i+2];
++            const auto* selected=(selectedTokenRows&&op.indexedDecodeProjection&&selectedTokenRows->size()<slots_[op.a].rows)?selectedTokenRows:nullptr;
++            if(gpu.TryEncodeFusedMistralDecode(a,slots_[op.b].affineInt4,slots_[up.b].affineInt4,slots_[silu.out].matrix,selected)){i+=2;continue;}
+--- a/src/backends/metal/compiled_graph.h
++++ b/src/backends/metal/compiled_graph.h
+@@ -59,0 +60,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++    std::vector<uint8_t> fusedDecodeSites_;
++#endif
+@@ -185,0 +189,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++    size_t FusedDecodeSites() const {std::lock_guard<std::mutex> lock(mutex_);size_t n=0;for(auto v:fusedDecodeSites_)n+=v!=0;return n;}
++#endif
+@@ -195,0 +202,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++        APISET().AddProp("fused_decode_sites",&MetalCompiledGraph::FusedDecodeSites);
++#endif
+--- a/src/backends/metal/decoder_session.cpp
++++ b/src/backends/metal/decoder_session.cpp
+@@ -351,0 +352,12 @@
++}
++#endif
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++void MetalDecoderSession::PrepareFusedDecodeProfiles(const MetalCompiledGraph& graph) {
++    // Caller holds the session and graph locks; execution uses this session GPU.
++    for(size_t i=0;i<graph.fusedDecodeSites_.size();++i)if(graph.fusedDecodeSites_[i]) {
++        if(i+2>=graph.ops_.size())throw std::logic_error("Invalid native decode use proof");
++        const auto& gate=graph.ops_[i];const auto& up=graph.ops_[i+1];const auto& silu=graph.ops_[i+2];
++        if(!gpu_->PrepareFusedMistralDecode(graph.slots_[gate.a].matrix,graph.slots_[gate.b].affineInt4,
++            graph.slots_[up.b].affineInt4,graph.slots_[silu.out].matrix))
++            throw std::invalid_argument("Native fused decode profile unsupported on this session device/layout");
++    }
+@@ -393,0 +406,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++            PrepareFusedDecodeProfiles(*graph);
++#endif
+@@ -1287,0 +1303,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++    append(gpu_->FusedMistralDecodeScratch(),SIZE_MAX,"fused_decode_fp32_input",{});
++#endif
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -240,0 +241,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++    void PrepareFusedDecodeProfiles(const MetalCompiledGraph&);
++#endif
+@@ -509,0 +513,5 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++    size_t FusedDecodeBlocks(){std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastFusedMistralDecodeBlocks():0;}
++    size_t FusedDecodeInputCopies(){std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastFusedMistralDecodeInputCopies():0;}
++    size_t FusedDecodeProfiles(){std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->FusedMistralDecodeProfileCount():0;}
++#endif
+@@ -510,0 +519,5 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++        APISET().AddProp("fused_decode_blocks",&MetalDecoderSession::FusedDecodeBlocks);
++        APISET().AddProp("fused_decode_input_copies",&MetalDecoderSession::FusedDecodeInputCopies);
++        APISET().AddProp("fused_decode_profiles",&MetalDecoderSession::FusedDecodeProfiles);
++#endif
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -251,0 +252,8 @@
++#endif
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++    bool PrepareFusedMistralDecode(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalAffineInt4Weight&,const MetalMatrix&);
++    bool TryEncodeFusedMistralDecode(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalAffineInt4Weight&,const MetalMatrix&,const std::vector<size_t>* selectedRows=nullptr);
++    size_t FusedMistralDecodeProfileCount() const;
++    size_t LastFusedMistralDecodeBlocks() const;
++    size_t LastFusedMistralDecodeInputCopies() const;
++    MetalMatrix FusedMistralDecodeScratch() const;
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -5,0 +6,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++#include "fused_q4_decode_shader.h"
++#endif
+@@ -598,0 +602,6 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++    id<MTLLibrary> fusedDecodeLibrary=nil;
++    std::map<std::array<size_t,2>,id<MTLComputePipelineState>> fusedDecodePlans;
++    MetalMatrix fusedDecodeInput;size_t fusedDecodeBlocks=0,fusedDecodeInputCopies=0;
++#endif
++
+@@ -2588,0 +2598,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++#include "fused_q4_decode_context.inc"
++#endif
+@@ -4529,0 +4542,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++    impl_->fusedDecodeBlocks=impl_->fusedDecodeInputCopies=0;
++#endif
+@@ -6309,0 +6325,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++    impl_->fusedDecodeBlocks=impl_->fusedDecodeInputCopies=0;
++#endif
+--- a/src/backends/metal/token_prefix_session.cpp
++++ b/src/backends/metal/token_prefix_session.cpp
+@@ -104,0 +105,3 @@
++#endif
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++        "|fused-q4-decode-rows4-default-v1"
+--- a/src/backends/metal/verification_session.cpp
++++ b/src/backends/metal/verification_session.cpp
+@@ -119,0 +120,3 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++        PrepareFusedDecodeProfiles(*graph);
++#endif
+@@ -183,0 +187,4 @@
++#ifdef GARNET_METAL_FUSED_Q4_DECODE
++    stats["target_fused_q4_decode_blocks"]=gpu_->LastFusedMistralDecodeBlocks();
++    stats["target_fused_q4_decode_input_copies"]=gpu_->LastFusedMistralDecodeInputCopies();
++#endif
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -493 +493,4 @@
+-        return info;
++    #ifdef GARNET_METAL_FUSED_Q4_DECODE
++    info+="; native_fused_q4_decode_rows4_default_v1";
++#endif
++    return info;

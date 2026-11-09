@@ -1,0 +1,67 @@
+{
+  "scope": "FP32 Q4 decode gate/up/SiLU fusion operator screen. Ordinary C1 gain gate failed; C4 satisfies the same criterion, native integration pending.",
+  "study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-screen1",
+  "operator_source_sha256": {
+    "fused1.inc": "90acde773cb44f6992d4b0d4aeebd4d9cede6e45ff3b7660ecbc6c69d86af916",
+    "screen1.mm": "e7ec452a760fe6e9a153ddcf1951b556685d5ed073762f57461e21945bcd8052",
+    "prepare1.py": "a0f6c83313cdb6a852a01d8f000eb87c6839fd4f69ea514daf2daf1e81109ddf",
+    "ordinary1.metal": "d4d0727f7686f02115b0d6943ce3dbbb9431209421d971cfcc61d71d46245efe",
+    "decode1.metal": "ddca64cdd7a48b89e4b50402b00e8685e9dfa6bcad3d9dddc8a33cde68ec7a67",
+    "activation1.metal": "843134939c54f19ad2de881ced95bbf6f83785dadfa494fc7438e330071fabac",
+    "run_correctness1.py": "c234d00c52a500293f37335b6d8e6b409abcff2effa14b5b2f563cc135eb03b9",
+    "audit_correctness1.py": "4f9f0d2560e3012b74e4658a0709f6ab8c2b2af913c65565f58e0abf10718c13",
+    "run_timing1.py": "e284f11bed1237f834bdd79d904248879d1e3f0592f015a045c9bb8db8239e41",
+    "audit_timing1.py": "84247e42b78b9ea1b16f677ce3b6b0c533d2ef8f6a3fd97ab55e40b295537412",
+    "analyze_saved_speculative_cost1.py": "a733905e719e53d24c6d68d8e6f88fcfeaba7a4db6ce3519d7ed11b0a395e4b6"
+  },
+  "correctness_audit_sha256": "31dd2a43f0275eb951d9cc2c5f638a03e741ac59c48915a6efc3b1de05b3082d",
+  "timing_audit_sha256": "0b7bf4a7c0e4bd5aac0388f6c3c3ef86f98d0a0e1cc0752c6ff4355dbc54de0a",
+  "saved_speculative_cost_sha256": "de65485b7102883a2bd00e6974d45b96a5d45e2d74fbacb4603dd6c967d4c3b1",
+  "decision": {
+    "status": "operator_screen_complete_native_integration_pending",
+    "previous_goal_turn_classification": "progress: committed budget-clipped scheduler correctness and exact saved-timestamp analysis at5b604c85e.",
+    "eligible_math_methods": [
+      2
+    ],
+    "default_candidate_complete_parent_words": 27737280,
+    "independent_fp64_checks": 7560,
+    "full_operator_gain_gate_passed": false,
+    "same_declared_gate_by_actual_occupancy": {
+      "1": false,
+      "4": true
+    },
+    "observed_ratio_ranges_by_physical_mask": {
+      "1": [
+        1.0073327046206693,
+        1.2507504174752568
+      ],
+      "8": [
+        1.0041399776326976,
+        1.0286588209733634
+      ],
+      "15": [
+        1.05044515974246,
+        1.0580710947540506
+      ]
+    },
+    "decision": "Ordinary C1 remains unchanged. Screen a default-off native fusion only for four actual active Mistral gate/up rows, preserving the original scalar/blocked fallback and all graph observability/alias guards.",
+    "why_relevant_to_c1_goal": "Saved learned-coder-draft traces contain1121 fully blocked four-input verification frames per cohort. This is separate from ordinary one-row decode and does not establish an end-to-end gain.",
+    "census_correction": "First saved-data census assumed all1125 instrumented frames use161 blocked dispatches and rejected. Inspection found4 frames use only1. Corrected census retains both categories and excludes54 uninstrumented fallback rounds from GPU coverage; no inference rerun.",
+    "native_integration_required_gates": [
+      "Prove eligible gate/up/SiLU subgraph has no other readers or externally observable intermediate aliases.",
+      "Prepare pipelines before readiness with no new weight cache or runtime allocation; only actual active count4 can dispatch.",
+      "Complete trained native output/parent/guard/abort recovery and all16 active masks with ordinary C1/C2/C3 fallback.",
+      "Full model and native verification outputs, KV, hidden, accepted-prefix rollback and survivor leases exact frozen FP32 controls.",
+      "Serial new native serving/speculative admission against frozen controls; retain all baselines."
+    ],
+    "new_comparator_execution": false,
+    "no_native_runtime_integration": true,
+    "quality_gate_passed": false,
+    "goal_complete": false
+  },
+  "goal_complete": false,
+  "saved_study_provenance_sha256": "7c1857f6c38d1289ec29c8bbaeb3d93455f62564c63c1aa6f42ad43169b4f91e",
+  "source_replay_provenance_sha256": "47b65baf465fdb1d9d5e0481c2ff12f228cb3a1edcff5e31cce0db55f71ff491",
+  "audit_replay_provenance_sha256": "924d3c6b23bef81dc76d6871ef191f45a8cae59a052adfd66178b5a2f2134ff3",
+  "checkpoint_proof_sha256": "1d0304abb784172056d3cd5493993e8c98005ba6d2328cd8f512e55aa50cb81c"
+}

@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "base_sha256": "c2b9c97f27c5722e4386f97efebfaf7eeb313cebaa36dd653bf510de73be69cc",
+  "changes": [
+    {
+      "old": "else selections={{1,1,false},{4,15,false},{4,1,true},{4,8,true},{4,3,true},{4,7,true},{4,15,true}};",
+      "new": "else selections={{4,1,true},{4,8,true}};"
+    },
+    {
+      "old": "int variant=std::array<int,2>{4,9}[index];",
+      "new": "int variant=std::array<int,2>{0,9}[index];"
+    },
+    {
+      "old": "{\"contiguous_layout\",!padded}",
+      "new": "{\"native_c1_control_variant\",0},{\"contiguous_layout\",!padded}"
+    }
+  ],
+  "reason": "Native AffineDecodeColumns chooses scalar control for occupancy1. Earlier C1 blocked4 comparator is a surrogate. C4 blocked4 comparison remains valid."
+}

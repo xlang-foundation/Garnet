@@ -1,0 +1,47 @@
+--- a/src/backends/metal/affine_int4_blocked_decode_shader.h
++++ b/src/backends/metal/affine_int4_blocked_decode_shader.h
+@@ -30,26 +30,30 @@
+         for(uint column=0;column<GARNET_BLOCKED_COLUMNS;++column)sums[row][column]=0;
+     }
+     for(AffineIndex word=lane;word<p.inner/8;word+=32) {
+-        float4 low[4],high[4];
+-#pragma clang loop unroll(full)
+-        for(uint row=0;row<4;++row)if(row<GARNET_BLOCKED_ROWS) {
+-            const AffineIndex base=physical[row]*p.aStride+word*8;
+-            // packed_float4 has scalar alignment, including row-padded views.
+-            low[row]=float4(*reinterpret_cast<device const packed_float4*>(a+base));
+-            high[row]=float4(*reinterpret_cast<device const packed_float4*>(a+base+4));
+-        }
++        // Hold packed coefficients across output columns; stream one K value
++        // for each live token. Each accumulator still visits word,j in exactly
++        // the original order, with the same dequantization and reduction.
++        uint words[GARNET_BLOCKED_COLUMNS];
++        float scalesForColumn[GARNET_BLOCKED_COLUMNS],biasesForColumn[GARNET_BLOCKED_COLUMNS];
+ #pragma clang loop unroll(full)
+         for(uint column=0;column<GARNET_BLOCKED_COLUMNS;++column)if(first+column<p.columns) {
+             const AffineIndex n=first+column,coefficient=n*(p.inner/64)+word/8;
+-            const uint values=packed[n*(p.inner/8)+word];
+-            const float scale=garnet_affine_coefficient(scales[coefficient]);
+-            const float bias=garnet_affine_coefficient(biases[coefficient]);
++            words[column]=packed[n*(p.inner/8)+word];
++            scalesForColumn[column]=garnet_affine_coefficient(scales[coefficient]);
++            biasesForColumn[column]=garnet_affine_coefficient(biases[coefficient]);
++        }
+ #pragma clang loop unroll(full)
+-            for(uint j=0;j<8;++j) {
+-                const float weight=fma(float((values>>(4*j))&15u),scale,bias);
++        for(uint j=0;j<8;++j) {
++            float inputsForRow[4];
++#pragma clang loop unroll(full)
++            for(uint row=0;row<4;++row)if(row<GARNET_BLOCKED_ROWS)
++                inputsForRow[row]=a[physical[row]*p.aStride+word*8+j];
++#pragma clang loop unroll(full)
++            for(uint column=0;column<GARNET_BLOCKED_COLUMNS;++column)if(first+column<p.columns) {
++                const float weight=fma(float((words[column]>>(4*j))&15u),scalesForColumn[column],biasesForColumn[column]);
+ #pragma clang loop unroll(full)
+                 for(uint row=0;row<4;++row)if(row<GARNET_BLOCKED_ROWS)
+-                    sums[row][column]=fma(j<4?low[row][j]:high[row][j-4],weight,sums[row][column]);
++                    sums[row][column]=fma(inputsForRow[row],weight,sums[row][column]);
+             }
+         }
+     }

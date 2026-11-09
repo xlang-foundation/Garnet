@@ -1,0 +1,32 @@
+{
+  "passed": true,
+  "original_sha256": "1bd2035be8f6a063096f8029c42f7df7f9b097e60d59ee8f904baf5973fbb577",
+  "changes": [
+    {
+      "old": "len(d['cases'])==1260",
+      "new": "len(d['cases'])==840"
+    },
+    {
+      "old": "for groups in [0,2,4,8]",
+      "new": "for groups in [0,4,9]"
+    },
+    {
+      "old": "p['maximum_threads']>=32*(p['groups'] or 4)",
+      "new": "p['maximum_threads']>=128"
+    },
+    {
+      "old": "rows=d['cases'][case*3:case*3+3]",
+      "new": "rows=d['cases'][case*2:case*2+2]"
+    },
+    {
+      "old": "[v['groups'] for v in rows]==[2,4,8]",
+      "new": "[v['groups'] for v in rows]==[4,9]"
+    },
+    {
+      "old": "return dict(cases=1260,",
+      "new": "return dict(cases=840,"
+    }
+  ],
+  "renamed_resource_key": "groups->variant (actual threadgroup width stays128)",
+  "helper_sha256": "26eff95788f8b4adc1441cd374bf55ec7776319abeff121f40abec19be6cba07"
+}

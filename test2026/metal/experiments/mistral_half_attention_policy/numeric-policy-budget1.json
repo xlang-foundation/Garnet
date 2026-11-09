@@ -1,0 +1,20 @@
+{
+  "scope": "Fixed pre-collection operator qualification budget for a NEW half-QKV numerical policy, not the original FP32 contract and not model quality proof.",
+  "reference": "FP64 exact causal softmax of Q/K/V rounded once to IEEE half (ties to even), with original controls/gate.",
+  "base_FP32_allowance": "1e-5 + 2e-4*abs(reference), unchanged coefficients",
+  "p16_relative_probability_rounding": 0.00048828125,
+  "p22_relative_probability_rounding": 2.384185791015625e-07,
+  "p16_additive_probability_rounding": 9.094947017729282e-13,
+  "p22_additive_probability_rounding": 1.8189894035458565e-12,
+  "FP64_sample_bound": "base + relative*sum(probability*abs(V_half)) + additive*visible*max(abs(V_half))",
+  "full_control_bound": "base + relative*max(abs(V_half)) + additive*visible*max(abs(V_half)); compare raw candidate to half-rounded-input four-MPS reference",
+  "derivation": "Half conversion error <= 2^-11*x + 2^-25, divided by probability scale32768. Two half components leave <= 2^-22*x + 2*2^-40. Online rescale factors <=1; final denominator >=1; weighted sum of absolute V bounds the normalized error. The existing FP32 allowance remains the empirical float-math check; this is not a universal proof of hardware roundoff.",
+  "failures": "Preserve original FP32-contract failure counts separately. If this fixed new-policy budget fails, reject; do not tune from outputs.",
+  "not_admitted": [
+    "Nonfinite/extreme inputs",
+    "Full-model quality or logits",
+    "Cache namespace or native integration",
+    "Frozen reference bit identity",
+    "Serving speed"
+  ]
+}

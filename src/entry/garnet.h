@@ -12,12 +12,18 @@
 #include "../backends/tensorrt/cuda_packed_prefix.h"
 #include "../backends/tensorrt/cuda_tree_commit.h"
 #include "../backends/tensorrt/cuda_execution_bundle.h"
+#include "../backends/tensorrt/cuda_engine_pool.h"
 #include "../backends/tensorrt/cuda_mtp_draft.h"
 #include "../backends/tensorrt/cuda_kv_delta_commit.h"
 #include "../backends/tensorrt/cuda_bf16_kv_delta_commit.h"
 #include "../backends/tensorrt/cuda_bf16_low_batch_kv_delta_commit.h"
 #include "../backends/tensorrt/cuda_bf16_prefill128_kv_delta_commit.h"
 #include "../backends/cpu/tokenizer_api.h"
+#include "../backends/common/tensor_views.h"
+#include "../backends/common/tensor_pixels.h"
+#include "../backends/common/generation_noise.h"
+#include "../media/media_api.h"
+#include "../model/generation_api.h"
 #include <string>
 #include <deque>
 #include <memory>
@@ -184,7 +190,11 @@ namespace Garnet
 		X::Value TensorToDevice(const X::ARGS&, const X::KWARGS&);
 		X::Value TensorZeros(const X::ARGS&, const X::KWARGS&);
 		X::Value BindOperatorModuleAPI(const X::ARGS&, const X::KWARGS&);
+		X::Value Generate(const X::ARGS& args,const X::KWARGS& options){return GenerateMedia(Host(),args,options);}
+		X::Value GaussianNoise(const X::ARGS& args,const X::KWARGS& options){return GenerationGaussianNoise(Host(),args,options);}
 		BEGIN_PACKAGE(GarnetAPI)
+            APISET().AddVarFunc("generate",&GarnetAPI::Generate);
+            APISET().AddVarFunc("gaussian_noise",&GarnetAPI::GaussianNoise);
 			APISET().AddFunc<0>("bf16_low_batch_tiled_scores_enabled", &GarnetAPI::BF16LowBatchTiledScoresEnabled);
 			APISET().AddVarFunc("cuda_devices_json", &GarnetAPI::CudaDevicesJson);
 			APISET().AddVarFunc("cuda_set_device", &GarnetAPI::CudaSetDevice);
@@ -214,12 +224,18 @@ namespace Garnet
             APISET().AddClass<0,CUDAPackedPrefix>("cuda_packed_prefix");
             APISET().AddClass<0,CUDATreeCommit>("cuda_tree_commit");
             APISET().AddClass<0,CUDAExecutionBundle>("cuda_execution_bundle");
+            APISET().AddClass<0,CUDAEnginePool>("cuda_engine_pool");
             APISET().AddClass<0,CUDAMTPDraft>("cuda_mtp_draft");
             APISET().AddClass<0,CUDAKVDeltaCommit>("cuda_kv_delta_commit");
             APISET().AddClass<0,CUDABF16KVDeltaCommit>("cuda_bf16_kv_delta_commit");
             APISET().AddClass<0,CUDABF16LowBatchKVDeltaCommit>("cuda_bf16_low_batch_kv_delta_commit");
             APISET().AddClass<0,CUDABF16Prefill128KVDeltaCommit>("cuda_bf16_prefill128_kv_delta_commit");
             APISET().AddClass<0,CPUTokenizer>("tokenizer");
+            APISET().AddClass<0,TensorViews>("tensor_views");
+            APISET().AddClass<0,TensorPixels>("tensor_pixels");
+            APISET().AddClass<0,NativeMediaAPI>("media");
+            APISET().AddClass<1,NativeVideoWriter>("video_writer");
+            APISET().AddClass<1,NativeVideoAssembler>("video_assembler");
 			APISET().AddVarFunc("replace_rows_by_mask", &GarnetAPI::ReplaceRowsByMask);
 			APISET().AddVarFunc("tensor_last_row", &GarnetAPI::TensorLastRow);
 			APISET().AddVarFunc("gelu_tanh", &GarnetAPI::GeluTanh);
@@ -246,6 +262,7 @@ namespace Garnet
 			APISET().AddVarFunc("infer_json", &GarnetAPI::InferJson);
 			APISET().AddVarFunc("transcribe_json", &GarnetAPI::TranscribeJson);
 			APISET().AddVarFunc("synthesize_json", &GarnetAPI::SynthesizeJson);
+			APISET().AddVarFunc("synthesize_bytes", &GarnetAPI::SynthesizeBytes);
 			APISET().AddVarFunc("stop_serving", &GarnetAPI::StopServing);
 			APISET().AddVarFunc("detect_acceleration_json", &GarnetAPI::DetectAccelerationJson);
 			APISET().AddVarFunc("activate_acceleration_path_json", &GarnetAPI::ActivateAccelerationPathJson);
@@ -333,6 +350,8 @@ namespace Garnet
 		X::Value InferJson(const X::ARGS& params, const X::KWARGS& kwParams);
 		X::Value TranscribeJson(const X::ARGS& params, const X::KWARGS& kwParams);
 		X::Value SynthesizeJson(const X::ARGS& params, const X::KWARGS& kwParams);
+		X::Value SynthesizeBytes(const X::ARGS& params, const X::KWARGS& kwParams);
+		X::Value SynthesizeSpeech(const X::ARGS& params, bool inMemory);
 		X::Value StopServing(const X::ARGS& params, const X::KWARGS& kwParams);
 		X::Value DetectAccelerationJson(const X::ARGS& params, const X::KWARGS& kwParams);
 		X::Value ActivateAccelerationPathJson(const X::ARGS& params, const X::KWARGS& kwParams);

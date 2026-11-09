@@ -1,0 +1,49 @@
+{
+  "scope": "Explicit new B1/T4 split path Abort, foreign pending writer and recovery",
+  "previous_goal_turn_classification": "progress: native split kernel, exact model/paired measurements and checkpoint8408a0641",
+  "base_native": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-verification-split-score-native1",
+  "cases": [
+    {
+      "first": 2048,
+      "active": 1
+    },
+    {
+      "first": 2048,
+      "active": 2
+    },
+    {
+      "first": 2048,
+      "active": 3
+    },
+    {
+      "first": 2048,
+      "active": 4
+    },
+    {
+      "first": 4093,
+      "active": 3
+    },
+    {
+      "first": 4095,
+      "active": 1
+    }
+  ],
+  "variants": [
+    "unsubmitted_abort",
+    "partial_flush_abort"
+  ],
+  "both_builds": true,
+  "required": [
+    "exact probabilities/context against split-disabled current path",
+    "pending host reads rejected",
+    "foreign writer before/after flush rejected without changing primary ownership",
+    "route changes rejected during open/partial batch",
+    "Begin does not reset existing counters when rejected",
+    "Abort invalidates outputs and resets split counters",
+    "readonly inputs unchanged and exact recovery",
+    "all tracked owners released"
+  ],
+  "performance_measurement": false,
+  "no_model_or_comparator_execution": true,
+  "goal_complete": false
+}

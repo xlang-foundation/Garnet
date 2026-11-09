@@ -1,0 +1,39 @@
+{
+  "scope": "DefaultOFF M5 native all-half bounded prefill policy with fixed scratch and cross-context safety. FP32 canonical KV and xModel operators unchanged; experimental, not serving/quality admitted.",
+  "committed_prepare_helper_sha256": "93fa1a9f867a124bf3d2073b2c731889136656bf99a5f3e5ac8a40047791a34b",
+  "admitted_manifest_sha256": "a390bf23c86c399de8333a659014c2e41f6cd4071472ae1d04cca3791300d440",
+  "component_provenance_sha256": "26e65c0ac48297ac2143ae4c6ec8b2718c68105655e6cb26718b57c89715dfd6",
+  "base_existing_files_sha256": {
+    "cmake/GarnetMetal.cmake": "ab70ee12ffaec99c4ff317eeb0551ad832070a06849c5a77740f644cb9b80b17",
+    "src/backends/metal/metal_context.h": "4576b8a4fdb61f80566a299eac2ae8f73112ae5895bcb69454b5eeb929c79ba8",
+    "src/backends/metal/metal_context.mm": "30a3ec46da309fbca1a3eb4e5c3b8175b8c626beab135726f56aaf41110214c9",
+    "src/backends/metal/compiled_graph.cpp": "4ada9027477549c4c6f6ea9ddc9a778874c2bb315929447a3d4ae3eb5513cbef",
+    "src/backends/metal/decoder_session.h": "8fa438b8a9d512e2290942f7785c71abcc7efe0948676570cf1f265635ab7517",
+    "src/backends/metal/token_prefix_session.cpp": "c1481c6c60d84b7943fb2095ae3bf51e007e445c599cdfd45137c32ae9df2b3f",
+    "src/entry/metal_main.cpp": "19417fefb669b6d9459bf22da9a3a7ea526b4397e1549ce943435685ed09231c"
+  },
+  "candidate_owned_files_sha256": {
+    "src/backends/metal/chunk_half_attention_shader.h": "c0e25bb436b828bc6bb8d1b47b93420b3eb5476ba9d1a89eef82e92080b430ec",
+    "cmake/GarnetMetal.cmake": "648ac66d302c2bb33138eb538c3651fc5576f7705cd54d49ebb71abc6429f2e8",
+    "src/backends/metal/metal_context.h": "9693649fa949ccebecae9f44dde2d99efd95c2bb19f2c25520b1c8b552b03839",
+    "src/backends/metal/metal_context.mm": "a2d1fe5f0ceb902a866a6a8230e7e753d32d342eb0bf071bbcc0fb02ef3f013d",
+    "src/backends/metal/compiled_graph.cpp": "adab1406d9fe48763bac84517af9b68c8fa0f2138011b7b522001d2c09d37147",
+    "src/backends/metal/decoder_session.h": "700fc9f2b3de9f4d1b41423d10c32143023e46d3d0bd731503d9a18591d1724f",
+    "src/backends/metal/token_prefix_session.cpp": "938ca49df1b6fc145a7b96ece6aeb2449df9b403197df2b7a71b2d903806aef3",
+    "src/entry/metal_main.cpp": "f5680df7088a0f9db9c37c09294168f32bd4a7c792917187a6ff0314c0afb5cd",
+    "test2026/metal/half_chunk_attention_test.cpp": "4521298e4d0b01ae193f7f4e835281a6d18ccbc39f9c0b05584fa884c57f83e9"
+  },
+  "patch_sha256": "4880632d1d0f272e91d7a7ee39ad9dd7edbc0b3568c9b37d312284b22b962251",
+  "option": "GARNET_METAL_CHUNK_HALF_ATTENTION",
+  "default": "OFF",
+  "backend_tag": "fp16_prefill_all_p16_gpupack_v1",
+  "prefix_domain": "fp16-prefill-all-p16-gpupack-v1",
+  "scratch_payload_and_guards_bytes": 71303552,
+  "shared_status_requested_bytes": 4,
+  "native_tests": {
+    "on": 52,
+    "off": 50
+  },
+  "new_native_default": false,
+  "goal_complete": false
+}

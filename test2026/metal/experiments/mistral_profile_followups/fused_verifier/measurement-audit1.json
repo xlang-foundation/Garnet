@@ -1,0 +1,103 @@
+{
+  "passed": true,
+  "stages": [
+    {
+      "cohort": 1,
+      "mode": "off",
+      "decode_tps": 35.20629108163657,
+      "decode_seconds": 3.607309832936153,
+      "prefill_seconds": 3.359782249899581,
+      "draft_seconds": 0.9995505034457892,
+      "target_seconds": 2.6059657053556293,
+      "accepted": 80,
+      "proposed": 138,
+      "target_calls": 47,
+      "actual_fused_blocks": 0
+    },
+    {
+      "cohort": 1,
+      "mode": "on",
+      "decode_tps": 35.73686119095133,
+      "decode_seconds": 3.553753624903038,
+      "prefill_seconds": 3.3604595409706235,
+      "draft_seconds": 0.9779834179207683,
+      "target_seconds": 2.5743922046385705,
+      "accepted": 80,
+      "proposed": 138,
+      "target_calls": 47,
+      "actual_fused_blocks": 1472
+    },
+    {
+      "cohort": 2,
+      "mode": "on",
+      "decode_tps": 35.7611820401915,
+      "decode_seconds": 3.551336749922484,
+      "prefill_seconds": 3.3784527918323874,
+      "draft_seconds": 0.9783975370228291,
+      "target_seconds": 2.5714540034532547,
+      "accepted": 80,
+      "proposed": 138,
+      "target_calls": 47,
+      "actual_fused_blocks": 1472
+    },
+    {
+      "cohort": 2,
+      "mode": "off",
+      "decode_tps": 35.25385249769373,
+      "decode_seconds": 3.6024431658443063,
+      "prefill_seconds": 3.4024465831462294,
+      "draft_seconds": 0.9901647886727005,
+      "target_seconds": 2.6107670466881245,
+      "accepted": 80,
+      "proposed": 138,
+      "target_calls": 47,
+      "actual_fused_blocks": 0
+    }
+  ],
+  "paired_ratios": [
+    {
+      "cohort": 1,
+      "decode_ratio": 1.0150703210424656
+    },
+    {
+      "cohort": 2,
+      "decode_ratio": 1.0143907546708821
+    }
+  ],
+  "median_decode_tps": {
+    "off": 35.230071789665146,
+    "on": 35.749021615571415
+  },
+  "native_stage_gate_passed": false,
+  "target_output_ids": 512,
+  "full_target_state_and_proposals_exact_qualified": true,
+  "negative_controls_rejected": [
+    "wrong rate",
+    "wrong target KV",
+    "missing fused route",
+    "future helper prefix",
+    "false accepted count"
+  ],
+  "no_http_ttft_throughput_or_comparator_claim": true,
+  "no_comparator_execution": true,
+  "goal_complete": false,
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort1-off-result1.json": "6fbe7a248ff34ba3df58afc1bc416de0bd9de8222cc550cfcab87d2701828125",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort1-off-status1.json": "1e13fb9721fb90942642ec843f8ec973544cd2a9609999ba9aab0800e8eb7cf0",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort1-off-command1.json": "7daf2b1835b1a73451050e6cc5bae5b48544b4c646882756004e4efff39a7d6f",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort1-on-result1.json": "6a4448d0f936c9245165cc47cff23cefe194985896c660ee9abe02ba8f39f448",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort1-on-status1.json": "08723f802f3465dd2f92aa9215a0bed836ae86a2305564b061c58090da1ba2a1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort1-on-command1.json": "94f7b9a16d96066ee8566aa5483ace1c1fea37aa1cadeb665591c725d23f24a2",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort2-on-result1.json": "24e7e0dac53717880a5b28056e20d4729cc4f3d6d6770b4785cea850e139c25d",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort2-on-status1.json": "d2f5090eb0f6f45986e0c28f3071238a0d7b8887317015b5a02d3c762eb480e1",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort2-on-command1.json": "d5c7fcca581865edabd730982f4aee56753a69f7f911e9bddd936c36a420fc88",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort2-off-result1.json": "ee37c4ec629260613941ce7dc24bb71b262d0e7bcefe2778ce857ae591285c13",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort2-off-status1.json": "a73e4faf3fe6fb028cf3fe0b5f2f55cae47dde5fdbf4702e21142605018a29a0",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/cohort2-off-command1.json": "0a740a97ad42c52a23261624beaa8284b23a4ab335da95cb1996bdd1b3447e60",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/audit_measurement1.py": "28c416da6ebb9253a32b4c8d1051b88cd6229f4d0d73f4091cb34ec3049d3365",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/measurement1-preflight.json": "dc14b8ccfbbf6d5e60f18e94c24a40c37a484c3ed9332bcd8a9a8f623fbf16d4",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/measurement1-postflight.json": "9a0f4bdb58161489a8565ae196547ca4daa7e242d2373d8fe6356bfcc79df27a",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/qualification-audit1.json": "1077fbf1aebc104c1c4c2b442866596e9483c841edc3c94d50a1fc6ad9576f2d",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-verify-gqa-profile1/measurement-plan1.json": "05c3b59552dce7a2fa56a77530de13cbf2cd90f49c11989cdb0b70aaed5a1544"
+  }
+}

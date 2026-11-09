@@ -1,0 +1,50 @@
+{
+  "passed": true,
+  "base_path": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-causal-batch4-helper1/audit_productive1.py",
+  "base_sha256": "e26ff4cdbfd795e3690aca2a5db212a9e8db08084604410d174b93059e7f965c",
+  "trace_audit_sha256": "0f557a8018daea11735ef03906f97a9bff7f9962a5b76f044b2112ba8f03051b",
+  "changes": [
+    {
+      "old": "\"\"\"Independent CPU audit of causal B4 drafts and ordinary target state equivalence.\"\"\"",
+      "new": "\"\"\"CPU causal trace audit for timed runs: no full-state equivalence admission.\"\"\""
+    },
+    {
+      "old": "R=Path(__file__).resolve().parent",
+      "new": "R=Path(__file__).resolve().parent\nQ=R.parent/'mistral-causal-batch4-helper1'"
+    },
+    {
+      "old": "str(R/'build-on1/libgarnet.dylib')",
+      "new": "str(Q/'build-on1/libgarnet.dylib')"
+    },
+    {
+      "old": "   snap=d['snapshots'][si];si+=1;need(snap['stage']==plan['stage'],'snapshot stage');checkstates(snap['states'],32);need(len(snap['hidden'])==4 and all(re.fullmatch('[0-9a-f]{64}',h) for h in snap['hidden']),'target hidden digests')\n   owners={o['label']:o for o in snap['owners']};need(set(owners)==set(placements),'snapshot owner set')\n   for label,o in owners.items():\n    need((o['row'],o['epoch'])==placements[label] and o['generated_ids']==hist[label] and o['prefilled']==prefilled[label] and o['finished']==(label in finished),'snapshot progress')\n    key=(label,prefilled[label],len(hist[label]),label in finished);value=(kvrow(snap['states'],o['row']),snap['hidden'][o['row']],list(hist[label]))\n    need(key not in states or states[key]==value,'unchanged target owner state');states[key]=value\n need(si==len(d['snapshots']) and len(finished)==4,'target snapshots/completion')\n",
+      "new": " need(len(finished)==4,'target completion')\n"
+    },
+    {
+      "old": "def audit(ordinary,candidate,inputs,ttok,dtok):",
+      "new": "def audit(ordinary,candidate,inputs,ttok,dtok,reconcile_offset=0):"
+    },
+    {
+      "old": "reconcile_count=0;survivor_pairs=0;",
+      "new": "reconcile_count=reconcile_offset;survivor_pairs=0;"
+    },
+    {
+      "old": "  for phase in ('before','after_reconcile','after'):checkstates(round[phase],24)\n  if previous is not None:\n   for label in live:row='ABCD'.index(label);need(kvrow(round['before'],row)==kvrow(previous,row),'helper survivor handoff')\n",
+      "new": "  need(all(round[phase] is None for phase in ('before','after_reconcile','after')),'timed state capture policy')\n"
+    },
+    {
+      "old": "  touched={'ABCD'.index(x) for x in selected}\n  for row in range(4):\n   if row not in touched:\n    need(kvrow(round['before'],row)==kvrow(round['after_reconcile'],row)==kvrow(round['after'],row),'helper untouched row changed');survivor_pairs+=96\n",
+      "new": ""
+    },
+    {
+      "old": "helper_reconciliation_calls=reconcile_count,",
+      "new": "helper_reconciliation_calls=reconcile_count-reconcile_offset,"
+    },
+    {
+      "old": "performance_claim=False,http_qualified=False,",
+      "new": "performance_claim=False,full_state_capture_in_timed_runs=False,http_qualified=False,"
+    }
+  ],
+  "full_state_equivalence_claim": false,
+  "raw_results_unchanged": true
+}

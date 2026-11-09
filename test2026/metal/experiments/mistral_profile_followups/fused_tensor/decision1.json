@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "decision": "Reject direct tensor fused gate/up for native integration. Exact learned whole-MLP outputs and GPU writer maps pass, but gate/up ratios are0.989-0.995 across both opposite-order cohorts and all three layers, with either down kernel.",
+  "gpu_writer_map_qualified_on_learned_dense512": true,
+  "whole_mlp_output_bits_exact": true,
+  "gate_ratios_with_tensor_down": [
+    0.991916910785065,
+    0.9912276047310167,
+    0.9924004047273921,
+    0.9897062877590469,
+    0.9949740978097014,
+    0.99323572763915
+  ],
+  "gate_ratios_with_original_down": [
+    0.9905564470512287,
+    0.9905840512110146,
+    0.9884206772865933,
+    0.9896557452268057,
+    0.9899559916440915,
+    0.9901126169650373
+  ],
+  "measured_gpu_commands": 288,
+  "no_native_runtime_changes": true,
+  "no_model_or_http_speed_claim": true,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

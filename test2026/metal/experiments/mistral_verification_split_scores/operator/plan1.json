@@ -1,0 +1,32 @@
+{
+  "scope": "Prepared B1/T4 Mistral split verification scores: same per-key dot and full-row softmax, unchanged FP32 operations and nil/default native compiler. Only cache-position work scheduling changes; no model or native runtime admission.",
+  "base_header": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-native1/source3/src/backends/metal/verification_attention_shader.h",
+  "base_header_sha256": "8c112320171e32b75da92d264ffc982b6a81fa30b32185549e89cba19caa3ced",
+  "control_msl_sha256": "fecfa35fa6782ea42686e395cec0395c46d541d753aa69644f7d5724bb275716",
+  "dot_body_derived_from_native": true,
+  "softmax_body_byte_copied_from_native": true,
+  "compiled_layout": {
+    "batch": 1,
+    "chunk": 4,
+    "heads": 32,
+    "kv_heads": 8,
+    "dim": 128,
+    "capacity": 4096
+  },
+  "score_tile": 128,
+  "existing_probability_buffer_reused_in_place": true,
+  "additional_weight_or_gpu_scratch_bytes": 0,
+  "control": "Unmodified native Mistral layout score kernel",
+  "candidate": "Separate tiled dots then identical full-row softmax,128 threads, tracked encoder hazard.",
+  "timing_not_model_performance": true,
+  "mandatory_before_native": [
+    "All probability-parent bits match original across masks/offsets/padding/context boundary",
+    "Read-only/guard integrity and CPU softmax sanity",
+    "Independent saved-word audit",
+    "Serial repeated component timing including both candidate encoders",
+    "Native runtime ownership/configuration/default-off tests",
+    "Full target IDs/KV/hidden, accepted rollback, prefix lifecycle and matched serving"
+  ],
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

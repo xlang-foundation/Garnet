@@ -38,9 +38,11 @@ namespace Garnet {
 
     struct EnginePartitionSpec {
         int id = 0;
+        int deviceId = -1;
         std::string enginePath;
         std::vector<EnginePartitionBinding> inputs;
         std::vector<EnginePartitionBinding> outputs;
+        std::vector<TensorInputShapeRange> inputShapeRanges;
     };
 
     class TRTEngine {
@@ -67,7 +69,11 @@ namespace Garnet {
         void SetCapturedOptimizationLevel(int level) {
             capturedOptimizationLevel = level;
         }
+        void SetCapturedPartitionDevices(const std::vector<int>& devices) {
+            capturedPartitionDevices = devices;
+        }
         void SetCapturedStrictFP32(bool value) { capturedStrictFP32 = value; }
+        void SetCapturedLinearKernelProvider(const std::string& value) { capturedLinearKernelProvider=value; }
         size_t ExternalCompressedWeightInputs() const { return externalCompressedBindings.size(); }
         size_t ExternalCompressedWeightBytes() const {
             size_t bytes=0;for(const auto& item:externalCompressedBindings)bytes+=item.second.bytes;return bytes;
@@ -141,7 +147,8 @@ namespace Garnet {
             const std::string& baseEnginePath,
             const std::vector<CapturedTensorOperation>& operations,
             std::vector<EnginePartitionSpec>& partitions,
-            std::string& errorMessage);
+            std::string& errorMessage,
+            const std::vector<TensorInputShapeRange>& inputShapeRanges = {});
         bool PrepareCapturedEngine(
             const std::string& enginePath,
             const SafeTensorsIndex* weightIndex,
@@ -152,6 +159,7 @@ namespace Garnet {
             std::string& errorMessage);
         static void ReleaseCachedExecutions(const std::string& cacheRoot);
         static std::string RetainedExecutionStats(const std::shared_ptr<void>& execution);
+        static void RetireResidentContexts(const std::vector<std::shared_ptr<void>>& executions);
         static std::string RetainedEngineInfo(const std::shared_ptr<void>& execution);
         static bool CapturedOutputCompatible(const std::shared_ptr<void>& execution,
             X::Value output,std::string& errorMessage);
@@ -164,6 +172,9 @@ namespace Garnet {
             const std::string& enginePath,
             const SafeTensorsIndex* weightIndex,
             std::string& errorMessage,bool userManagedWorkspace=false,bool embeddedWeights=false);
+        static std::shared_ptr<void> RetainCachedEngine(
+            const std::string& enginePath,const SafeTensorsIndex* weightIndex,
+            std::string& errorMessage,bool validateArtifact=false);
         X::Value RunCapturedEngine(
             const std::string& enginePath,
             X::Value inputs,
@@ -186,6 +197,8 @@ namespace Garnet {
         X::Value HandleBranchEnd() override;
 
     private:
+        bool LowerTensorPrimitive(const std::string&, nvinfer1::ITensor*,
+            nvinfer1::ITensor*, X::KWARGS&, nvinfer1::ITensor*&);
         nvinfer1::ITensor* LowerGptOss(const std::string&, nvinfer1::ITensor*,
             nvinfer1::ITensor*, X::KWARGS&);
         nvinfer1::ITensor* LowerGptOssDecodeGemv(nvinfer1::ITensor*,
@@ -204,6 +217,7 @@ namespace Garnet {
             std::unordered_map<std::string,nvinfer1::ITensor*>> qwen35Bindings;
         unsigned long long capturedWorkspaceBytes = 64ULL << 20;
         int capturedOptimizationLevel = 3;
+        std::vector<int> capturedPartitionDevices;
         bool capturedStrictFP32 = false;
         std::unordered_map<std::string, nvinfer1::ITensor*> weightTensorMap;
         struct NativeNVFP4Weight {
@@ -234,6 +248,7 @@ namespace Garnet {
             std::string,
             std::shared_ptr<QuantizedWeight>> capturedQuantizedWeights;
         std::string capturedWeightProfile = "bf16";
+        std::string capturedLinearKernelProvider;
         std::unordered_map<std::string,std::pair<unsigned long long,size_t>> externalBF16Bindings;
         struct ExternalCompressedBinding {unsigned long long packedId=0,scaleId=0;size_t bytes=0;};
         std::unordered_map<std::string,ExternalCompressedBinding> externalCompressedBindings;
@@ -260,6 +275,7 @@ namespace Garnet {
         size_t replayOperationIndex = 0;
         std::unordered_map<unsigned long long, std::string> partitionInputNames;
         std::unordered_map<unsigned long long, std::string> partitionOutputNames;
+        std::unordered_map<unsigned long long,TensorInputShapeRange> partitionInputShapeRanges;
         std::unordered_map<
             unsigned long long,
             std::pair<nvinfer1::DataType, nvinfer1::Dims>> partitionBoundaryMetadata;

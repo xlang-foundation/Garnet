@@ -1,0 +1,54 @@
+{
+  "passed": true,
+  "scope": "Audit fixed bounded draft context with the full frozen2K target untouched.",
+  "target_prompt_tokens": 2048,
+  "output_tokens_per_mode": 128,
+  "full_kv_hidden_digest_pairs": 65,
+  "all_target_ids_exact_frozen_native": true,
+  "all_target_state_exact_current_ordinary": true,
+  "bounded_base_draft_tokens": 221,
+  "summary": [
+    {
+      "case_id": "p2048-c1-o128",
+      "mode": "base",
+      "base_tps": 21.24580863112138,
+      "candidate_tps": 21.24580863112138,
+      "ratio": 1.0,
+      "accepted": 80,
+      "proposed": 138,
+      "target_calls": 47,
+      "draft_steps": 76,
+      "early_margin_stops": 0,
+      "draft_seconds": 1.0281922067515552,
+      "target_seconds": 4.946948665427044
+    }
+  ],
+  "negative_controls_rejected": [
+    "wrong_output",
+    "wrong_kv",
+    "wrong_hidden",
+    "future_cursor",
+    "future_draft_prefix",
+    "wrong_proposal",
+    "fake_acceptance",
+    "missing_rollback",
+    "wrong_resident_lcp",
+    "resident_host_copy",
+    "changed_target_prompt",
+    "changed_draft_prompt",
+    "fake_native_rate",
+    "live_native_owner"
+  ],
+  "files_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/qualification1-result.json": "7d47969708c03e15426fd196940ea096e6fc22f3e71475ef6e82374184f5bbf6",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/qualification1-preflight.json": "77fca5fc190ed3aa30ff766f0ec37642a94e9168bfcbbf99ff87dfdcc47ca6b7",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/input1.json": "354848b3b21f4136b0346f169fa70b1f780b673f73a7edd32d922006384674f2",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/frozen-control1.json": "4516f97584af426ec748d904113ec6a8e468ab2d088b291a56904c4414c2b6e8",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-bounded-draft-long1/audit_bounded_common1.py": "6c95d7ac7d24e1ccdd859ec03c39f563f994eb59183d14a119f1481e827364b3"
+  },
+  "qualification_order_not_performance_admission": true,
+  "matched_http_speedup_admitted": false,
+  "coding_quality_qualified": false,
+  "production_runtime_integrated": false,
+  "goal_complete": false
+}

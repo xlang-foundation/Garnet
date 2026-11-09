@@ -1,0 +1,525 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -33,6 +33,13 @@
+         message(FATAL_ERROR "Mistral decode reuse requires affine FP16 coefficients, prepared profiles and indexed FP32 decode")
+     endif()
+     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_MISTRAL_DECODE_REUSE=1)
++endif()
++option(GARNET_METAL_MISTRAL_N4_DECODE "Prepared lossless N4 weights for four-active-row Mistral MLP decode" OFF)
++if(GARNET_METAL_MISTRAL_N4_DECODE)
++    if(NOT GARNET_METAL_MISTRAL_DECODE_REUSE OR NOT GARNET_METAL_AFFINE_PROFILE_INDEX32)
++        message(FATAL_ERROR "N4 decode requires the strict prepared Mistral reuse/index32 engine")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_MISTRAL_N4_DECODE=1)
+ endif()
+ option(GARNET_METAL_MISTRAL_THREE_ROW_REUSE "Exact FP32 input reuse for prepared three-active-row Mistral projections" OFF)
+ if(GARNET_METAL_MISTRAL_THREE_ROW_REUSE)
+@@ -836,6 +843,9 @@
+     garnet_add_coreml_mlp_probe()
+ endif()
+ enable_testing()
++add_executable(garnet_mistral_n4_layout_test test2026/metal/mistral_n4_layout_test.cpp)
++target_include_directories(garnet_mistral_n4_layout_test PRIVATE src/backends/metal)
++add_test(NAME metal_mistral_n4_layout_reference COMMAND garnet_mistral_n4_layout_test)
+ if(GARNET_METAL_MISTRAL_DECODE_REUSE)
+     add_executable(garnet_mistral_projection_occupancy_test test2026/metal/mistral_projection_occupancy_test.cpp)
+     target_link_libraries(garnet_mistral_projection_occupancy_test PRIVATE garnet_metal)
+@@ -1275,3 +1285,10 @@
+     endif()
+     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_FUSED_MISTRAL_MLP=1)
+ endif()
++
++if(GARNET_METAL_MISTRAL_DECODE_REUSE)
++    add_executable(garnet_mistral_n4_decode_test test2026/metal/mistral_n4_decode_test.cpp)
++    target_link_libraries(garnet_mistral_n4_decode_test PRIVATE garnet_metal)
++    add_test(NAME metal_mistral_n4_decode_reference COMMAND garnet_mistral_n4_decode_test)
++    set_tests_properties(metal_mistral_n4_decode_reference PROPERTIES TIMEOUT 240)
++endif()
+--- /dev/null
++++ b/src/backends/metal/affine_int4_n4_decode_shader.h
+@@ -0,0 +1,61 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++namespace Garnet {
++inline constexpr const char* kMistralN4DecodeShader=R"METAL(
++// Occupancy-four Mistral MLP N4 layout, with original FP32 lane/FMA order.
++struct InterleavedQ4Params {ulong rows,inner,columns,aStride,oStride;};
++kernel void affine_q4_interleaved4(device const float* a [[buffer(0)]],
++ device const uint* packed [[buffer(1)]],device const ushort* scales [[buffer(2)]],
++ device const ushort* biases [[buffer(3)]],device float* out [[buffer(4)]],
++ constant InterleavedQ4Params& runtime [[buffer(5)]],
++#ifdef GARNET_BLOCKED_INDEXED
++ constant uint* indices [[buffer(6)]],
++#endif
++ uint group [[threadgroup_position_in_grid]],uint lane [[thread_index_in_simdgroup]],
++ uint simd [[simdgroup_index_in_threadgroup]]) {
++    GARNET_AFFINE_PARAMETERS(InterleavedQ4Params);
++    const AffineIndex block=AffineIndex(group)*4+simd,first=block*4;
++    if(first>=p.columns)return;
++    AffineIndex physical[4];float4 sums[4];
++#pragma clang loop unroll(full)
++    for(uint row=0;row<4;++row) {
++#ifdef GARNET_BLOCKED_INDEXED
++        physical[row]=row<GARNET_BLOCKED_ROWS?indices[row]:0;
++#else
++        physical[row]=row;
++#endif
++        sums[row]=float4(0.0f);
++    }
++    for(AffineIndex word=lane;word<p.inner/8;word+=32) {
++        const uint4 values=*reinterpret_cast<device const uint4*>(packed+(block*(p.inner/8)+word)*4);
++        const AffineIndex coefficient=(block*(p.inner/64)+word/8)*4;
++        const ushort4 sc=*reinterpret_cast<device const ushort4*>(scales+coefficient);
++        const ushort4 bi=*reinterpret_cast<device const ushort4*>(biases+coefficient);
++        const float4 scale=float4(as_type<half4>(sc)),bias=float4(as_type<half4>(bi));
++        float4 low[4],high[4];
++#pragma clang loop unroll(full)
++        for(uint row=0;row<4;++row)if(row<GARNET_BLOCKED_ROWS) {
++            const AffineIndex base=physical[row]*p.aStride+word*8;
++            low[row]=float4(*reinterpret_cast<device const packed_float4*>(a+base));
++            high[row]=float4(*reinterpret_cast<device const packed_float4*>(a+base+4));
++        }
++#pragma clang loop unroll(full)
++        for(uint j=0;j<8;++j) {
++            const float4 weight=fma(float4((values>>(4*j))&uint4(15u)),scale,bias);
++#pragma clang loop unroll(full)
++            for(uint row=0;row<4;++row)if(row<GARNET_BLOCKED_ROWS)
++                sums[row]=fma(float4(j<4?low[row][j]:high[row][j-4]),weight,sums[row]);
++        }
++    }
++#pragma clang loop unroll(full)
++    for(uint column=0;column<4;++column)if(first+column<p.columns) {
++#pragma clang loop unroll(full)
++        for(uint row=0;row<4;++row)if(row<GARNET_BLOCKED_ROWS) {
++            const float total=simd_sum(sums[row][column]);
++            if(lane==0)out[physical[row]*p.oStride+first+column]=total;
++        }
++    }
++}
++
++)METAL";
++}
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -120,6 +120,7 @@
+ struct MetalPrimaryStats {
+  uint64_t activeWeights=0,originalBytes=0,payloadBytes=0,metadataBytes=0,allocatedBytes=0,uploads=0,decodeEncoded=0,prefillEncoded=0,headEncoded=0,vectorDecodeEncoded=0,vectorHeadEncoded=0;
+ };
++struct MetalN4Stats {uint64_t bytes=0,weights=0,decodeEncoded=0;};
+ struct MetalProfileOwnerStats {size_t matrices=0,affineWeights=0,bf16Weights=0,pipelineSets=0;};
+ class MetalContext {
+     friend class MetalCompiledGraph;
+@@ -189,6 +190,8 @@
+     static std::string AvailableDeviceName();
+     static MetalMemoryStats MemoryStats();
+     static MetalProfileOwnerStats ProfileOwnerStats();
++    static MetalN4Stats N4Stats();
++    size_t LastN4DecodeDispatches() const;
+     // Correctness diagnostic only; deliberately queries live MPS properties.
+     static bool MatrixMetadataMatchesLive(const MetalMatrix&);
+     static MetalBufferInfo MatrixBufferInfo(const MetalMatrix&);
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -98,6 +98,10 @@
+ #include "affine_int4_indexed_decode_shader.h"
+ #ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+ #include "affine_int4_blocked_decode_shader.h"
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++#include "affine_int4_n4_decode_shader.h"
++#include "mistral_n4_layout.h"
++#endif
+ #endif
+ #endif
+ #ifdef GARNET_METAL_MPP_AFFINE
+@@ -294,13 +298,47 @@
+     bool floatPrefill=false;
+ };
+ #ifdef GARNET_METAL_MLX_AFFINE_INT4
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++namespace {std::atomic<uint64_t> n4Bytes{0},n4Weights{0},n4Encoded{0};}
++#endif
+ struct MetalAffineInt4Weight::Impl {
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+     ProfileOwnerTracker profileOwner{profileAffineOwners};
+ #endif
+     id<MTLBuffer> packed,scales,biases;
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++    std::mutex n4Mutex;id<MTLBuffer> n4Packed,n4Scales,n4Biases;uint64_t n4Charge=0;
++    ~Impl(){if(n4Charge){n4Bytes.fetch_sub(n4Charge);n4Weights.fetch_sub(1);}}
++#endif
+     size_t rows=0,columns=0;
+ };
++#endif
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++namespace {
++template<class Weight>void PrepareN4Weight(id<MTLDevice> device,const std::shared_ptr<Weight>& w) {
++    std::lock_guard<std::mutex> lock(w->n4Mutex);if(w->n4Charge)return;
++    const auto bytes=MistralN4PayloadBytes(w->columns,w->rows);
++    if(!w->packed.contents||!w->scales.contents||!w->biases.contents||w->packed.device!=device||w->scales.device!=device||w->biases.device!=device)
++        throw std::invalid_argument("N4 preparation requires immutable shared checkpoint buffers");
++    const size_t packedBytes=w->rows*(w->columns/8)*4,coefficientBytes=w->rows*(w->columns/64)*2;
++    if(w->packed.length<packedBytes||w->scales.length<coefficientBytes||w->biases.length<coefficientBytes)
++        throw std::invalid_argument("N4 checkpoint buffer span is truncated");
++    auto cached=n4Bytes.load();
++    do{if(!MistralN4MemoryFits(cached,bytes,device.currentAllocatedSize,device.recommendedMaxWorkingSetSize))
++        throw std::runtime_error("N4 cache exceeds3GiB or recommended working set minus256MiB");
++    }while(!n4Bytes.compare_exchange_weak(cached,cached+bytes));
++    try {
++        auto packed=[device newBufferWithLength:packedBytes options:MTLResourceStorageModeShared];
++        auto scales=[device newBufferWithLength:coefficientBytes options:MTLResourceStorageModeShared];
++        auto biases=[device newBufferWithLength:coefficientBytes options:MTLResourceStorageModeShared];
++        if(!packed||!scales||!biases)throw std::runtime_error("Cannot allocate prepared N4 weights");
++        MistralN4Pack(static_cast<const uint32_t*>(w->packed.contents),static_cast<uint32_t*>(packed.contents),w->rows,w->columns/8);
++        MistralN4Pack(static_cast<const uint16_t*>(w->scales.contents),static_cast<uint16_t*>(scales.contents),w->rows,w->columns/64);
++        MistralN4Pack(static_cast<const uint16_t*>(w->biases.contents),static_cast<uint16_t*>(biases.contents),w->rows,w->columns/64);
++        w->n4Packed=packed;w->n4Scales=scales;w->n4Biases=biases;w->n4Charge=bytes;n4Weights.fetch_add(1);
++    }catch(...){n4Bytes.fetch_sub(bytes);throw;}
++}
++}
+ #endif
+ bool MetalBF16Weight::PrimaryReady() const {
+ #ifdef GARNET_METAL_PRIMARY_BF16_BLOCKS
+@@ -355,7 +393,7 @@
+ // Route, K, N, input stride, output stride, decode-row variant. Prefill's actual
+ // row count is runtime data. The entry records the largest prepared bound.
+ using AffineProfileKey=std::array<size_t,6>;
+-struct AffineProfilePipeline {id<MTLComputePipelineState> pipeline=nil;size_t maximumRows=0;size_t decodeColumns=1;};
++struct AffineProfilePipeline {id<MTLComputePipelineState> pipeline=nil;size_t maximumRows=0;size_t decodeColumns=1;bool n4=false;};
+ #ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+ size_t AffineDecodeColumns(size_t inner,size_t columns,size_t rows) {
+ #ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+@@ -580,7 +618,8 @@
+ namespace {
+ id<MTLComputePipelineState> SelectAffineProfile(MetalPipelines& kernels,AffineProfileRoute route,
+     size_t rows,size_t inner,size_t columns,size_t aStride,size_t oStride,size_t decodeRows,
+-    id<MTLComputePipelineState> fallback,size_t& dispatches,size_t& misses,size_t& maxThreads,size_t* decodeColumns=nullptr,bool requirePrepared=false) {
++    id<MTLComputePipelineState> fallback,size_t& dispatches,size_t& misses,size_t& maxThreads,size_t* decodeColumns=nullptr,bool requirePrepared=false,bool* n4=nullptr) {
++    if(n4)*n4=false;
+     if(decodeColumns)*decodeColumns=1;
+     const AffineProfileKey key{size_t(route),inner,columns,aStride,oStride,decodeRows};
+     std::shared_lock<std::shared_mutex> lock(kernels.affineProfileMutex);
+@@ -591,6 +630,7 @@
+     }
+     ++dispatches;maxThreads=found->second.pipeline.maxTotalThreadsPerThreadgroup;
+     if(decodeColumns)*decodeColumns=found->second.decodeColumns;
++    if(n4)*n4=found->second.n4;
+     return found->second.pipeline;
+ }
+ }
+@@ -707,6 +747,7 @@
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+     size_t affineProfileDispatches=0,affineProfileMisses=0,affineProfileMaxThreads=0;
+     size_t affineDecodeBlockDispatches=0;
++    size_t n4DecodeDispatches=0;
+ #endif
+ #ifdef GARNET_METAL_FUSED_HEAD_ARGMAX
+     std::map<std::array<size_t,2>,MetalMatrix> fusedHeadScratch;
+@@ -2043,6 +2084,9 @@
+ constexpr unsigned decodeColumns=4;
+         affineSource=[affineSource stringByAppendingString:[NSString stringWithFormat:@"\n#define GARNET_BLOCKED_COLUMNS %u\n#define GARNET_BLOCKED_ROWS affine_decode_rows\n",decodeColumns]];
+         affineSource=[affineSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4BlockedDecodeShader]];
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++        affineSource=[affineSource stringByAppendingString:[NSString stringWithUTF8String:kMistralN4DecodeShader]];
++#endif
+ #endif
+ #ifdef GARNET_METAL_AFFINE_TALL_TILES
+         affineSource=[affineSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4TallShader]];
+@@ -2070,6 +2114,9 @@
+ #ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+         indexedDecodeSource=[indexedDecodeSource stringByAppendingString:[NSString stringWithFormat:@"\n#define GARNET_BLOCKED_COLUMNS %u\n#define GARNET_BLOCKED_ROWS selected_decode_rows\n#define GARNET_BLOCKED_INDEXED 1\n",decodeColumns]];
+         indexedDecodeSource=[indexedDecodeSource stringByAppendingString:[NSString stringWithUTF8String:kAffineInt4BlockedDecodeShader]];
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++        indexedDecodeSource=[indexedDecodeSource stringByAppendingString:[NSString stringWithUTF8String:kMistralN4DecodeShader]];
++#endif
+ #endif
+         auto indexedDecodeLibrary=[impl_->device newLibraryWithSource:indexedDecodeSource options:affineOptions error:&error];
+         if(!indexedDecodeLibrary)throw std::runtime_error("Cannot compile indexed FP32 decode: "+std::string(error.localizedDescription.UTF8String));
+@@ -2528,6 +2575,9 @@
+ #ifdef GARNET_METAL_AFFINE_PROFILE_INDEX32
+         if(!AffineProfileIndex32Fits(maximumRows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4))return false;
+ #endif
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++        if(maximumRows>=4&&MistralN4Shape(a.columns,o.columns))PrepareN4Weight(impl_->device,w);
++#endif
+         std::unique_lock<std::shared_mutex> lock(impl_->kernels->affineProfileMutex);
+         auto prepare=[&](AffineProfileRoute route,size_t decodeRows) {
+             const AffineProfileKey key{size_t(route),a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,decodeRows};
+@@ -2547,6 +2597,11 @@
+                 if(decodeColumns>1)names[size_t(route)]=@"affine_q4_blocked";
+             }
+ #endif
++            bool n4=false;
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++            n4=(route==AffineProfileRoute::Decode||route==AffineProfileRoute::IndexedDecode)&&MistralN4Profile(a.columns,o.columns,decodeRows);
++            if(n4){names[size_t(route)]=@"affine_q4_interleaved4";decodeColumns=4;}
++#endif
+             auto library=impl_->kernels->affineProfileLibraries[size_t(route)];NSError* error=nil;
+             auto function=[library newFunctionWithName:names[size_t(route)] constantValues:constants error:&error];
+             if(!function)throw std::runtime_error("Cannot specialize affine kernel profile: "+std::string(error.localizedDescription.UTF8String));
+@@ -2565,7 +2620,7 @@
+             if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<requiredThreads||
+                pipeline.staticThreadgroupMemoryLength>impl_->device.maxThreadgroupMemoryLength)
+                 throw std::runtime_error("Affine profile pipeline exceeds its execution limits");
+-            cache.emplace(key,AffineProfilePipeline{pipeline,maximumRows,decodeColumns});
++            cache.emplace(key,AffineProfilePipeline{pipeline,maximumRows,decodeColumns,n4});
+         };
+         // Compile every possible small decode occupancy before readiness. Larger
+         // prefill kernels retain dynamic row counts, bounded by this profile.
+@@ -2603,6 +2658,20 @@
+ size_t MetalContext::LastAffineProfileMisses() const {
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+     return impl_->affineProfileMisses;
++#else
++    return 0;
++#endif
++}
++MetalN4Stats MetalContext::N4Stats() {
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++    return {n4Bytes.load(),n4Weights.load(),n4Encoded.load()};
++#else
++    return {};
++#endif
++}
++size_t MetalContext::LastN4DecodeDispatches() const {
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++    return impl_->n4DecodeDispatches;
+ #else
+     return 0;
+ #endif
+@@ -3200,16 +3269,22 @@
+             ++impl_->mppAffineDispatches;
+         }
+ #endif
+-        size_t decodeColumns=1;
++        size_t decodeColumns=1;bool n4=false;
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+         pipeline=SelectAffineProfile(*impl_->kernels,a.rows<=4?AffineProfileRoute::Decode:AffineProfileRoute::MPP,
+             a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,a.rows<=4?a.rows:0,
+-            pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads,&decodeColumns);
++            pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads,&decodeColumns,false,&n4);
+         impl_->affineDecodeBlockDispatches+=size_t(decodeColumns>1);
+ #endif
++                id<MTLBuffer> packed=w->packed,scales=w->scales,biases=w->biases;
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++        if(n4){std::lock_guard<std::mutex> lock(w->n4Mutex);
++            if(!w->n4Charge||!w->n4Packed||!w->n4Scales||!w->n4Biases)throw std::logic_error("Prepare N4 weight cache before decode");
++            packed=w->n4Packed;scales=w->n4Scales;biases=w->n4Biases;++impl_->n4DecodeDispatches;n4Encoded.fetch_add(1);}
++#endif
+         [encoder setComputePipelineState:pipeline];
+-        [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
+-        [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
++        [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:packed offset:0 atIndex:1];
++        [encoder setBuffer:scales offset:0 atIndex:2];[encoder setBuffer:biases offset:0 atIndex:3];
+         [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
+         const size_t decodeOutputs=4*decodeColumns;
+         const auto groups=a.rows<=4?MTLSizeMake((o.columns+decodeOutputs-1)/decodeOutputs,1,1):MTLSizeMake((o.columns+31)/32,(a.rows+tileRows-1)/tileRows,1);
+@@ -3260,16 +3335,22 @@
+             auto encoder=impl_->ComputeEncoder(__func__);
+             if(!encoder)throw std::runtime_error("Cannot encode indexed FP32 decode");
+             auto pipeline=impl_->kernels->indexedDecodeAffine[indices.size()-1];
+-            size_t decodeColumns=1;
++            size_t decodeColumns=1;bool n4=false;
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+             pipeline=SelectAffineProfile(*impl_->kernels,AffineProfileRoute::IndexedDecode,
+                 a.rows,a.columns,o.columns,a.rowBytes/4,o.rowBytes/4,indices.size(),
+-                pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads,&decodeColumns);
++                pipeline,impl_->affineProfileDispatches,impl_->affineProfileMisses,impl_->affineProfileMaxThreads,&decodeColumns,false,&n4);
+             impl_->affineDecodeBlockDispatches+=size_t(decodeColumns>1);
+ #endif
+-            [encoder setComputePipelineState:pipeline];
+-            [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:w->packed offset:0 atIndex:1];
+-            [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
++                    id<MTLBuffer> packed=w->packed,scales=w->scales,biases=w->biases;
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++        if(n4){std::lock_guard<std::mutex> lock(w->n4Mutex);
++            if(!w->n4Charge||!w->n4Packed||!w->n4Scales||!w->n4Biases)throw std::logic_error("Prepare N4 weight cache before decode");
++            packed=w->n4Packed;scales=w->n4Scales;biases=w->n4Biases;++impl_->n4DecodeDispatches;n4Encoded.fetch_add(1);}
++#endif
++        [encoder setComputePipelineState:pipeline];
++            [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:packed offset:0 atIndex:1];
++            [encoder setBuffer:scales offset:0 atIndex:2];[encoder setBuffer:biases offset:0 atIndex:3];
+             [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
+             [encoder setBytes:indices.data() length:indices.size()*sizeof(uint32_t) atIndex:6];
+             const size_t decodeOutputs=4*decodeColumns;
+@@ -3407,6 +3488,9 @@
+         std::vector<MetalBufferInfo> result;if(!weight.impl_)return result;
+         auto add=[&](id<MTLBuffer> buffer,const char* kind){if(buffer)result.push_back({reinterpret_cast<uintptr_t>((__bridge void*)buffer),uint64_t(buffer.allocatedSize),uint64_t(buffer.length),kind});};
+         add(weight.impl_->packed,"affine_int4_payload");add(weight.impl_->scales,"affine_int4_bf16_scales");add(weight.impl_->biases,"affine_int4_bf16_biases");
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++        {std::lock_guard<std::mutex> lock(weight.impl_->n4Mutex);add(weight.impl_->n4Packed,"affine_int4_n4_payload");add(weight.impl_->n4Scales,"affine_int4_n4_fp16_scales");add(weight.impl_->n4Biases,"affine_int4_n4_fp16_biases");}
++#endif
+         return result;
+     }
+ }
+@@ -4531,6 +4615,7 @@
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
+     impl_->affineDecodeBlockDispatches=0;
++    impl_->n4DecodeDispatches=0;
+ #ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+     impl_->streamedDispatches=0;
+ #endif
+@@ -6311,6 +6396,7 @@
+ #ifdef GARNET_METAL_AFFINE_PROFILE
+     impl_->affineProfileDispatches=impl_->affineProfileMisses=impl_->affineProfileMaxThreads=0;
+     impl_->affineDecodeBlockDispatches=0;
++    impl_->n4DecodeDispatches=0;
+ #ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+     impl_->streamedDispatches=0;
+ #endif
+--- /dev/null
++++ b/src/backends/metal/mistral_n4_layout.h
+@@ -0,0 +1,31 @@
++// SPDX-License-Identifier: Apache-2.0
++#pragma once
++#include <cstddef>
++#include <cstdint>
++#include <limits>
++#include <stdexcept>
++namespace Garnet {
++inline constexpr uint64_t kMistralN4CacheBudget=uint64_t(3)*1024*1024*1024;
++inline bool MistralN4Shape(size_t k,size_t n) noexcept {
++    return (k==4096&&n==14336)||(k==14336&&n==4096);
++}
++inline bool MistralN4Profile(size_t k,size_t n,size_t rows) noexcept {
++    return rows==4&&MistralN4Shape(k,n);
++}
++inline size_t MistralN4PayloadBytes(size_t k,size_t n) {
++    if(!MistralN4Shape(k,n))throw std::invalid_argument("N4 cache requires a qualified Mistral MLP shape");
++    return n*(k/8)*sizeof(uint32_t)+2*n*(k/64)*sizeof(uint16_t);
++}
++inline bool MistralN4MemoryFits(uint64_t cached,uint64_t bytes,uint64_t used,uint64_t recommended) noexcept {
++    constexpr uint64_t reserve=256*1024*1024,alignment=64*1024;
++    if(!bytes||cached>kMistralN4CacheBudget||bytes>kMistralN4CacheBudget-cached||bytes>UINT64_MAX-(alignment-1))return false;
++    const auto charge=(bytes+alignment-1)&~(alignment-1);
++    return recommended>reserve&&used<=recommended-reserve&&charge<=recommended-reserve-used;
++}
++template<class T> void MistralN4Pack(const T* input,T* output,size_t columns,size_t width) {
++    if(!input||!output||input==output||!columns||columns%4||!width||columns>SIZE_MAX/width)
++        throw std::invalid_argument("Invalid immutable N4 packing layout");
++    for(size_t group=0;group<columns/4;++group)for(size_t word=0;word<width;++word)
++        for(size_t c=0;c<4;++c)output[(group*width+word)*4+c]=input[(group*4+c)*width+word];
++}
++}
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -50,6 +50,9 @@
+         const auto owners=MetalContext::ProfileOwnerStats();
+         result["garnet_live_matrix_owners"]=owners.matrices;result["garnet_live_affine_weight_owners"]=owners.affineWeights;
+         result["garnet_live_bf16_weight_owners"]=owners.bf16Weights;result["garnet_live_pipeline_sets"]=owners.pipelineSets;
++#endif
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++        const auto n4=MetalContext::N4Stats();result["garnet_n4_reserved_or_live_bytes"]=n4.bytes;result["garnet_n4_weight_owners"]=n4.weights;result["garnet_n4_decode_encoded"]=n4.decodeEncoded;
+ #endif
+         return result.dump();
+     }
+@@ -247,6 +250,9 @@
+ #endif
+ #ifdef GARNET_METAL_MISTRAL_DECODE_REUSE
+     info+="; mistral_decode_reuse_four_rows";
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++    info+="; mistral_n4_decode_mlp_rows4_v1; n4_cache_budget_bytes=3221225472";
++#endif
+ #ifdef GARNET_METAL_MISTRAL_GROUPED_VALUE_CONTEXT
+     info+="; mistral_grouped_value_context_two_heads";
+ #endif
+--- /dev/null
++++ b/test2026/metal/mistral_n4_decode_test.cpp
+@@ -0,0 +1,63 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "metal_context.h"
++#include "mistral_n4_layout.h"
++#include "../../src/model/affine_int4_codec.h"
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <cstring>
++#include <iostream>
++#include <stdexcept>
++#include <vector>
++using namespace Garnet;
++void Need(bool v,const char* why){if(!v)throw std::runtime_error(why);}
++int main(){try{
++ size_t compared=0;
++ for(auto shape:std::array<std::array<size_t,2>,2>{{{4096,14336},{14336,4096}}}){{
++    const size_t k=shape[0],n=shape[1];MetalContext gpu;
++    const auto layout=AffineInt4Layout::Create(n,k,AffineInt4CoefficientType::FP16);
++    std::vector<uint32_t> packed(layout.weightBytes/4);std::vector<uint16_t> scales(layout.coefficientBytes/2),biases(scales.size());
++    for(size_t i=0;i<packed.size();i++)packed[i]=uint32_t(i)*2654435761u+37;
++    for(size_t i=0;i<scales.size();i++){scales[i]=uint16_t(0x2c00+i%8);biases[i]=uint16_t(0xb000+i%7);}
++    std::vector<float> input(4*k);uint32_t seed=37;
++    for(auto& x:input){seed=1664525u*seed+1013904223u;x=float(int((seed>>8)%65521)-32760)*0x1p-18f;}
++    auto weight=gpu.UploadAffineInt4(packed.data(),layout.weightBytes,scales.data(),layout.coefficientBytes,biases.data(),layout.coefficientBytes,n,k,true);
++    auto x=gpu.Upload(input,4,k),out=gpu.Allocate(4,n);
++    // No profile exists yet: this is the original scalar FP32 native control.
++    gpu.Begin();gpu.EncodeAffineInt4MatMul(x,weight,out);gpu.SubmitAndWait();
++    Need(gpu.LastAffineProfileMisses()==1&&gpu.LastN4DecodeDispatches()==0,"Control was not the unprepared scalar route");
++    const auto gold=gpu.Download(out);
++    Need(gpu.PrepareAffineInt4Profile(x,weight,out,4),"Cannot prepare bounded profile");
++    const auto ready=MetalContext::N4Stats();
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++    Need(ready.weights==1&&ready.bytes==MistralN4PayloadBytes(k,n),"N4 owner or payload charge differs");
++    Need(MetalContext::AffineInt4BufferInfo(weight).size()==6,"N4 buffers absent from inventory");
++#else
++    Need(ready.weights==0&&ready.bytes==0,"Default-off profile allocated N4 cache");
++#endif
++    for(size_t mask=0;mask<16;mask++){
++        std::vector<size_t> ids;for(size_t row=0;row<4;row++)if(mask&(size_t(1)<<row))ids.push_back(row);
++        gpu.Begin();gpu.EncodeAffineInt4IndexedDecode(x,weight,out,ids);gpu.SubmitAndWait();const auto actual=gpu.Download(out);
++        Need(gpu.LastAffineProfileMisses()==0,"Prepared profile missed");
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++        Need(gpu.LastN4DecodeDispatches()==size_t(mask==15),"N4 selected outside four-active-row profile");
++#else
++        Need(gpu.LastN4DecodeDispatches()==0,"Default-off profile selected N4");
++#endif
++        for(size_t row=0;row<4;row++)for(size_t col=0;col<n;col++){
++            float wanted=(mask&(size_t(1)<<row))?gold[row*n+col]:0.f;
++            Need(std::memcmp(&wanted,&actual[row*n+col],4)==0,"Native selected row output differs from scalar control");++compared;
++        }
++    }
++    gpu.Begin();gpu.EncodeAffineInt4MatMul(x,weight,out);gpu.SubmitAndWait();const auto dense=gpu.Download(out);
++    Need(!std::memcmp(gold.data(),dense.data(),gold.size()*4),"Native four-row output differs from scalar control");compared+=gold.size();
++#ifdef GARNET_METAL_MISTRAL_N4_DECODE
++    Need(gpu.LastN4DecodeDispatches()==1,"Four-row MLP did not use N4");
++#endif
++    const auto afterInput=gpu.Download(x);Need(!std::memcmp(input.data(),afterInput.data(),input.size()*4),"Read-only native input changed");
++ }}
++ const auto closed=MetalContext::N4Stats();const auto owners=MetalContext::ProfileOwnerStats();
++ Need(closed.weights==0&&closed.bytes==0,"N4 cache charge retained after owner close");
++ Need(!owners.matrices&&!owners.affineWeights&&!owners.pipelineSets,"Native owners retained after close");
++ std::cout<<"Native N4 decode PASS exact_words="<<compared<<" masks=16 per_shape=2 occupancy4_only\n";return 0;
++}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+--- /dev/null
++++ b/test2026/metal/mistral_n4_layout_test.cpp
+@@ -0,0 +1,31 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "mistral_n4_layout.h"
++#include <array>
++#include <iostream>
++#include <stdexcept>
++#include <vector>
++using namespace Garnet;
++void Need(bool value){if(!value)throw std::runtime_error("N4 layout policy check failed");}
++template<class T>void PackCheck(size_t n,size_t width){
++    std::vector<T> source(n*width),packed(n*width+32,T(0x735a));
++    for(size_t i=0;i<source.size();i++)source[i]=T(i*2654435761u+37);
++    MistralN4Pack(source.data(),packed.data()+16,n,width);
++    for(size_t col=0;col<n;col++)for(size_t word=0;word<width;word++)Need(packed[16+((col/4)*width+word)*4+col%4]==source[col*width+word]);
++    for(size_t i=0;i<16;i++)Need(packed[i]==T(0x735a)&&packed[16+n*width+i]==T(0x735a));
++}
++int main(){try{
++ for(auto shape:std::array<std::array<size_t,2>,2>{{{4096,14336},{14336,4096}}}){
++    auto k=shape[0],n=shape[1];for(size_t rows=0;rows<17;rows++)Need(MistralN4Profile(k,n,rows)==(rows==4));
++    Need(MistralN4PayloadBytes(k,n)==33030144);PackCheck<uint32_t>(n,k/8);PackCheck<uint16_t>(n,k/64);
++ }
++ for(size_t k:{0ul,64ul,4096ul,14336ul,SIZE_MAX})for(size_t n:{0ul,1ul,1024ul,4096ul,14336ul,32768ul,SIZE_MAX}){
++    bool expected=(k==4096&&n==14336)||(k==14336&&n==4096);Need(MistralN4Shape(k,n)==expected);
++ }
++ constexpr uint64_t bytes=33030144,limit=20ull*1024*1024*1024,reserve=256ull*1024*1024;
++ Need(MistralN4MemoryFits(0,bytes,0,limit));Need(!MistralN4MemoryFits(kMistralN4CacheBudget,bytes,0,limit));
++ Need(!MistralN4MemoryFits(0,UINT64_MAX,0,limit));Need(!MistralN4MemoryFits(0,bytes,limit-reserve,limit));
++ Need(!MistralN4MemoryFits(0,bytes,0,reserve));Need(!MistralN4MemoryFits(UINT64_MAX,1,0,limit));
++ Need(uint64_t(96)*bytes==3170893824ull&&uint64_t(96)*bytes<kMistralN4CacheBudget);
++ bool rejected=false;std::array<uint32_t,8> v{};try{MistralN4Pack(v.data(),v.data()+4,1,1);}catch(const std::invalid_argument&){rejected=true;}Need(rejected);
++ std::cout<<"N4 layout/memory policy PASS exact roundtrips and occupancy4 guard\n";return 0;
++}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

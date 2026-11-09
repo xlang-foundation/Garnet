@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "decision": "Use64 as an experimental helper upper bound;32 is nearly tied. The clean two-order native sweep shows a small positive64-vs16 gain in both orders, with lower memory than128/256. This is not a production default or2x/HTTP admission.",
+  "experimental_cap": 64,
+  "experimental_cache_profile_id": "B1D512T64",
+  "median_native_decode_tps": {
+    "16": 34.727088452858084,
+    "32": 35.60916420497644,
+    "64": 35.63633374022052,
+    "128": 35.32594067006746,
+    "256": 35.45182981450958
+  },
+  "median_ratio_cap64_over16": 1.0261825948523366,
+  "paired_cap64_ratios": [
+    {
+      "cohort": "forward",
+      "cap": 64,
+      "decode_ratio_over_cap16": 1.011563624852676
+    },
+    {
+      "cohort": "reverse",
+      "cap": 64,
+      "decode_ratio_over_cap16": 1.0415633939609026
+    }
+  ],
+  "prepared_metal_bytes": {
+    "16": 5744869376,
+    "32": 5749014528,
+    "64": 5757501440,
+    "128": 5775523840,
+    "256": 5815107584
+  },
+  "extra_cap64_prepared_bytes_over16": 12632064,
+  "qualified_target_output_ids": 1280,
+  "qualified_full_target_state_digest_pairs": 650,
+  "additional_identity_fix_target_ids": 256,
+  "additional_identity_fix_state_digest_pairs": 130,
+  "clean_measured_target_ids": 1280,
+  "all_target_commits_exact_ordinary": true,
+  "helper_proposals_and_acceptance_preserved_on_observed_cases": true,
+  "helper_state_bit_equality_across_profiles_not_claimed": true,
+  "host_snapshot_caches_unused": true,
+  "initial_actual_helper_tokens": 222,
+  "all_prefill_graphs_precompiled": true,
+  "first_sweep_excluded_for_external_archive_overlap": true,
+  "historical_benchmark_worker_kept_unchanged": true,
+  "cache_identity_fix_mathematical_functions_ast_identical": true,
+  "no_native_library_changes": true,
+  "no_xmodel_operator_changes": true,
+  "no_ane_gain_claim": true,
+  "http_comparison_unchanged": true,
+  "broader_quality_suite_or_c4_performance_not_admitted": true,
+  "no_comparator_execution": true,
+  "goal_complete": false
+}

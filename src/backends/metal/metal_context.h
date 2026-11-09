@@ -1,12 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 #include <cstddef>
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
 #include <utility>
 #include <cstdint>
+#ifdef GARNET_METAL_LOOKAHEAD_ATTENTION
+#include "lookahead_layout.h"
+#endif
 namespace Garnet {
+#ifdef GARNET_METAL_PREFIX_DIRECT_CAPTURE
+struct DensePrefixBlock;
+struct DensePrefixCapture;
+#endif
 #ifdef GARNET_METAL_COMPACT_ATTENTION_INDEX
 inline constexpr size_t kMetalAttentionChunkCapacityLimit=4096;
 #if defined(GARNET_METAL_QWEN38_LARGE_PREFILL)||(defined(GARNET_METAL_DENSE_PREFILL_MAX_TOKENS)&&GARNET_METAL_DENSE_PREFILL_MAX_TOKENS>127)
@@ -58,8 +66,15 @@ public:
     MetalMatrix() = default;
     bool Valid() const {return bool(impl_);}
     bool SharesStorage(const MetalMatrix&) const;
+    bool SameView(const MetalMatrix& other) const {return impl_&&impl_==other.impl_;}
     bool CompatibleLayout(const MetalMatrix&) const;
 };
+#ifdef GARNET_METAL_REQUEST_ROWS
+struct MetalRowClearRange {
+    MetalMatrix matrix;
+    size_t row=0,groups=0,capacity=0,width=0,begin=0,end=0;
+};
+#endif
 class MetalBF16Weight {
     struct Impl;
     std::shared_ptr<Impl> impl_;
@@ -110,11 +125,32 @@ struct MetalPrimaryStats {
 };
 struct MetalProfileOwnerStats {size_t matrices=0,affineWeights=0,bf16Weights=0,pipelineSets=0;};
 class MetalContext {
+    friend class MetalCompiledGraph;
+    friend struct MetalCommittedAttentionReference;
+    friend struct MetalHalfAttentionReference;
+    void EncodeAttentionChunkInternal(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t,size_t,size_t,size_t,size_t,bool,bool,bool,bool,bool halfKV=false);
+#ifdef GARNET_METAL_COMMITTED_KV_MPS
+    void EncodeCommittedAttentionChunk(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t,size_t,size_t,size_t,size_t,bool);
+#endif
+#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+    void NoteChunkKVCommitHoist();
+#endif
+#ifdef GARNET_METAL_CHUNK_HALF_ATTENTION
+    void EncodeHalfAttentionChunk(const std::vector<MetalMatrix>&,const MetalMatrix&,size_t,size_t,size_t,size_t,size_t,bool);
+    std::array<MetalMatrix,3> HalfAttentionScratchForTest() const;
+    uint32_t HalfAttentionPartialStatusForTest() const;
+#endif
     struct Impl;
     std::unique_ptr<Impl> impl_;
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+    bool TryEncodePackedAffine(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&,const std::vector<uint32_t>&,bool reportIndexed);
+#endif
+#ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+    bool TryEncodeStreamedAffine(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&,const std::vector<uint32_t>&,bool reportIndexed);
+#endif
 #ifdef GARNET_METAL_INDEXED_AFFINE
     void EncodeAffineInt4IndexedImpl(const MetalMatrix&,const MetalAffineInt4Weight&,
-        const MetalMatrix&,const std::vector<size_t>&,bool reportIndexed);
+        const MetalMatrix&,const std::vector<size_t>&,bool reportIndexed,bool allowReuse128=true);
 #endif
     void EncodePointwise(const MetalMatrix&, const MetalMatrix&, const MetalMatrix&,
         unsigned operation, float epsilon, float offset);
@@ -170,6 +206,67 @@ public:
     // Preparation only: compile model dimensions/strides for every supported
     // route up to maximumRows (1..512). Actual rows remain dynamic. Encoding
     // never compiles; missing/unsupported profiles use the original pipelines.
+#ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+    // Prepared up-to512 profile: currently only512 active rows use MPS; all
+    // shorter counts retain existing affine kernels. One scratch set/context.
+    bool PrepareStreamedAffineProfile(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&,size_t maximumRows);
+    void SetStreamedAffineEnabled(bool enabled);
+    size_t LastStreamedAffineDispatches() const;
+    size_t StreamedAffinePlanCount() const;
+    std::array<MetalMatrix,3> StreamedAffineScratch() const;
+#endif
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+    bool PreparePackedAffineProfile(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&,size_t maximumRows);
+    void SetPackedAffineEnabled(bool enabled);
+    // Research-only projection amortization. Prepared dense up-to8192 rows;
+    // not an inference/session/serving interface.
+    bool PrepareDiagnosticBulkAffine(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&);
+    void EncodeDiagnosticBulkAffine(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&);
+    size_t LastDiagnosticBulkDispatches() const;
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+    void EncodeDiagnosticSiluHalf(const MetalMatrix&,const MetalMatrix&,const MetalMatrix& halfCarrier);
+    void EncodeDiagnosticHalfCastReference(const MetalMatrix&,const MetalMatrix& halfCarrier);
+    void EncodeDiagnosticBulkGatedDown(const MetalMatrix& gate,const MetalMatrix& up,const MetalAffineInt4Weight&,const MetalMatrix&);
+    size_t LastDiagnosticSiluHalfDispatches() const;
+    MetalMatrix PrepareDiagnosticDenseView(const MetalMatrix&,size_t firstElement,size_t rows,size_t columns) const;
+#endif
+    std::array<MetalMatrix,2> DiagnosticBulkScratch() const;
+
+    size_t LastPackedAffineDispatches() const;
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+    size_t LastFusedMistralMlpBlocks() const;
+    MetalMatrix FusedMistralMlpScratch() const;
+    bool TryEncodeFusedMistralMlp(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalAffineInt4Weight&,
+        const MetalAffineInt4Weight&,const MetalMatrix& gateLayout,const MetalMatrix& upLayout,
+        const MetalMatrix& activatedLayout,const MetalMatrix& output,const std::vector<size_t>* selectedRows=nullptr);
+#endif
+
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+    void SetPairedPackedPrefillEnabled(bool enabled);
+    size_t LastPairedPackedPrefillDispatches() const;
+    // Returns false without encoding for unsupported profiles/layouts. Both
+    // outputs remain materialized; no graph operator or SiLU semantics change.
+    bool TryEncodePairedPackedPrefill(const MetalMatrix&,const MetalAffineInt4Weight&,
+        const MetalAffineInt4Weight&,const MetalMatrix&,const MetalMatrix&,
+        const std::vector<size_t>* selectedRows=nullptr);
+#endif
+    size_t PackedAffinePlanCount() const;
+    MetalMatrix PackedAffineScratch() const;
+#endif
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+    bool PrepareFusedMistralDecode(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalAffineInt4Weight&,const MetalMatrix&);
+    bool TryEncodeFusedMistralDecode(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalAffineInt4Weight&,const MetalMatrix&,const std::vector<size_t>* selectedRows=nullptr);
+    size_t FusedMistralDecodeProfileCount() const;
+    size_t LastFusedMistralDecodeBlocks() const;
+    size_t LastFusedMistralDecodeInputCopies() const;
+    MetalMatrix FusedMistralDecodeScratch() const;
+#ifdef GARNET_METAL_FUSED_Q4_WIDE_SELECTION
+    void SetFusedMistralWideDecodeEnabled(bool enabled);
+    bool FusedMistralWideDecodeEnabled() const;
+    size_t LastFusedMistralWideDecodeBlocks() const;
+    MetalMatrix FusedMistralWideDecodeScratch() const;
+#endif
+#endif
     bool PrepareAffineInt4Profile(const MetalMatrix&,const MetalAffineInt4Weight&,
         const MetalMatrix&,size_t maximumRows);
     size_t AffineProfilePipelineCount() const;
@@ -183,6 +280,11 @@ public:
         const MetalMatrix&,const std::vector<size_t>& selectedRows);
     bool HasIndexedDecodeAffine() const;
     size_t LastIndexedDecodeAffineDispatches() const;
+    // Optional prepared physical-B4 pipeline; runtime toggles require a drained
+    // context. Generic/padded/empty/full selections retain established routes.
+    void SetIndexedDecodeFusedClearEnabled(bool enabled);
+    size_t LastIndexedDecodeFusedClearDispatches() const;
+    size_t LastIndexedDecodeBlitClears() const;
 #endif
 #ifdef GARNET_METAL_INDEXED_AFFINE
     // Experimental strict BF16 indexed prefill. Does not change graph dispatch.
@@ -196,6 +298,17 @@ public:
     bool HasReuse64Affine() const;
     size_t LastReuse64AffineDispatches() const;
 #endif
+#ifdef GARNET_METAL_MPP_AFFINE_REUSE128
+    bool HasReuse128Affine() const;
+    size_t LastReuse128AffineDispatches() const;
+#ifdef GARNET_METAL_VERIFY_ATTENTION
+    // Diagnostic selection between two already-prepared routes; closed batches only.
+    void VerificationSetAffineReuse128(bool enabled);
+#endif
+    // Operator-control entry point; preserves the existing64-row policy.
+    void EncodeAffineInt4IndexedMatMulControl(const MetalMatrix&,const MetalAffineInt4Weight&,
+        const MetalMatrix&,const std::vector<size_t>& selectedRows);
+#endif
 #endif
     MetalMatrix Upload(const std::vector<float>& values, size_t rows, size_t columns);
     MetalMatrix Allocate(size_t rows, size_t columns);
@@ -205,12 +318,18 @@ public:
 #ifdef GARNET_METAL_REQUEST_ROWS
     void ValidateCompletedRow(const MetalMatrix&,size_t row) const;
     void ZeroRow(const MetalMatrix&,size_t row);
+    // Validate every range, then clear in one synchronous GPU blit batch.
+    size_t ZeroRowRanges(const std::vector<MetalRowClearRange>&);
     std::vector<float> ReadRow(const MetalMatrix&,size_t row) const;
     void WriteRow(const MetalMatrix&,size_t row,const std::vector<float>&);
     // Compact one request's dense KV prefix. Recurrent/convolution state must
     // use complete ReadRow snapshots at the same boundary. Caller clears the
     // destination row before installing a prefix, so future slots stay empty.
     std::vector<float> ReadRowPrefixGroups(const MetalMatrix&,size_t row,size_t groups,size_t capacity,size_t width,size_t tokens) const;
+#ifdef GARNET_METAL_PREFIX_DIRECT_CAPTURE
+    DensePrefixCapture ReadRowPrefixBlocks(const MetalMatrix&,size_t row,size_t groups,size_t capacity,size_t width,size_t tokens,
+        size_t commonTokens,const std::vector<std::shared_ptr<const DensePrefixBlock>>& candidates) const;
+#endif
     void WriteRowPrefixGroups(const MetalMatrix&,size_t row,size_t groups,size_t capacity,size_t width,size_t tokens,const std::vector<float>&);
 #endif
     MetalBF16Weight UploadBF16(const void* data,size_t bytes,size_t rows,size_t columns,bool floatPrefill=false,bool visionPrefill=false);
@@ -260,6 +379,9 @@ public:
     size_t LastMlpGraphDispatches() const;
     // Output is batch x [token index, nonfinite flag]; lowest index wins ties.
     void EncodeArgmax(const MetalMatrix&,const MetalMatrix&);
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+    void EncodePredictionConfidence(const MetalMatrix&,const MetalMatrix&);
+#endif
     // Greedy-only BF16 projection. False encodes nothing; generic logits remain separate.
     // Optional full logits are emitted only for numerical validation.
     bool EncodeBF16Argmax(const MetalMatrix&,const MetalBF16Weight&,const MetalMatrix&,
@@ -280,6 +402,30 @@ public:
     void WritePrefixGroups(const MetalMatrix&,size_t groups,size_t capacity,size_t width,size_t tokens,const std::vector<float>&);
     void ZeroPrefixGroups(const MetalMatrix&,size_t groups,size_t capacity,size_t width,size_t dirtyTokens);
     void Begin();
+#ifdef GARNET_METAL_LOOKAHEAD_ATTENTION
+    void PrepareLookaheadAttention(const LookaheadLayout&);
+    size_t LookaheadAttentionPipelineCount() const;
+    size_t LastLookaheadAttentionDispatches() const;
+    // Read-only canonical prefix and staged local K/V. Session callers must
+    // validate actual live row leases before constructing these request views.
+    void EncodeLookaheadAttention(const std::vector<MetalMatrix>& inputs,
+        const MetalMatrix& probabilities,const MetalMatrix& output,
+        const LookaheadLayout&,const std::vector<LookaheadLayout::View>&);
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_PROJECTIONS
+    void PrepareLookaheadProjection(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&,const LookaheadLayout&);
+    void EncodeLookaheadProjection(const MetalMatrix&,const MetalAffineInt4Weight&,const MetalMatrix&,const LookaheadLayout&,const std::vector<LookaheadLayout::View>&);
+    size_t LookaheadProjectionPipelineCount() const;
+    size_t LastLookaheadProjectionDispatches() const;
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+    void EncodeLookaheadKVCommit(const MetalMatrix& local,const MetalMatrix& canonical,const LookaheadLayout&,
+        const std::vector<LookaheadLayout::View>&,const std::vector<LookaheadLayout::CommitSelection>&);
+    size_t LastLookaheadKVCommitDispatches() const;
+#endif
+#if defined(GARNET_METAL_TARGET_JACOBI)||defined(GARNET_METAL_LOOKAHEAD_RUNTIME)
+    void RequireDrainedProfileControl() const;
+#endif
     // Commit an ordered partial batch and continue encoding without CPU wait.
     void Flush();
     size_t LastPartialSubmissions() const;
@@ -287,6 +433,10 @@ public:
         const MetalMatrix& output, bool transposeRight = false);
     void EncodeRMSNorm(const MetalMatrix& input, const MetalMatrix& weight,
         const MetalMatrix& output, float epsilon, float weightOffset = 1.0f);
+#ifdef GARNET_METAL_SILU_PROFILE32
+    void SetSiluProfile32Enabled(bool enabled);
+    size_t LastSiluProfile32Dispatches() const;
+#endif
     void EncodeSiluMul(const MetalMatrix& gate, const MetalMatrix& up,
         const MetalMatrix& output);
     void EncodeAdd(const MetalMatrix&, const MetalMatrix&, const MetalMatrix&);
@@ -359,10 +509,27 @@ public:
     void EncodeVerificationAttention(const std::vector<MetalMatrix>&,const MetalMatrix& probabilities,
         const MetalMatrix& output,size_t heads,size_t kvHeads,size_t dim,size_t capacity,size_t chunk,bool gated);
     size_t LastVerificationAttentionDispatches() const;
+    size_t LastVerificationLayoutDispatches() const;
+    size_t LastVerificationSplitScoreDispatches() const;
+    size_t LastVerificationGqaValueDispatches() const;
+    void VerificationSetGqaValuesEnabled(bool enabled);
+    size_t LastVerificationGqaScoreDispatches() const;
+    void VerificationSetGqaScoresEnabled(bool enabled);
+    void VerificationSetSplitScoresEnabled(bool enabled);
+    size_t LastVerificationValueVectorDispatches() const;
+    void VerificationSetValueVector4(bool enabled);
+    void VerificationSetMistralLayout(bool enabled);
 #endif
     size_t LastChunkProbabilityReuseDispatches() const;
     size_t LastChunkAttentionIndex32Dispatches() const;
     size_t LastChunkKVScatterDispatches() const;
+    size_t LastChunkKVHoistedCommits() const;
+    size_t LastCommittedKVAttentionDispatches() const;
+    size_t LastHalfAttentionDispatches() const;
+    size_t HalfAttentionScratchBytes() const;
+#ifdef GARNET_METAL_CHUNK_KV_COMMIT_HOIST
+    bool CanHoistKVControls(const MetalMatrix&,const MetalMatrix&,size_t batch,size_t chunk,size_t capacity) const;
+#endif
     size_t LastLayoutVectorDispatches() const;
     size_t LastChunkAttentionOptimizedDispatches() const;
     size_t LastChunkAttentionMPSDispatches() const;
@@ -377,14 +544,36 @@ public:
     size_t LastChunkAttentionBucketCapacity() const;
     size_t LastChunkAttentionUnknownControls() const;
     void PrepareAttentionChunk(const std::vector<MetalMatrix>&,size_t heads,size_t kvHeads,
-        size_t dim,size_t capacity,size_t chunk);
+        size_t dim,size_t capacity,size_t chunk,bool halfOnly=false);
+    size_t HalfOnlyAttentionPlanCount() const;
+#ifdef GARNET_METAL_SPLIT_DECODE_SCORES
+    void SetSplitScoresEnabled(bool enabled);
+    size_t LastSplitScoreDispatches() const;
+#ifdef GARNET_METAL_SPLIT_SCORE_PROFILE32
+    void SetProfile32ScoresEnabled(bool enabled);
+    size_t LastProfile32ScoreDispatches() const;
+#endif
+#endif
     void EncodeAttentionScores(const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,
         const MetalMatrix&,size_t heads,size_t kvHeads,size_t dim,size_t capacity);
+#ifdef GARNET_METAL_VALUE_PROFILE32
+    void SetValueProfile32Enabled(bool enabled);
+    size_t LastValueProfile32Dispatches() const;
+#endif
     void EncodeAttentionContext(const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,
         size_t heads,size_t kvHeads,size_t dim,size_t capacity,bool gated=true);
     void EncodeLayout(const MetalMatrix&,const MetalMatrix&,const MetalMatrix&,size_t tokenWidth=0);
     void SubmitAndWait();
     double LastGPUMs() const;
+    // Explicit diagnostic preparation. Does not split batches or disable graph
+    // fusions. MPS-owned encoders remain unobserved.
+#ifdef GARNET_METAL_AFFINE_WEIGHT_RESIDENCY
+    void PrepareAffineResidency(const std::vector<MetalAffineInt4Weight>& weights,size_t budget);
+    std::string AffineResidencyStatsJson() const;
+#endif
+    void PrepareGpuCounters();
+    void SetGpuCounterRegion(const char* kind,size_t op,size_t rows,size_t columns);
+    void ClearGpuCounterRegion();
     // Fixed-grid image operators; projections continue to use MPS matmul.
     void EncodeVision(unsigned operation,const std::vector<MetalMatrix>& inputs,
         const MetalMatrix& output,size_t tokens,size_t hidden,size_t heads,size_t mergeUnit);

@@ -1,0 +1,174 @@
+{
+  "scope": "Native fused Mistral MLP experimental source overlay: exact primitive/full-model/cache regression; production integration and speed targets remain open.",
+  "native": {
+    "passed": true,
+    "trained_layers": 3,
+    "cases": 54,
+    "complete_parent_word_comparisons": 113688576,
+    "half_word_comparisons": 242135040,
+    "invalid_operations_rejected": 81,
+    "input_output_aliases_tested": true,
+    "partial_submit_abort_recovery": true,
+    "all_native_owners_zero": true
+  },
+  "model": {
+    "completed_requests": 4,
+    "generated_tokens": 32,
+    "full_state_witnesses": 260,
+    "hidden_values_compared": 65536,
+    "fused_blocks": 512,
+    "fused_producer_dispatches": 512,
+    "fused_down_dispatches": 512,
+    "half_attention_dispatches": 544,
+    "private_half_arena_bytes": 14680064,
+    "postclose_metal_bytes": 1900544,
+    "passed": true,
+    "scope": "Untimed native fused MLP full-model exact regression against frozen selected half policy.",
+    "all_tokens_text_and_full_state_exact": true,
+    "negative_controls_rejected": [
+      "wrong_generated_token",
+      "wrong_text",
+      "wrong_prompt",
+      "missing_compiled_site",
+      "missing_fused_dispatch",
+      "decode_fused_dispatch",
+      "wrong_native_epoch",
+      "wrong_kv_state",
+      "wrong_hidden_state",
+      "nonfinite_hidden",
+      "owner_leak",
+      "device_leak",
+      "missing_private_arena",
+      "wrong_private_arena_size"
+    ],
+    "stdout_sha256": "4ee54ad3a56fa12e98a04fcb5b7715e45af82cfdc7d1e75748ee423d39cf706d",
+    "reference_stdout_sha256": "84434665bc750efd3fa8857ca6844ae1ed8fcd66cb55284e06e4884a921eb975",
+    "inventory_sha256": "a0271451d758f5ff502d3a4098198896e4a54bd9294e0d882c324ee26f5f5d90",
+    "preflight_sha256": "7e0767bbe7f9b963d4ccb72a1b5f9b4ae056c3c4680d1fc5d191d9a993655296",
+    "coding_quality_qualified": false,
+    "prefix_reuse_qualified": false,
+    "serving_speed_measured": false,
+    "goal_complete": false,
+    "warning": "CoreAnalytics context-leak messages remain retained; zero native owners do not explain those warnings."
+  },
+  "prefix": {
+    "passed": true,
+    "scope": "Fused-route and frozen half-control audit atop unchanged cache invariants.",
+    "phases": {
+      "uncached": {
+        "fused_blocks": 224,
+        "body_calls": 267,
+        "private_half_arena_bytes": 14680064,
+        "full_target_digest_pairs_to_frozen_control": 1170,
+        "generated_tokens": 752
+      },
+      "cached": {
+        "fused_blocks": 128,
+        "body_calls": 263,
+        "private_half_arena_bytes": 14680064,
+        "full_target_digest_pairs_to_frozen_control": 1170,
+        "generated_tokens": 752
+      }
+    },
+    "all_outputs_and_target_states_exact_to_frozen_half": true,
+    "inherited_cache_protocol_audit_sha256": "1ba2e56e79428c916f204b11dfe4f5ec8e21aa95b862f5f71ee813f264356c0e",
+    "inherited_negative_controls": [
+      "wrong_half_route",
+      "missing_half_route",
+      "wrong_target_KV",
+      "wrong_target_hidden",
+      "wrong_target_epoch",
+      "wrong_survivor_hidden",
+      "wrong_cache_hit",
+      "owner_leak"
+    ],
+    "inherited_auditor_sha256": "539317b6524d5bc700695b54c2025f856558e1f2fc656081b1a25c0263941c08",
+    "additional_negative_controls_rejected": [
+      "wrong_fused_route",
+      "missing_fused_route",
+      "wrong_compiled_site",
+      "wrong_frozen_target_state",
+      "missing_private_arena"
+    ],
+    "source_binding_sha256": "0c6592b3269030e4c011ab51cde29f8d8f3f97fd4a7ade109cf1a33802510cd3",
+    "fixture_sha256": "38f44a13c47faeac444422dc02ecf6fa46711b49aab73960b70a8a55e6a89df1",
+    "worker_stdout_sha256": {
+      "uncached": "586893e518f956446e8a100919b73e3cdc31a76237128885652db5f76f2c6ac7",
+      "cached": "b7ce957260c8c4da325b73238c2341da5d58d5efd8eb32e74aa2c6d9afd8a67a"
+    },
+    "prefix_reuse_and_continuous_batch_regression_passed": true,
+    "cache_pressure_tested": false,
+    "hybrid_recurrent_model_tested": false,
+    "coding_quality_qualified": false,
+    "serving_speed_claim": false,
+    "goal_complete": false
+  },
+  "native_suite": {
+    "enabled": {
+      "tests": 52,
+      "passed": 52,
+      "status_sha256": "225d84dee2b4c10b3dd1e40142bf2275c75c6a18b1a87037d4bd77c259751ee4",
+      "stdout_sha256": "1fb42aef1902c32ea9602cad561e7d02d54abadfae795c60cd71178c5003624f"
+    },
+    "default_off": {
+      "tests": 52,
+      "passed": 52,
+      "option": "OFF",
+      "status_sha256": "9371305ae7f52a12a352d71903e8fde76c236afc1eb069191b8f9de1189c9721",
+      "stdout_sha256": "a87fc501af317e9946812d9ea0ad843dd05c1a595db7adae98137958663b1fa0"
+    }
+  },
+  "logical_use_proof": {
+    "passed": true,
+    "invalid_graphs_rejected": 13,
+    "observable_alias_roots_protected": true
+  },
+  "source_policy": {
+    "source_files": 26294,
+    "canonical_source_manifest_sha256": "717796e56c43699edb7adce46c4e8c1f31f3af66e3061dee2ba5bbfb5dfc4746",
+    "changed_paths": [
+      "cmake/GarnetMetal.cmake",
+      "src/backends/metal/compiled_graph.cpp",
+      "src/backends/metal/compiled_graph.h",
+      "src/backends/metal/decoder_session.cpp",
+      "src/backends/metal/decoder_session.h",
+      "src/backends/metal/fused_mistral_mlp_shader.h",
+      "src/backends/metal/fused_mlp_use_proof.h",
+      "src/backends/metal/metal_context.h",
+      "src/backends/metal/metal_context.mm",
+      "src/backends/metal/token_prefix_session.cpp",
+      "src/entry/metal_main.cpp"
+    ],
+    "base_provenance_sha256": "f47d1073955b9943d1038bc066d9fc0d04aff79599a6c951051fcaae74fefe08",
+    "default_option": "OFF",
+    "new_scratch_bytes": 14680064
+  },
+  "frozen_studies": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-native1": {
+      "files": 84,
+      "provenance_sha256": "b94f6e7ee34d17079439e88cd0d5e419ff9c11e8d2514fbe2dbd00f589917ebe"
+    },
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-prefix-http1": {
+      "files": 101,
+      "provenance_sha256": "d9abf05f94f2c8f92c066717eee3ca5824ed39766c7412e8923d0bf2ab4ed96c"
+    },
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-mlp-native-replay-preparation1": {
+      "files": 19,
+      "provenance_sha256": "70f271b2b1f97c99a09693b8cf37ba13cfab742d46cd832a6e03344e9063c70d"
+    }
+  },
+  "native_candidate_patch_sha256": "341e14b23f80a1ea109061f984dd9b233f664e6f0accd4f2cb71b325a419ad52",
+  "native_library_sha256": "928a07351eb25b0c81217bab783e3c7e88f35848b9a629407b750cd365265aa5",
+  "source_binding_sha256": "0c6592b3269030e4c011ab51cde29f8d8f3f97fd4a7ade109cf1a33802510cd3",
+  "source_replay_byte_exact": true,
+  "packaged_audits_byte_exact": true,
+  "protected_original_files_byte_exact": 11,
+  "production_runtime_integrated": false,
+  "cache_pressure_tested_for_new_producer": false,
+  "coding_quality_rerun_for_new_producer": false,
+  "saved_strict_coding_score": "0/8",
+  "serving_speed_measured_for_new_producer": false,
+  "comparator_inference_rerun": false,
+  "goal_complete": false,
+  "patch_applies_forward_and_reverse": true
+}

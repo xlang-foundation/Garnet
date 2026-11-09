@@ -1,0 +1,349 @@
+{
+  "scope": "Optional completion-first native policy with exact output admission; default unchanged and full qualification pending.",
+  "decision": {
+    "passed": true,
+    "parent_checkpoint": "0f9f3c35f2552e7c4e9df9612b0a7fb81fe3291a",
+    "scope": "Optional completion-first native policy with exact output admission; default unchanged and full qualification pending.",
+    "reason": "Single-process128-token candidate admission shows earlier first responses but larger worst-request TTFT and lower observed throughput than the saved campaign. Cross-campaign observations are not a causal estimate; no default promotion is justified.",
+    "tests_passed": 52,
+    "exact_output_tokens": 1536,
+    "observed_maximum_decode_batch_rows": 4,
+    "next_candidate": "Qualify prepared owner profiles up to512 under the same global512-token bound, retaining decode priority. Require model/KV lineage, cache lifecycle, unchanged coding gate and full latency/throughput reporting before any promotion.",
+    "default_policy_enabled": false,
+    "production_runtime_integrated": false,
+    "serving_speed_claim": false,
+    "canonical_gpu_kv_contents_independently_observed": false,
+    "prefix_cache_lineage_qualified": false,
+    "coding_quality_qualified": false,
+    "original_dirty_files_preserved": 11,
+    "goal_complete": false
+  },
+  "frozen_studies": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-policy1": {
+      "provenance_sha256": "b3e840df717e63b7e8de3ec321bf914f22b0ebc8f3c3a19ce33bd9903e3268df",
+      "bound_files": 104
+    },
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-replay1": {
+      "provenance_sha256": "605845298d20d61b0c3967ab53ea12d923e13a4437c5e98bd8c64166daee15b4",
+      "bound_files": 16
+    },
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-replay-source1": {
+      "provenance_sha256": "d5207f1b47b8feadcbbfc416d7784a33ba8568c5515db6f4ee949024b34899c0",
+      "bound_files": 11
+    }
+  },
+  "source_file_count": 26294,
+  "canonical_source_files_sha256": "12583703d087c1b0704ef5ea8341f2e5cf1dcd4b987b0932527d248a8c82c584",
+  "source_patch_sha256": "70a4839e9fb16fb7c842c633bfa57ab78b9062c52114efe4ac1aab6a03376129",
+  "build": {
+    "passed": true,
+    "source_bindings_sha256": "4e0eeb7e7bb9fe069b9f72b8c72f5f1b242c6dfee4d9b46c1651b96d53d3fa9a",
+    "library_sha256": "400093161a1c8618188c5ea10c355d92afc1687f397607c1ad0a39d3d5ebf762",
+    "portable_binary_sha256": "8f0905dde27bb5f56f48df6871eb422d438c1ac56796d55f0d05f5d182edc935",
+    "suite_stdout_sha256": "1a1c742aaf4ad3ebde987af9ecd4f68438cb2e672d2aa75c9cbd52a044ea1336",
+    "source_files_unchanged": 26294,
+    "default_policy_enabled": false,
+    "new_model_or_serving_execution": false,
+    "goal_complete": false
+  },
+  "scheduling_summary": {
+    "vllm-metal": {
+      "measured_waves": 15,
+      "median_ttft_by_rank_seconds": [
+        5.662318791029975,
+        9.665141083998606,
+        13.47395100002177,
+        15.619615250034258
+      ],
+      "median_first_token_spread_seconds": 10.654737500008196,
+      "median_submission_spread_seconds": 0.00020062481053173542,
+      "median_of_wave_medians_seconds": 11.569546042010188
+    },
+    "sglang-mlx": {
+      "measured_waves": 15,
+      "median_ttft_by_rank_seconds": [
+        4.585828500101343,
+        8.922619207995012,
+        13.042055875062943,
+        16.29004537500441
+      ],
+      "median_first_token_spread_seconds": 11.752828249940649,
+      "median_submission_spread_seconds": 0.00020037498325109482,
+      "median_of_wave_medians_seconds": 10.884484875015914
+    },
+    "garnet-native": {
+      "measured_waves": 4,
+      "median_ttft_by_rank_seconds": [
+        14.37021749955602,
+        14.370372395962477,
+        14.713981791515835,
+        14.714060458121821
+      ],
+      "median_first_token_spread_seconds": 0.2951703129801899,
+      "median_submission_spread_seconds": 0.0001710834912955761,
+      "median_of_wave_medians_seconds": 14.542177093739156
+    }
+  },
+  "admission": {
+    "passed": true,
+    "scope": "Audit candidate outputs and completion-first plans; timing is diagnostic.",
+    "requests": 12,
+    "output_tokens": 1536,
+    "all_ids_and_text_exact_frozen_fp32": true,
+    "policy": {
+      "prefill_owner_start_order": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "prefill_steps_with_ready_decoders": 148,
+      "observed_maximum_decode_batch_rows": 4,
+      "all_prefill_steps_one_owner": true,
+      "all_ready_decoders_scheduled_before_prefill": true
+    },
+    "native": {
+      "bulk_prefill_batches": 0,
+      "bulk_tickets": [],
+      "requests": [
+        {
+          "plan": "p2048-c4-o128-0",
+          "request": "606ab1321c24477aa418f0a1909a400f",
+          "native_request": 2,
+          "row": 1,
+          "epoch": 2,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        },
+        {
+          "plan": "p2048-c4-o128-1",
+          "request": "675f2f311b1d486c8bbc5fbbab8143fb",
+          "native_request": 4,
+          "row": 3,
+          "epoch": 4,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        },
+        {
+          "plan": "p2048-c4-o128-2",
+          "request": "38ef276a485c42eca67de8295de6d94a",
+          "native_request": 3,
+          "row": 2,
+          "epoch": 3,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        },
+        {
+          "plan": "p2048-c4-o128-3",
+          "request": "1f4c574b2a204a9889c52b045437db4a",
+          "native_request": 1,
+          "row": 0,
+          "epoch": 1,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        },
+        {
+          "plan": "p2048-c4-o128-0",
+          "request": "e91d767b09624c8ca2ebe5c4eea936d1",
+          "native_request": 8,
+          "row": 3,
+          "epoch": 8,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        },
+        {
+          "plan": "p2048-c4-o128-1",
+          "request": "eaac2b9d637d487d905d8e3ccea3d60b",
+          "native_request": 6,
+          "row": 1,
+          "epoch": 6,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        },
+        {
+          "plan": "p2048-c4-o128-2",
+          "request": "fa7fda79738a4911a0d007e0efdd2117",
+          "native_request": 5,
+          "row": 0,
+          "epoch": 5,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        },
+        {
+          "plan": "p2048-c4-o128-3",
+          "request": "672d68f532ec4673bb9dd7fb9d6f9b5b",
+          "native_request": 7,
+          "row": 2,
+          "epoch": 7,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        },
+        {
+          "plan": "p2048-c4-o128-0",
+          "request": "a4dc366280a84db1817d86daaa8eab14",
+          "native_request": 12,
+          "row": 3,
+          "epoch": 12,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        },
+        {
+          "plan": "p2048-c4-o128-1",
+          "request": "218adeaea98545eeb50e7bd17e372f8b",
+          "native_request": 9,
+          "row": 0,
+          "epoch": 9,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        },
+        {
+          "plan": "p2048-c4-o128-2",
+          "request": "b206c322213c409e8d4fd9bc2ef75075",
+          "native_request": 10,
+          "row": 1,
+          "epoch": 10,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        },
+        {
+          "plan": "p2048-c4-o128-3",
+          "request": "d3e35a5457cf4630937299c9ab968907",
+          "native_request": 11,
+          "row": 2,
+          "epoch": 11,
+          "output_tokens": 128,
+          "exact_native_coding_control": true
+        }
+      ],
+      "maximum_active_rows": 4,
+      "event_counts": {
+        "native_compact_prefill_prepared": 1,
+        "native_fused_mlp_prepared": 1,
+        "native_prefill_alias_prepared": 1,
+        "native_silu_profile32_prepared": 1,
+        "native_paired_prefill_prepared": 1,
+        "native_value_profile32_prepared": 1,
+        "native_profile32_score_prepared": 1,
+        "native_split_score_prepared": 1,
+        "native_dense_schedule_bound": 1,
+        "native_prefill_completion_policy": 1,
+        "native_chunk_attention_mps_prepared": 1,
+        "native_chunk_attention_buckets_prepared": 1,
+        "native_chunk_half_attention_prepared": 1,
+        "native_packed_prefill_prepared": 1,
+        "ready": 1,
+        "native_batch": 727,
+        "native_compact_prefill": 727,
+        "native_chunk_attention_index32": 727,
+        "native_chunk_half_attention": 727,
+        "native_chunk_attention_mps": 727,
+        "native_chunk_attention_request_products": 727,
+        "native_chunk_attention_bucket": 727,
+        "native_silu_profile32_dispatch": 739,
+        "native_paired_prefill_dispatch": 739,
+        "native_value_profile32_dispatch": 739,
+        "native_profile32_score_dispatch": 739,
+        "native_split_score_dispatch": 739,
+        "native_affine_profile": 739,
+        "native_prefill_pool": 727,
+        "native_chunk_kv_scatter": 727,
+        "native_chunk_layout_vector": 727,
+        "native_mpp": 198,
+        "native_indexed": 198,
+        "native_cooperative_affine": 198,
+        "native_fused_mlp": 727,
+        "native_prefill_chunk": 198,
+        "native_indexed_decode": 541,
+        "token": 1536,
+        "completed": 12,
+        "closed": 1
+      },
+      "head_only_prefill_batches": 0,
+      "close_allocation_bytes": 1769472
+    },
+    "fused": {
+      "blocks": 6144,
+      "producer_kernels": 6144,
+      "down_kernels": 6144
+    },
+    "diagnostic_metrics": {
+      "cold": {
+        "ttft_median_seconds": 11.884234520606697,
+        "decode_median_tps": 7.987958914807729,
+        "aggregate_tps": 17.232780280677236,
+        "ranked_ttft_seconds": [
+          4.506346291862428,
+          9.376697583124042,
+          14.391771458089352,
+          19.83319358411245
+        ],
+        "worst_request_ttft_seconds": 19.83319358411245,
+        "observed_token_delivery_gap_p95_seconds": 0.32465112511999905,
+        "observed_token_delivery_gap_max_seconds": 0.38509245798923075
+      },
+      "warm1": {
+        "ttft_median_seconds": 12.501262395991944,
+        "decode_median_tps": 7.459292114002507,
+        "aggregate_tps": 16.23834932496496,
+        "ranked_ttft_seconds": [
+          4.221193165984005,
+          9.643283708952367,
+          15.35924108303152,
+          21.03064808389172
+        ],
+        "worst_request_ttft_seconds": 21.03064808389172,
+        "observed_token_delivery_gap_p95_seconds": 0.35797370807267725,
+        "observed_token_delivery_gap_max_seconds": 0.38427662500180304
+      },
+      "warm2": {
+        "ttft_median_seconds": 12.864331166958436,
+        "decode_median_tps": 7.294176974347426,
+        "aggregate_tps": 15.857675831599826,
+        "ranked_ttft_seconds": [
+          4.565045791910961,
+          9.968798042042181,
+          15.759864291874692,
+          21.529634959064424
+        ],
+        "worst_request_ttft_seconds": 21.529634959064424,
+        "observed_token_delivery_gap_p95_seconds": 0.36343816691078246,
+        "observed_token_delivery_gap_max_seconds": 0.3800280410796404
+      }
+    },
+    "negative_controls_rejected": [
+      "changed_owner_mid_prompt",
+      "omitted_ready_decoder",
+      "changed_output",
+      "changed_control",
+      "wrong_native_policy",
+      "stale_epoch",
+      "false_ttft",
+      "wrong_fusion"
+    ],
+    "actual_batch_width_reported": true,
+    "client_concurrency": 4,
+    "canonical_gpu_kv_contents_independently_observed": false,
+    "prefix_cache_lineage_qualified": false,
+    "coding_quality_qualified": false,
+    "matched_control_campaign_collected": false,
+    "default_policy_enabled": false,
+    "production_runtime_integrated": false,
+    "serving_speed_claim": false,
+    "goal_complete": false
+  },
+  "packaged_audits_exact": true,
+  "prepared_complete_source_exact": true,
+  "original_dirty_files_preserved": 11,
+  "default_policy_enabled": false,
+  "production_runtime_integrated": false,
+  "serving_speed_claim": false,
+  "goal_complete": false
+}

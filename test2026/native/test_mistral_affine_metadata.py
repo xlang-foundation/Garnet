@@ -13,8 +13,8 @@ def save(folder,config,tensors):
 
 def main():
  p=argparse.ArgumentParser();p.add_argument('--binary',type=pathlib.Path,required=True)
- p.add_argument('--output',type=pathlib.Path,required=True);a=p.parse_args();a.output.mkdir(exist_ok=False)
- config=dict(model_type='mistral',quantization=dict(bits=4,group_size=64))
+ p.add_argument('--family',choices=('mistral','qwen3','qwen2'),default='mistral');p.add_argument('--output',type=pathlib.Path,required=True);a=p.parse_args();a.output.mkdir(exist_ok=False)
+ config=dict(model_type=a.family,quantization=dict(bits=4,group_size=64))
  tensors=[('model.embed_tokens.weight','U32',[1,8],bytes(32)),('model.embed_tokens.scales','F16',[1,1],struct.pack('<H',0x3c00)),('model.embed_tokens.biases','F16',[1,1],bytes(2))]
  scenarios=[]
  def case(name,mutator,accepted=False):
@@ -34,7 +34,7 @@ def main():
  request=a.output/'request.json';request.write_text(json.dumps([dict(tensor='model.language_model.embed_tokens.weight',rows=[0])])+'\n');rows=[]
  for name,c,t,accepted in scenarios:
   folder=a.output/name;save(folder,c,t)
-  result=subprocess.run([str(a.binary),str(folder),str(request),str(folder/'decoded')],capture_output=True,text=True,timeout=30)
+  result=subprocess.run([str(a.binary),str(folder),str(request),str(folder/'decoded'),a.family],capture_output=True,text=True,timeout=30)
   ok=result.returncode==0 if accepted else result.returncode==1 and bool(result.stderr)
   rows.append(dict(case=name,expected_accepted=accepted,returncode=result.returncode,error=result.stderr.strip(),pass_case=ok))
  report=dict(passed=all(x['pass_case'] for x in rows),cases=rows,binary_sha256=hashlib.sha256(a.binary.read_bytes()).hexdigest(),test_sha256=hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest())

@@ -228,6 +228,46 @@ X::Tensor TensorHelper::CopyToCPU(const X::Tensor& tensor) {
     return output;
 }
 
+X::Tensor TensorHelper::CopyToDevice(const X::Tensor& tensor, int destination) {
+    const auto info=tensor.Info();
+    RequireStorage(info);
+    int count=0;Check(cudaGetDeviceCount(&count));
+    if(destination<0||destination>=count)throw std::invalid_argument("CUDA device index out of range");
+    if(info.device_type!=0&&info.device_type!=CudaDevice)throw std::invalid_argument("unsupported source tensor device");
+    std::vector<int64_t> shape(info.shape,info.shape+info.rank);
+    uint64_t expected=ItemSize(info.dtype);
+    for(size_t axis=shape.size();axis-->0;){
+        if(shape[axis]<0||expected>INT64_MAX||(shape[axis]&&expected>SIZE_MAX/static_cast<uint64_t>(shape[axis])))
+            throw std::overflow_error("invalid transfer shape");
+        if(info.strides&&info.strides[axis]!=static_cast<int64_t>(expected))
+            throw std::invalid_argument("device transfer requires a contiguous tensor");
+        expected*=shape[axis];
+    }
+    if(expected>info.byte_size)throw std::invalid_argument("transfer storage is too small");
+    if(info.device_type==CudaDevice&&info.device_id==destination)return tensor;
+    // Host acquisition waits for the producer, including another device's
+    // completion event. Synchronous copies finish before either lease retires.
+    auto read=tensor.Acquire();
+    DeviceScope device(destination);
+    auto output=CreateGPU(tensor.host(),info.dtype,shape);
+    auto write=output.Acquire(X3_TENSOR_WRITE);
+    if(expected){
+        if(info.device_type==0)Check(cudaMemcpy(output.Info().data,info.data,expected,cudaMemcpyHostToDevice));
+        else {
+            int peer=0;Check(cudaDeviceCanAccessPeer(&peer,destination,info.device_id));
+            if(peer){
+                auto enabled=cudaDeviceEnablePeerAccess(info.device_id,0);
+                if(enabled==cudaErrorPeerAccessAlreadyEnabled)cudaGetLastError();else Check(enabled);
+                Check(cudaMemcpyPeer(output.Info().data,destination,info.data,info.device_id,expected));
+            }else{
+                auto cpu=CopyToCPU(tensor);
+                Check(cudaMemcpy(output.Info().data,cpu.Info().data,expected,cudaMemcpyHostToDevice));
+            }
+        }
+    }
+    return output;
+}
+
 X::Tensor TensorHelper::CopyToGPU(const X::Tensor& tensor) {
     auto info = tensor.Info();
     RequireStorage(info);

@@ -1,0 +1,102 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -746,6 +746,13 @@
+         message(FATAL_ERROR "Dense verification scheduler requires verification, continuous rows and native token-prefix tracking")
+     endif()
+     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_DENSE_VERIFY_SCHEDULER=1)
++endif()
++option(GARNET_METAL_COMPACT_VERIFY_COEXISTENCE "Opt-in prepared B4/T1 dense verification with compact owner prefill" OFF)
++if(GARNET_METAL_COMPACT_VERIFY_COEXISTENCE)
++    if(NOT GARNET_METAL_VERIFY_ATTENTION OR NOT GARNET_METAL_COMPACT_OWNER_PREFILL OR NOT GARNET_METAL_TOKEN_PREFIX_CACHE OR NOT GARNET_METAL_SHARED_PREFILL_SCRATCH)
++        message(FATAL_ERROR "Compact verification coexistence requires verification, compact owner prefill, token tracking and shared scratch")
++    endif()
++    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_COMPACT_VERIFY_COEXISTENCE=1)
+ endif()
+ option(GARNET_METAL_MISTRAL_VERIFY_LAYOUT "Prepared B1/T4/C4096 H32/KV8/D128 ungated verification attention layout" OFF)
+ if(GARNET_METAL_MISTRAL_VERIFY_LAYOUT)
+--- a/src/backends/metal/compact_prefill_session.cpp
++++ b/src/backends/metal/compact_prefill_session.cpp
+@@ -28,6 +28,16 @@
+     return X::Tensor::Create(host,X3_TENSOR_FLOAT32,outputShape,static_cast<const float*>(info.data)+first*width,count*width*4);
+ }
+ }
++#ifdef GARNET_METAL_COMPACT_VERIFY_COEXISTENCE
++bool MetalDecoderSession::CompactVerificationPreparationSupported() const {
++    // Session lock is held by the preparation caller. Inspect only private
++    // session metadata here; graph owners are separately locked by each path.
++    if(!gpu_||poisoned_||managedRows_||compactSealed_||compactRunning_||states_.size()!=32)return false;
++    const std::vector<int64_t> dense{4,8,4096,128};
++    for(const auto& state:states_)if(state.rows!=4||state.shape[0]!=dense||state.shape[1]!=dense)return false;
++    return !verification_||(verification_->batch==4&&verification_->chunk==1&&verification_->width==4096&&verification_->vocab==32768);
++}
++#endif
+ bool MetalDecoderSession::PrepareCompactPrefill(X::Value values,X::Value fallbackValues) {
+     std::lock_guard<std::mutex> sessionLock(mutex_);
+     if(!gpu_||poisoned_||states_.empty()||states_[0].rows!=4||managedRows_||compactSealed_||
+@@ -35,7 +45,13 @@
+        values.Size()!=states_.size()||fallbackValues.Size()!=states_.size())
+         throw std::invalid_argument("Prepare full compact families before any execution or physical row claim");
+ #ifdef GARNET_METAL_VERIFY_ATTENTION
+-    if(verification_)throw std::invalid_argument("Compact prefill with speculative target workspaces is not qualified");
++    if(verification_) {
++#ifdef GARNET_METAL_COMPACT_VERIFY_COEXISTENCE
++        if(!CompactVerificationPreparationSupported())throw std::invalid_argument("Compact verification preparation exceeds the closed B4/T1 dense profile");
++#else
++        throw std::invalid_argument("Compact prefill with speculative target workspaces is not qualified");
++#endif
++    }
+ #endif
+     std::vector<MetalCompiledGraph*> graphs,fallback,base,ordered;
+     for(size_t i=0;i<states_.size();++i) {
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -86,6 +86,9 @@
+     CompactFamily* compactRunning_=nullptr;
+     size_t compactFirst_=0,compactLastRows_=0,compactLastFirst_=4;
+     bool compactSealed_=false;
++#ifdef GARNET_METAL_COMPACT_VERIFY_COEXISTENCE
++    bool CompactVerificationPreparationSupported() const;
++#endif
+     bool TryCompactPrefill(X::Value,X::Value,X::Value,X::Value,X::Value,int64_t,
+         const std::vector<uint64_t>*,const std::vector<int64_t>*,VerificationRun*,X::Value&);
+ #endif
+--- a/src/backends/metal/verification_session.cpp
++++ b/src/backends/metal/verification_session.cpp
+@@ -38,7 +38,13 @@
+ #else
+     std::lock_guard<std::mutex> sessionLock(mutex_);
+ #ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
+-    if(!compactFamilies_.empty())throw std::invalid_argument("Speculative workspaces with compact prefill families are not qualified");
++    if(!compactFamilies_.empty()) {
++#ifdef GARNET_METAL_COMPACT_VERIFY_COEXISTENCE
++        if(!CompactVerificationPreparationSupported())throw std::invalid_argument("Verification with compact families requires the closed B4/T1 dense preparation profile");
++#else
++        throw std::invalid_argument("Speculative workspaces with compact prefill families are not qualified");
++#endif
++    }
+ #endif
+ #ifdef GARNET_METAL_MTP_BRIDGE
+     if(mtp_)throw std::invalid_argument("Prepare verification before attaching MTP");
+@@ -68,6 +74,10 @@
+     if(output.rows!=r||!output.columns||output.columns>16777216||output.shape.size()!=2)
+         throw std::invalid_argument("Verification head output must be bounded full vocabulary rows");
+     staged->vocab=output.columns;staged->headGeneration=staged->head->generation_;
++#ifdef GARNET_METAL_COMPACT_VERIFY_COEXISTENCE
++    if(!compactFamilies_.empty()&&(b!=4||t!=1||w!=4096||staged->vocab!=32768))
++        throw std::invalid_argument("Compact verification workspace must retain B4/T1/W4096/V32768");
++#endif
+     size_t projections=0;
+     for(const auto& op:staged->head->ops_)if(op.kind==MetalCompiledGraph::Kind::MatMul||op.kind==MetalCompiledGraph::Kind::BF16MatVec) {
+         if(op.kind!=MetalCompiledGraph::Kind::MatMul||!op.transpose||!op.indexedDecodeProjection||
+--- a/src/entry/metal_main.cpp
++++ b/src/entry/metal_main.cpp
+@@ -490,6 +490,9 @@
+ #ifdef GARNET_APPLE_COREML
+         info+="; coreml_stateful_optional";
+ #endif
++#ifdef GARNET_METAL_COMPACT_VERIFY_COEXISTENCE
++    info+="; native_compact_verify_b4t1_optional_v1";
++#endif
+ #ifdef GARNET_METAL_DENSE_VERIFY_SCHEDULER
+     info+="; native_scheduled_dense_verify_v1";
+ #endif

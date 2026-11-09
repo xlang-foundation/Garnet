@@ -1,0 +1,41 @@
+{
+  "profiles": "B4/T4 dense C4096, up-to512 compact prefill; correct profile identity",
+  "arms": [
+    "ordinary",
+    "verify",
+    "reverse"
+  ],
+  "proposals": "ORDINARY OUTPUT ORACLE ONLY FOR CORRECTNESS",
+  "first_verify_submitted": [
+    4,
+    4,
+    4,
+    4
+  ],
+  "first_verify_expected_consumed": [
+    4,
+    1,
+    2,
+    3
+  ],
+  "per_owner_state_match": "Compare all32 layers K/V planes plus hidden row at the same generated-token count against fresh ordinary control, including rejected suffix slots and terminal release.",
+  "native_remaining_budgets": true,
+  "independent_terminal_release": true,
+  "rejections": [
+    "wrong_known",
+    "noncontiguous_prefix",
+    "stale_tick"
+  ],
+  "prefix_retention_qualified": false,
+  "learned_helper_qualified": false,
+  "performance_measured": false,
+  "goal_complete": false,
+  "output_ids_per_arm": 47,
+  "active_requests_required": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "fixture_repair": "Budgets9/10/11/12 made B/C/D finish together and covered only active3/4. Budgets9/10/14/14 exercise active4/3/2/1; keep original raw arms and strict failed audit."
+}

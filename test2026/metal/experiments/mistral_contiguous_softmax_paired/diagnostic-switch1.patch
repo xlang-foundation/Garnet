@@ -1,0 +1,131 @@
+diff --git a/src/backends/metal/decoder_session.h b/src/backends/metal/decoder_session.h
+--- a/src/backends/metal/decoder_session.h
++++ b/src/backends/metal/decoder_session.h
+@@ -441,6 +441,15 @@
+     size_t LastLayoutVectorDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastLayoutVectorDispatches():0;}
+     size_t LastChunkAttentionMPSDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSDispatches():0;}
+     size_t LastChunkAttentionContiguousSoftmaxDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionContiguousSoftmaxDispatches():0;}
++    bool DiagnosticSetContiguousSoftmaxEnabled(bool enabled) {
++        std::lock_guard<std::mutex> lock(mutex_);
++        if(!gpu_||poisoned_)throw std::logic_error("Diagnostic softmax selection needs a ready session");
++        gpu_->DiagnosticSetContiguousSoftmaxEnabled(enabled);return true;
++    }
++    bool DiagnosticContiguousSoftmaxEnabled() {
++        std::lock_guard<std::mutex> lock(mutex_);
++        return gpu_?gpu_->DiagnosticContiguousSoftmaxEnabled():false;
++    }
+     size_t LastChunkFlashAttentionDispatches() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkFlashAttentionDispatches():0;}
+     size_t LastChunkAttentionMPSMatrices() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSMatrices():0;}
+     size_t LastChunkAttentionMPSSkippedMatrices() {std::lock_guard<std::mutex> lock(mutex_);return gpu_?gpu_->LastChunkAttentionMPSSkippedMatrices():0;}
+@@ -649,6 +658,8 @@
+         APISET().AddProp("layout_vector_dispatches",&MetalDecoderSession::LastLayoutVectorDispatches);
+         APISET().AddProp("chunk_attention_mps_dispatches",&MetalDecoderSession::LastChunkAttentionMPSDispatches);
+         APISET().AddProp("chunk_attention_contiguous_softmax_dispatches",&MetalDecoderSession::LastChunkAttentionContiguousSoftmaxDispatches);
++        APISET().AddFunc<1>("diagnostic_contiguous_softmax_set_enabled",&MetalDecoderSession::DiagnosticSetContiguousSoftmaxEnabled);
++        APISET().AddProp("diagnostic_contiguous_softmax_enabled",&MetalDecoderSession::DiagnosticContiguousSoftmaxEnabled);
+         APISET().AddProp("chunk_flash_attention_dispatches",&MetalDecoderSession::LastChunkFlashAttentionDispatches);
+         APISET().AddProp("chunk_attention_mps_matrices",&MetalDecoderSession::LastChunkAttentionMPSMatrices);
+         APISET().AddProp("chunk_attention_mps_skipped_matrices",&MetalDecoderSession::LastChunkAttentionMPSSkippedMatrices);
+diff --git a/src/backends/metal/metal_context.h b/src/backends/metal/metal_context.h
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -451,6 +451,9 @@
+     size_t LastChunkAttentionOptimizedDispatches() const;
+     size_t LastChunkAttentionMPSDispatches() const;
+     size_t LastChunkAttentionContiguousSoftmaxDispatches() const;
++    // Diagnostic only: selects precompiled bit-equivalent kernels between drained batches.
++    void DiagnosticSetContiguousSoftmaxEnabled(bool enabled);
++    bool DiagnosticContiguousSoftmaxEnabled() const;
+     size_t LastChunkFlashAttentionDispatches() const;
+     size_t LastChunkAttentionMPSMatrices() const;
+     size_t LastChunkAttentionMPSSkippedMatrices() const;
+diff --git a/src/backends/metal/metal_context.mm b/src/backends/metal/metal_context.mm
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -670,6 +670,11 @@
+ #endif
+     size_t chunkAttentionMPSDispatches=0,chunkFlashAttentionDispatches=0;
+     size_t chunkAttentionContiguousSoftmaxDispatches=0;
++#ifdef GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX
++    bool diagnosticContiguousSoftmaxEnabled=true;
++#else
++    bool diagnosticContiguousSoftmaxEnabled=false;
++#endif
+     size_t chunkAttentionMPSMatrices=0,chunkAttentionMPSSkippedMatrices=0;
+     size_t chunkKVScatterDispatches=0;
+     size_t layoutVectorDispatches=0;
+@@ -5655,7 +5660,7 @@
+ #ifdef GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX
+         // Prove actual controls once per owner, not separately for each query/head.
+         // Never narrow based on pending GPU writes or unproved alias/control state.
+-        if(bucket.contiguousSoftmax&&controlsReady&&policy.known&&!fullRequestRows&&
++        if(impl_->diagnosticContiguousSoftmaxEnabled&&bucket.contiguousSoftmax&&controlsReady&&policy.known&&!fullRequestRows&&
+            ChunkMPSContiguousPrefix(size_t(p.batch),chunk,capacity,
+                reinterpret_cast<const float*>(static_cast<const char*>(s.data.contents)+s.offset),size_t(p.sStride),
+                reinterpret_cast<const float*>(static_cast<const char*>(a.data.contents)+a.offset),size_t(p.aStride))) {
+@@ -5844,6 +5849,15 @@
+ size_t MetalContext::LastLayoutVectorDispatches() const {return impl_->layoutVectorDispatches;}
+ size_t MetalContext::LastChunkAttentionMPSDispatches() const {return impl_->chunkAttentionMPSDispatches;}
+ size_t MetalContext::LastChunkAttentionContiguousSoftmaxDispatches() const {return impl_->chunkAttentionContiguousSoftmaxDispatches;}
++void MetalContext::DiagnosticSetContiguousSoftmaxEnabled(bool enabled) {
++    if(impl_->command||impl_->submitted.count)
++        throw std::logic_error("Diagnostic softmax selection requires a drained command batch");
++#ifndef GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX
++    if(enabled)throw std::logic_error("Contiguous softmax is not compiled in this profile");
++#endif
++    impl_->diagnosticContiguousSoftmaxEnabled=enabled;
++}
++bool MetalContext::DiagnosticContiguousSoftmaxEnabled() const {return impl_->diagnosticContiguousSoftmaxEnabled;}
+ size_t MetalContext::LastChunkFlashAttentionDispatches() const {return impl_->chunkFlashAttentionDispatches;}
+ size_t MetalContext::LastChunkAttentionMPSMatrices() const {return impl_->chunkAttentionMPSMatrices;}
+ size_t MetalContext::LastChunkAttentionMPSSkippedMatrices() const {return impl_->chunkAttentionMPSSkippedMatrices;}
+diff --git a/test2026/metal/contiguous_softmax_native_test.cpp b/test2026/metal/contiguous_softmax_native_test.cpp
+--- a/test2026/metal/contiguous_softmax_native_test.cpp
++++ b/test2026/metal/contiguous_softmax_native_test.cpp
+@@ -62,6 +62,38 @@
+         for(size_t i:{size_t(3),size_t(4)}){auto got=gpu.Download(inputs[i]);const auto& original=i==3?kc:vc;Need(got.size()==original.size()&&!std::memcmp(got.data(),original.data(),got.size()*4),"Readonly KV changed");}
+         Oracle(b);++cells;words+=b.size();
+     }
++    void DiagnosticSwitch() {
++        const bool original=gpu.DiagnosticContiguousSoftmaxEnabled();
++#ifdef GARNET_METAL_MPS_CONTIGUOUS_SOFTMAX
++        Need(original,"Compiled ON default changed");
++#else
++        Need(!original,"Compiled OFF default changed");
++        bool unavailable=false;try{gpu.DiagnosticSetContiguousSoftmaxEnabled(true);}catch(const std::logic_error&){unavailable=true;}
++        Need(unavailable&&!gpu.DiagnosticContiguousSoftmaxEnabled(),"Uncompiled diagnostic enabled");
++#endif
++        MetalContext peer;
++        const auto plans=gpu.ChunkAttentionMPSPlanCount(),scratch=gpu.ChunkAttentionMPSScratchBytes();
++        gpu.DiagnosticSetContiguousSoftmaxEnabled(false);
++        Need(peer.DiagnosticContiguousSoftmaxEnabled()==original,"Diagnostic selection leaked across contexts");
++        gpu.Begin();bool open=false;try{gpu.DiagnosticSetContiguousSoftmaxEnabled(original);}catch(const std::logic_error&){open=true;}
++        Need(open&&!gpu.DiagnosticContiguousSoftmaxEnabled(),"Open-batch diagnostic mutation admitted");
++        gpu.EncodeAttentionChunk(inputs,control,heads,kv,dim,capacity,chunk,true);
++        gpu.Flush();bool pending=false;try{gpu.DiagnosticSetContiguousSoftmaxEnabled(original);}catch(const std::logic_error&){pending=true;}
++        Need(pending&&!gpu.DiagnosticContiguousSoftmaxEnabled(),"Partly submitted diagnostic mutation admitted");
++        gpu.SubmitAndWait();Need(gpu.LastChunkAttentionContiguousSoftmaxDispatches()==0,"Disabled route dispatched");
++        const auto expected=gpu.Download(control);
++        for(bool enabled:{original,false,original}) {
++            gpu.DiagnosticSetContiguousSoftmaxEnabled(enabled);Need(gpu.DiagnosticContiguousSoftmaxEnabled()==enabled,"Diagnostic state differs");
++            gpu.Begin();gpu.EncodeAttentionChunk(inputs,candidate,heads,kv,dim,capacity,chunk,true);gpu.SubmitAndWait();
++            Need(gpu.LastChunkAttentionContiguousSoftmaxDispatches()==size_t(enabled),"Diagnostic route differs");
++            const auto got=gpu.Download(candidate);Need(got.size()==expected.size()&&!std::memcmp(got.data(),expected.data(),got.size()*4),"Diagnostic switch changed bits");
++        }
++        Need(gpu.ChunkAttentionMPSPlanCount()==plans&&gpu.ChunkAttentionMPSScratchBytes()==scratch,"Diagnostic switch allocated profiles");
++        Need(peer.DiagnosticContiguousSoftmaxEnabled()==original,"Diagnostic peer changed");
++        gpu.Begin();gpu.EncodeAttentionChunk(inputs,candidate,heads,kv,dim,capacity,chunk,true);gpu.Abort();
++        Need(gpu.DiagnosticContiguousSoftmaxEnabled()==original&&gpu.LastChunkAttentionContiguousSoftmaxDispatches()==0,"Abort changed selector or retained counters");
++        std::cout<<"Per-context diagnostic: drained/open/partial/abort/default/compiled-out routing and exact words verified\n";
++    }
+     void RejectAndRecover() {
+         gpu.Begin();bool alias=false;try{gpu.EncodeAttentionChunk(inputs,inputs[0],heads,kv,dim,capacity,chunk,true);}catch(const std::invalid_argument&){alias=true;}gpu.Abort();Need(alias,"Output alias admitted");
+         auto args=inputs;args[0]=gpu.Allocate(rows,heads*dim);gpu.Begin();bool unready=false;try{gpu.EncodeAttentionChunk(args,candidate,heads,kv,dim,capacity,chunk,true);}catch(const std::logic_error&){unready=true;}gpu.Abort();Need(unready,"Uninitialized input admitted");
+@@ -69,6 +101,6 @@
+     }
+ };
+ }
+-int main(){try{{Fixture f;for(int kind=0;kind<5;++kind)f.Run(kind);f.RejectAndRecover();std::cout<<"Native contiguous softmax "<<f.cells<<" cells, "<<f.words<<" complete exact output words, "<<f.oracle<<" FP64 values; pending/gap/overwrite/full-row fallback and abort recovery verified\n";}
++int main(){try{{Fixture f;for(int kind=0;kind<5;++kind)f.Run(kind);f.RejectAndRecover();f.DiagnosticSwitch();std::cout<<"Native contiguous softmax "<<f.cells<<" cells, "<<f.words<<" complete exact output words, "<<f.oracle<<" FP64 values; pending/gap/overwrite/full-row fallback and abort recovery verified\n";}
+     auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.affineWeights&&!owners.bf16Weights&&!owners.pipelineSets,"Native owners retained after close");return 0;
+ }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

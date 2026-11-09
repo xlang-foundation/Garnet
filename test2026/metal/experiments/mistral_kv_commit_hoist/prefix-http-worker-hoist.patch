@@ -1,0 +1,12 @@
+--- qualified-prefix-http-worker.py
++++ kv-hoist-prefix-http-worker.py
+@@ -558,6 +558,9 @@
+                 expected=coverage if valid<batch else 0
+                 emit(dict(event='native_indexed_decode',stage=stage,affine_dispatches=count,active_rows=valid,physical_rows=batch))
+                 if count!=expected:raise ValueError('Active FP32 '+stage+' projection coverage '+str(count)+' differs from expected '+str(expected))
++            hoisted=decoder.session.chunk_kv_hoisted_commits
++            if hoisted not in (0,64) or (len(ids)==batch and hoisted!=0):raise ValueError('Native KV hoist route outside qualified body/decode bounds')
++            emit(dict(event='diagnostic_native_kv_hoist',dispatches=hoisted,ids=ids,slots=slots.tolist(),active=active.tolist(),epochs=epochs))
+             return result
+         def predict_rows(epochs):
+             started=time.monotonic() if trace_stages else 0

@@ -680,6 +680,14 @@ namespace Garnet
         return mFixtureExecution;
     }
 
+    X::Value Model::TrimExecutionContexts(const X::ARGS& params, const X::KWARGS& kwParams)
+    {
+        if (!mCompiledRuntime) throw X::Error("trim_execution_contexts requires a loaded compiled model");
+        mCompiledRuntime->TrimExecutionContexts(GetBoolArg(params,kwParams,0,"keep_contexts",false),
+            GetBoolArg(params,kwParams,1,"keep_device_cache",false));
+        return NativeValue(Host(), X::Value(true));
+    }
+
     X::Value Model::ReleaseRuntime(const X::ARGS& params, const X::KWARGS& kwParams)
     {
         X::Value retValue;

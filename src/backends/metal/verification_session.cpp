@@ -8,6 +8,9 @@
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#ifdef GARNET_METAL_TARGET_JACOBI
+#include <optional>
+#endif
 namespace Garnet {
 namespace {
 MetalCompiledGraph* VGraph(const X::Value& value,X3PackageHost* host) {
@@ -38,7 +41,13 @@ bool MetalDecoderSession::PrepareVerification(X::Value values,X::Value headValue
 #else
     std::lock_guard<std::mutex> sessionLock(mutex_);
 #ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
-    if(!compactFamilies_.empty())throw std::invalid_argument("Speculative workspaces with compact prefill families are not qualified");
+    if(!compactFamilies_.empty()) {
+#ifdef GARNET_METAL_COMPACT_VERIFY_COEXISTENCE
+        if(!CompactVerificationPreparationSupported())throw std::invalid_argument("Verification with compact families requires the closed B4/T1 dense preparation profile");
+#else
+        throw std::invalid_argument("Speculative workspaces with compact prefill families are not qualified");
+#endif
+    }
 #endif
 #ifdef GARNET_METAL_MTP_BRIDGE
     if(mtp_)throw std::invalid_argument("Prepare verification before attaching MTP");
@@ -61,13 +70,39 @@ bool MetalDecoderSession::PrepareVerification(X::Value values,X::Value headValue
     if(!first->ready_||!first->verificationTokens_||first->inputShapes_[0].size()!=3)throw std::invalid_argument("Prepare explicit compiled verification layers first");
     staged->batch=size_t(first->inputShapes_[0][0]);staged->chunk=first->verificationTokens_;staged->width=size_t(first->inputShapes_[0][2]);
     const auto b=staged->batch,t=staged->chunk,w=staged->width,r=b*t;
-    if(!b||b>4||!t||r>4||staged->head->inputShapes_!=std::vector<std::vector<int64_t>>{{int64_t(r),int64_t(w)}}||
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+    if(wideVerificationPreparationClosed_&&(r>4||(verification_&&verification_->batch*verification_->chunk>4)))
+        throw std::invalid_argument("Prepare or replace a wide verification profile before the first row claim or inference; reset does not reopen preparation");
+#endif
+    if(!b||b>4||!t||
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+       (r>4&&!(b==4&&t==4&&w==4096&&states_.size()==32))||
+#else
+       r>4||
+#endif
+       staged->head->inputShapes_!=std::vector<std::vector<int64_t>>{{int64_t(r),int64_t(w)}}||
        head_->inputShapes_!=std::vector<std::vector<int64_t>>{{int64_t(b),int64_t(w)}})
         throw std::invalid_argument("Verification head/profile dimensions disagree");
     const auto& output=staged->head->slots_[staged->head->output_];
     if(output.rows!=r||!output.columns||output.columns>16777216||output.shape.size()!=2)
         throw std::invalid_argument("Verification head output must be bounded full vocabulary rows");
     staged->vocab=output.columns;staged->headGeneration=staged->head->generation_;
+#ifdef GARNET_METAL_COMPACT_VERIFY_COEXISTENCE
+    if(!compactFamilies_.empty()&&(b!=4||
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+       (t!=1&&t!=4)||
+#else
+       t!=1||
+#endif
+       w!=4096||staged->vocab!=32768))
+        throw std::invalid_argument("Compact verification workspace must retain B4/T1/W4096/V32768");
+#endif
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+    if(r>4){const std::vector<int64_t> shape{4,8,4096,128};
+        if(staged->vocab!=32768)throw std::invalid_argument("Wide verification requires Mistral vocabulary");
+        for(const auto& state:states_)if(state.shape[0]!=shape||state.shape[1]!=shape)
+            throw std::invalid_argument("Wide verification requires dense Mistral cache banks");}
+#endif
     size_t projections=0;
     for(const auto& op:staged->head->ops_)if(op.kind==MetalCompiledGraph::Kind::MatMul||op.kind==MetalCompiledGraph::Kind::BF16MatVec) {
         if(op.kind!=MetalCompiledGraph::Kind::MatMul||!op.transpose||!op.indexedDecodeProjection||
@@ -117,6 +152,9 @@ bool MetalDecoderSession::PrepareVerification(X::Value values,X::Value headValue
         if(!tokenGraphs_.count(graph))tokenGraphOwners_.push_back(staged->graphs.Get(uint64_t(i)));
         tokenGraphs_[graph]={i,graph->generation_};
 #endif
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+        PrepareFusedDecodeProfiles(*graph);
+#endif
         staged->layers.push_back(std::move(binding));
     }
     staged->allHidden=gpu_->Allocate(b,t*w);staged->flatHidden=gpu_->Allocate(r,w);staged->predictions=gpu_->Allocate(r,2);
@@ -131,7 +169,11 @@ bool MetalDecoderSession::PrepareVerification(X::Value values,X::Value headValue
     const auto memory=MetalContext::MemoryStats();
     if(memory.recommended<=256*1024*1024||memory.allocated>memory.recommended-256*1024*1024)
         throw std::runtime_error("Prepared verification workspace exceeds the native working-set guard");
-    staged->preparedMetalBytes=memory.allocated;verification_=std::move(staged);verificationStats_="{}";return true;
+    staged->preparedMetalBytes=memory.allocated;verification_=std::move(staged);verificationStats_="{}";
+#ifdef GARNET_METAL_TARGET_JACOBI
+    targetJacobi_.Clear();targetJacobiEnabled_=false;
+#endif
+    return true;
 #endif
 }
 void MetalDecoderSession::ValidateVerificationRun(VerificationRun& run,const std::vector<MetalCompiledGraph*>& layers) {
@@ -166,7 +208,12 @@ void MetalDecoderSession::EncodeVerificationBackups(VerificationRun& run,const s
 }
 void MetalDecoderSession::EncodeVerificationHead(VerificationRun& run,const MetalMatrix& hidden) {
     auto& p=*run.plan;gpu_->EncodeLayout(hidden,hidden,p.flatHidden,0);auto& slot=p.head->slots_[p.head->inputs_[0]];const auto saved=slot.matrix;slot.matrix=p.flatHidden;
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+    std::vector<size_t> selected;for(size_t i=0;i<run.active.size();++i)if(run.active[i]!=0)selected.push_back(i);
+    try{p.head->EncodeGreedy(*gpu_,p.predictions,&selected);}catch(...){slot.matrix=saved;throw;}slot.matrix=saved;
+#else
     try{p.head->EncodeGreedy(*gpu_,p.predictions);}catch(...){slot.matrix=saved;throw;}slot.matrix=saved;
+#endif
 }
 void MetalDecoderSession::CommitVerification(VerificationRun& run,const std::vector<MetalCompiledGraph*>& layers) {
 #if !defined(GARNET_METAL_ROW_FINAL_HIDDEN)||!defined(GARNET_METAL_AFFINE_PROFILE)||!defined(GARNET_METAL_INDEXED_DECODE)
@@ -179,8 +226,15 @@ void MetalDecoderSession::CommitVerification(VerificationRun& run,const std::vec
         {"target_affine_decode_block_dispatches",gpu_->LastAffineDecodeBlockDispatches()},
         {"target_indexed_decode_dispatches",gpu_->LastIndexedDecodeAffineDispatches()},{"target_conv_checkpoints",gpu_->LastVerificationConvCheckpoints()},
         {"target_delta_checkpoints",gpu_->LastVerificationDeltaCheckpoints()},{"target_kv_backups",gpu_->LastVerificationKVBackups()},
-        {"target_attention_dispatches",gpu_->LastVerificationAttentionDispatches()},{"prepared_metal_bytes",p.preparedMetalBytes},{"target_gpu_ms",targetGPU},
+        {"target_attention_dispatches",gpu_->LastVerificationAttentionDispatches()},{"target_attention_layout_dispatches",gpu_->LastVerificationLayoutDispatches()},{"target_attention_split_score_dispatches",gpu_->LastVerificationSplitScoreDispatches()},{"target_attention_gqa16_score_dispatches",gpu_->LastVerificationGqaScoreDispatches()},{"target_attention_gqa16_value_dispatches",gpu_->LastVerificationGqaValueDispatches()},{"target_attention_vector4_dispatches",gpu_->LastVerificationValueVectorDispatches()},{"prepared_metal_bytes",p.preparedMetalBytes},{"target_gpu_ms",targetGPU},
         {"scope","Native target verification plus exact accepted-prefix commit; no draft model or speed qualification"}};
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+    stats["target_fused_q4_decode_blocks"]=gpu_->LastFusedMistralDecodeBlocks();
+    stats["target_fused_q4_decode_input_copies"]=gpu_->LastFusedMistralDecodeInputCopies();
+#ifdef GARNET_METAL_FUSED_Q4_WIDE_SELECTION
+    stats["target_fused_q4_wide_decode_blocks"]=gpu_->LastFusedMistralWideDecodeBlocks();
+#endif
+#endif
 #ifdef GARNET_METAL_MPP_AFFINE
     stats["target_mpp_affine_dispatches"]=gpu_->LastMPPAffineDispatches();
 #endif
@@ -206,6 +260,35 @@ void MetalDecoderSession::CommitVerification(VerificationRun& run,const std::vec
         run.consumed[row]=int64_t(consumed);rejected=rejected||consumed<length;
         for(size_t t=0;t<p.chunk;++t){run.accepted[row*p.chunk+t]=float(t<consumed);run.replay[row*p.chunk+t]=float(t>0&&t<consumed);}
     }
+#ifdef GARNET_METAL_TARGET_JACOBI
+    std::optional<TargetJacobiCandidates::Update> jacobiUpdate;
+    if(targetJacobiEnabled_) {
+        if(run.jacobiSlots.size()!=p.batch*p.chunk||run.jacobiEpochs.size()!=p.batch)
+            throw std::logic_error("Missing immutable target Jacobi controls");
+        std::array<TargetJacobiCandidates::Observation,TargetJacobiCandidates::MaxRows> observed{};
+        for(size_t row=0;row<p.batch;++row) {
+            auto& item=observed[row];
+            while(item.length<p.chunk&&run.active[row*p.chunk+item.length]!=0)++item.length;
+            if(!item.length)continue;
+            const float slot=run.jacobiSlots[row*p.chunk];
+            if(!std::isfinite(slot)||slot<0||slot>=float(tokenCapacity_)||slot!=std::floor(slot))
+                throw std::invalid_argument("Target Jacobi observation slot outside profile");
+            item.epoch=run.jacobiEpochs[row];item.slot=size_t(slot);
+            item.consumed=size_t(run.consumed[row]);item.remaining=size_t(run.remaining[row]);
+            item.finished=run.eos[row]||run.consumed[row]==run.remaining[row];
+            for(size_t t=0;t<item.length;++t) {
+                const size_t at=row*p.chunk+t,index=at*2;
+                // Unconsumed predictions remain speculative but still require
+                // valid typed target output before entering the proposal owner.
+                if(predictions[index+1]!=0||!std::isfinite(predictions[index])||
+                   predictions[index]<0||predictions[index]>=p.vocab||predictions[index]!=std::floor(predictions[index]))
+                    throw std::runtime_error("Invalid speculative target Jacobi prediction");
+                item.input[t]=run.tokens[at];item.prediction[t]=int64_t(predictions[index]);
+            }
+        }
+        jacobiUpdate=targetJacobi_.Stage(observed);
+    }
+#endif
     gpu_->Update(p.acceptedMask,run.accepted.data(),run.accepted.size());gpu_->Update(p.replayMask,run.replay.data(),run.replay.size());
     gpu_->Begin();size_t replayLayers=0;
     if(rejected)for(size_t i=0;i<layers.size();++i) {
@@ -231,6 +314,15 @@ void MetalDecoderSession::CommitVerification(VerificationRun& run,const std::vec
     stats["commit_replay_layers"]=replayLayers;stats["commit_kv_restores"]=gpu_->LastVerificationKVRestores();
     stats["consumed_inputs"]=run.consumed;stats["emitted_tokens"]=run.emitted;stats["eos"]=run.eos;
     stats["borrowed_s1_banks"]=size_t(std::count_if(run.bindings.begin(),run.bindings.end(),[](const auto& b){return b.conv!=SIZE_MAX;}))*2;
+#ifdef GARNET_METAL_TARGET_JACOBI
+    if(jacobiUpdate&&!targetJacobi_.Commit(*jacobiUpdate))
+        throw std::logic_error("Target Jacobi owner changed before canonical commit");
+    stats["target_jacobi_enabled"]=targetJacobiEnabled_;
+    if(jacobiUpdate) {
+        stats["target_jacobi_observed_rows"]=jacobiUpdate->observedRows;
+        stats["target_jacobi_observed_predictions"]=jacobiUpdate->observedPredictions;
+    }
+#endif
     verificationStats_=stats.dump();gpuMs_=targetGPU+gpu_->LastGPUMs();
 #ifdef GARNET_METAL_REQUEST_ROWS
     predictionInitialized_=predictionInitialized_||std::any_of(run.consumed.begin(),run.consumed.end(),[](auto n){return n>0;});
@@ -252,7 +344,11 @@ X::Value MetalDecoderSession::VerifyGreedyUnlocked(X::Value hidden,X::Value posi
     for(auto id:run.tokens)if(id<0||uint64_t(id)>=p.vocab)throw std::invalid_argument("Verification input token exceeds vocabulary");
     for(auto id:run.stops)if(id<0||uint64_t(id)>=p.vocab)throw std::invalid_argument("Verification stop token exceeds vocabulary");
     positions=ControlCopy(positions,Host(),{int64_t(p.batch),int64_t(p.chunk),3});
+#ifdef GARNET_METAL_TARGET_JACOBI
+    slots=ControlCopy(slots,Host(),{int64_t(p.batch),int64_t(p.chunk)},targetJacobiEnabled_?&run.jacobiSlots:nullptr);
+#else
     slots=ControlCopy(slots,Host(),{int64_t(p.batch),int64_t(p.chunk)});
+#endif
     active=ControlCopy(active,Host(),{int64_t(p.batch),int64_t(p.chunk)},&run.active);
     for(size_t row=0;row<p.batch;++row){size_t length=0;bool ended=false;
         for(size_t t=0;t<p.chunk;++t){float flag=run.active[row*p.chunk+t];if(flag!=0&&flag!=1)throw std::invalid_argument("Verification active masks must be binary");
@@ -268,6 +364,15 @@ X::Value MetalDecoderSession::VerifyGreedyUnlocked(X::Value hidden,X::Value posi
 #ifdef GARNET_METAL_CONTINUOUS_ROWS
     if(managedRows_&&!lease)throw std::invalid_argument("Managed verification requires explicit row epochs");
 #endif
+#ifdef GARNET_METAL_TARGET_JACOBI
+    if(targetJacobiEnabled_) {
+        if(!lease)throw std::invalid_argument("Target Jacobi verification requires explicit row epochs");
+        for(size_t row=0;row<p.batch;++row)
+            if(run.active[row*p.chunk]!=0&&!expected[row])
+                throw std::invalid_argument("Active target Jacobi verification requires a live row epoch");
+        run.jacobiEpochs=expected;
+    }
+#endif
     run.consumed.assign(p.batch,0);run.accepted.assign(p.batch*p.chunk,0);run.replay=run.accepted;run.emitted.resize(p.batch);run.eos.assign(p.batch,false);
     for(auto& row:run.emitted)row.reserve(p.chunk);
     const std::vector<int64_t>* tracked=nullptr;
@@ -279,6 +384,77 @@ X::Value MetalDecoderSession::VerifyGreedyUnlocked(X::Value hidden,X::Value posi
     for(size_t row=0;row<p.batch;++row){auto item=X::Value::List(Host()),emitted=X::Value::List(Host());for(auto token:run.emitted[row])emitted.Append(X::Value(token));
         item.Append(emitted);item.Append(X::Value(run.consumed[row]));item.Append(X::Value(run.eos[row]));result.Append(item);}return result;
 }
+#ifdef GARNET_METAL_DENSE_VERIFY_SCHEDULER
+std::array<size_t,2> MetalDecoderSession::VerificationGeometry() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!verification_||!gpu_||poisoned_)throw std::logic_error("Prepare native verification before scheduled decoding");
+    return {verification_->batch,verification_->chunk};
+}
+#endif
 std::string MetalDecoderSession::VerificationStatsJson(){std::lock_guard<std::mutex> lock(mutex_);return verificationStats_;}
+#ifdef GARNET_METAL_TARGET_JACOBI
+bool MetalDecoderSession::SetTargetJacobiEnabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_)throw std::logic_error("Prepare a ready native session before target Jacobi control");
+    gpu_->RequireDrainedProfileControl();
+    if(enabled) {
+        if(!verification_||!tokenCache_||!requestRows_||
+           !verification_->batch||verification_->batch>TargetJacobiCandidates::MaxRows||
+           verification_->chunk<2||verification_->chunk>TargetJacobiCandidates::MaxDepth||
+           verification_->vocab!=tokenVocabulary_||verification_->vocab>(1u<<24)||
+           !tokenCapacity_||tokenCapacity_>4096||rowTokens_.size()!=verification_->batch||
+           rowTokensValid_.size()!=verification_->batch)
+            throw std::invalid_argument("Target Jacobi requires a bounded prepared verifier and native row/token ownership");
+        std::vector<std::unique_lock<std::mutex>> ownerLocks;ValidateTokenOwners(ownerLocks);
+        targetJacobi_.Configure(verification_->batch,verification_->chunk,verification_->vocab,tokenCapacity_);
+    }else targetJacobi_.Clear();
+    targetJacobiEnabled_=enabled;return true;
+}
+std::string MetalDecoderSession::TargetJacobiDraftsJson(X::Value known,X::Value slots,X::Value budgets,X::Value epochs) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_||!verification_||!targetJacobiEnabled_||!tokenCache_||!requestRows_||!managedRows_)
+        throw std::logic_error("Enable the prepared native target Jacobi owner first");
+    gpu_->RequireDrainedProfileControl();
+    std::vector<std::unique_lock<std::mutex>> ownerLocks;ValidateTokenOwners(ownerLocks);
+    const size_t batch=verification_->batch;
+    const auto ids=Integers(known,Host(),batch,"Jacobi known tokens");
+    const auto starts=Integers(slots,Host(),batch,"Jacobi slots");
+    const auto remaining=Integers(budgets,Host(),batch,"Jacobi budgets");
+    const auto leases=Integers(epochs,Host(),batch,"Jacobi epochs");
+    // Validate the complete request before updating even proposal statistics.
+    for(size_t row=0;row<batch;++row) {
+        if(!leases[row]) {
+            if(ids[row]||starts[row]||remaining[row])throw std::invalid_argument("Inactive Jacobi controls must be canonical zero");
+            continue;
+        }
+        if(leases[row]<0||!requestRows_->Matches(row,uint64_t(leases[row]))||
+           ids[row]<0||uint64_t(ids[row])>=verification_->vocab||starts[row]<0||
+           uint64_t(starts[row])>=tokenCapacity_||remaining[row]<1||
+           !rowTokensValid_[row]||rowTokens_[row].size()!=uint64_t(starts[row]))
+            throw std::invalid_argument("Target Jacobi controls differ from native row epoch/token progress");
+    }
+    nlohmann::json proposals=nlohmann::json::array(),reuse=nlohmann::json::array();
+    for(size_t row=0;row<batch;++row) {
+        std::vector<int64_t> tokens;
+        size_t reused=0;
+        if(leases[row]) {
+            const auto draft=targetJacobi_.Propose(row,uint64_t(leases[row]),size_t(starts[row]),ids[row],size_t(remaining[row]));
+            tokens.assign(draft.following.begin(),draft.following.begin()+draft.count);reused=draft.reused;
+        }
+        proposals.push_back(tokens);reuse.push_back(reused);
+    }
+    return nlohmann::json{{"proposals",proposals},{"reused_predictions",reuse},{"epochs",leases},
+        {"slots",starts},{"known",ids},{"remaining",remaining},
+        {"scope","Bounded native shifted-Jacobi guesses only; every proposal requires target verification"}}.dump();
+}
+std::string MetalDecoderSession::TargetJacobiStatsJson() {
+    std::lock_guard<std::mutex> lock(mutex_);const auto stats=targetJacobi_.Counters();
+    return nlohmann::json{{"enabled",targetJacobiEnabled_},{"host_owner_bytes",targetJacobi_.ResidentBytes()},
+        {"queries",stats.queries},{"reused_queries",stats.reusedQueries},{"proposed_tokens",stats.proposedTokens},
+        {"reused_tokens",stats.reusedTokens},{"observed_rows",stats.observedRows},
+        {"observed_predictions",stats.observedPredictions},{"new_GPU_buffers",0},
+        {"scope","Speculative session-owned candidates, never canonical state or emitted output"}}.dump();
+}
+#endif
 }
 #endif

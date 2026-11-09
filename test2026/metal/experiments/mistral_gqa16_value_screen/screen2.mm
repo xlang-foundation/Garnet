@@ -1,0 +1,87 @@
+// Fixed-profile GQA score sharing screen. No inference-runtime modifications.
+#import <Foundation/Foundation.h>
+#import <Metal/Metal.h>
+#include "nlohmann/json.hpp"
+#include <CommonCrypto/CommonDigest.h>
+#include <algorithm>
+#include <array>
+#include <chrono>
+#include <cmath>
+#include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <vector>
+using J=nlohmann::json;namespace fs=std::filesystem;
+void Need(bool x,const char* why){if(!x)throw std::runtime_error(why);}
+J Read(fs::path p){std::ifstream f(p);J j;f>>j;return j;}
+void Save(fs::path p,const J& j){std::ofstream f(p);f<<j.dump(2)<<'\n';Need(bool(f),"JSON write failed");}
+void Binary(fs::path p,const void* v,size_t n){std::ofstream f(p,std::ios::binary);f.write((const char*)v,n);Need(bool(f),"Binary write failed");}
+std::string Sha(const void* ptr,size_t n){Need(n<=UINT32_MAX,"Hash bound");unsigned char d[32];CC_SHA256(ptr,CC_LONG(n),d);std::ostringstream s;for(auto b:d)s<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(b);return s.str();}
+uint64_t Now(){return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();}
+struct Params{uint64_t batch,chunk,heads,kvHeads,dim,capacity,qStride,kStride,vStride,kcStride,vcStride,sStride,aStride,gStride,pStride,oStride,gated;};
+struct Clock{double start,end;uint64_t hostStart,hostEnd;};
+struct Case{std::vector<size_t> firsts;std::vector<unsigned> masks;};
+int main(int argc,char** argv){fs::path out;J report={{"completed",false},{"cases",J::array()},{"inputs",J::array()},{"resources",J::array()},{"timing",J::array()}};
+try{@autoreleasepool{
+ Need(argc==4,"STUDY FRESH-OUTPUT COHORT");fs::path root=argv[1];out=argv[2];int cohort=std::stoi(argv[3]);Need(cohort==1||cohort==2,"Cohort");Need(!fs::exists(out),"Output exists");fs::create_directory(out);auto plan=Read(root/"plan2.json");report["cohort"]=cohort;
+ auto device=MTLCreateSystemDefaultDevice();Need(device!=nil,"No Metal device");auto baseline=device.currentAllocatedSize;report["baseline_allocated_bytes"]=baseline;report["device"]=device.name.UTF8String;uint64_t pairs=0;
+ {@autoreleasepool{
+ auto queue=[device newCommandQueue];Need(queue!=nil,"No queue");NSError* error=nil;
+ std::vector<size_t> batches{1,4};if(cohort==2)std::reverse(batches.begin(),batches.end());
+ for(size_t batch:batches){@autoreleasepool{
+  std::array<id<MTLLibrary>,2> libs;
+  for(int i=0;i<2;++i){auto path=root/(i?"candidate1.metal":"control1.metal");auto s=[NSString stringWithContentsOfFile:[NSString stringWithUTF8String:path.c_str()] encoding:NSUTF8StringEncoding error:&error];Need(s!=nil,"No MSL");if(batch==1)s=[@"#define GARNET_VERIFY_MISTRAL_LAYOUT 1\n" stringByAppendingString:s];libs[i]=[device newLibraryWithSource:s options:nil error:&error];if(!libs[i])throw std::runtime_error(error.localizedDescription.UTF8String);}
+  std::array<id<MTLComputePipelineState>,5> psos;
+  for(int i=0;i<5;++i){NSString* name=i==0?@"verification_attention_scores":i==1?(batch==1?@"verification_attention_context_vector4":@"verification_attention_context"):i==4?@"verification_attention_context_vector4":@"verification_gqa16_context";id<MTLFunction> fn;
+   if(i==2||i==3){auto fc=[MTLFunctionConstantValues new];uint32_t tile=i==2?32:64;[fc setConstantValue:&tile type:MTLDataTypeUInt atIndex:2];fn=[libs[1] newFunctionWithName:name constantValues:fc error:&error];}else fn=[libs[0] newFunctionWithName:name];Need(fn!=nil,"No function");auto p=[device newComputePipelineStateWithFunction:fn error:&error];if(!p)throw std::runtime_error(error.localizedDescription.UTF8String);size_t dynamic=i==0?16384:i==2?6144:i==3?12288:0;Need(p.threadExecutionWidth==32&&p.maxTotalThreadsPerThreadgroup>=128&&p.staticThreadgroupMemoryLength+dynamic<=device.maxThreadgroupMemoryLength,"PSO resource bound");psos[i]=p;report["resources"].push_back({{"batch",batch},{"function",name.UTF8String},{"index",i},{"simd_width",p.threadExecutionWidth},{"max_threads",p.maxTotalThreadsPerThreadgroup},{"static_threadgroup_bytes",p.staticThreadgroupMemoryLength},{"dynamic_threadgroup_bytes",dynamic}});
+  }
+  for(size_t layout=0;layout<2;++layout){@autoreleasepool{
+   constexpr uint32_t guard=0x1937abef,nan=0x7fc01234;size_t off=layout?16:0,pad=layout?8:0;
+   Params p{batch,4,32,8,128,4096,4096+pad,1024+pad,1024+pad,8*4096*128+pad,8*4096*128+pad,4+pad,4+pad,4096+pad,32*4096+pad,4096+pad,0};
+   std::array<size_t,6> rows{batch*4,batch*4,batch,batch*4,batch,batch*4},strides{p.qStride,p.kStride,p.kcStride,p.vStride,p.vcStride,p.gStride},widths{4096,1024,8*4096*128,1024,8*4096*128,4096};
+   std::array<std::vector<uint32_t>,6> input;
+   uint32_t state=0x6a09e667u+uint32_t(layout+batch*77);auto random=[&](){state^=state<<13;state^=state>>17;state^=state<<5;return float(int(state&65535)-32768)/65536.0f;};
+   for(size_t i=0;i<6;++i){input[i].assign(off+rows[i]*strides[i]+16,guard);for(size_t r=0;r<rows[i];++r)for(size_t j=0;j<widths[i];++j){float v=random();std::memcpy(input[i].data()+off+r*strides[i]+j,&v,4);}}
+   auto upload=[&](const std::vector<uint32_t>& a){auto b=[device newBufferWithBytes:a.data() length:a.size()*4 options:MTLResourceStorageModeShared];Need(b!=nil,"Buffer allocation");return b;};std::array<id<MTLBuffer>,6> buffers;
+   std::string stem="b"+std::to_string(batch)+"-l"+std::to_string(layout);
+   for(size_t i=0;i<6;++i){buffers[i]=upload(input[i]);auto name=stem+"-input"+std::to_string(i)+".u32";Binary(out/name,input[i].data(),input[i].size()*4);report["inputs"].push_back({{"batch",batch},{"layout",layout},{"input",i},{"file",name},{"words",input[i].size()},{"sha256",Sha(input[i].data(),input[i].size()*4)}});}
+   std::vector<uint32_t> slotsWords(off+batch*p.sStride+16,guard),flagsWords(off+batch*p.aStride+16,guard),probBlank(off+batch*4*p.pStride+16,guard),blank(off+batch*4*p.oStride+16,guard),currentValue;
+   auto slots=upload(slotsWords),active=upload(flagsWords),probabilities=upload(probBlank),output=upload(blank);
+   auto setCase=[&](const Case& c){currentValue=input[3];for(size_t r=0;r<batch;++r){int last=-1;for(int t=0;t<4;++t)if(c.masks[r]&(1u<<t))last=t;for(size_t t=0;t<4;++t){float slot=float(c.firsts[r]+t),flag=float((c.masks[r]&(1u<<t))!=0);Need(!flag||slot<4096,"Invalid active slot");if(last<0)std::memcpy(slotsWords.data()+off+r*p.sStride+t,&nan,4);else std::memcpy(slotsWords.data()+off+r*p.sStride+t,&slot,4);std::memcpy(flagsWords.data()+off+r*p.aStride+t,&flag,4);if(int(t)>last)std::fill_n(currentValue.data()+off+(r*4+t)*p.vStride,1024,nan);}}
+    std::memcpy(slots.contents,slotsWords.data(),slots.length);std::memcpy(active.contents,flagsWords.data(),active.length);std::memcpy(buffers[3].contents,currentValue.data(),buffers[3].length);
+   };
+   auto makeProb=[&](){std::memcpy(probabilities.contents,probBlank.data(),probabilities.length);@autoreleasepool{auto cb=[queue commandBuffer];auto e=[cb computeCommandEncoder];Need(cb&&e,"Score command");[e setComputePipelineState:psos[0]];for(int i=0;i<3;++i)[e setBuffer:buffers[i] offset:off*4 atIndex:i];[e setBuffer:slots offset:off*4 atIndex:3];[e setBuffer:active offset:off*4 atIndex:4];[e setBuffer:probabilities offset:off*4 atIndex:5];[e setBytes:&p length:sizeof(p) atIndex:6];[e setThreadgroupMemoryLength:16384 atIndex:0];[e dispatchThreadgroups:MTLSizeMake(batch*4*32,1,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];[e endEncoding];[cb commit];[cb waitUntilCompleted];Need(cb.status==MTLCommandBufferStatusCompleted,"Score command failed");}};
+   auto encode=[&](int method){Clock c{};c.hostStart=Now();@autoreleasepool{auto cb=[queue commandBuffer];auto e=[cb computeCommandEncoder];Need(cb&&e,"Value command");auto pipeline=psos[method+1];[e setComputePipelineState:pipeline];[e setBuffer:probabilities offset:off*4 atIndex:0];[e setBuffer:buffers[3] offset:off*4 atIndex:1];[e setBuffer:buffers[4] offset:off*4 atIndex:2];[e setBuffer:buffers[5] offset:off*4 atIndex:3];[e setBuffer:slots offset:off*4 atIndex:4];[e setBuffer:active offset:off*4 atIndex:5];[e setBuffer:output offset:off*4 atIndex:6];[e setBytes:&p length:sizeof(p) atIndex:7];
+    if(method==1||method==2){[e setThreadgroupMemoryLength:method==1?6144:12288 atIndex:0];[e dispatchThreadgroups:MTLSizeMake(batch*8,4,1) threadsPerThreadgroup:MTLSizeMake(128,1,1)];}
+    else{size_t count=batch*4*4096/((batch==1||method==3)?4:1),threads=(batch==1||method==3)?64:std::min(count,size_t(pipeline.maxTotalThreadsPerThreadgroup));[e dispatchThreads:MTLSizeMake(count,1,1) threadsPerThreadgroup:MTLSizeMake(threads,1,1)];}
+    [e endEncoding];[cb commit];[cb waitUntilCompleted];Need(cb.status==MTLCommandBufferStatusCompleted,"Value command failed");c.start=cb.GPUStartTime;c.end=cb.GPUEndTime;
+   }c.hostEnd=Now();Need(std::isfinite(c.start)&&std::isfinite(c.end)&&c.end>c.start,"Value clock");return c;};
+   auto readonly=[&](const std::vector<uint32_t>& prob){for(size_t i=0;i<6;++i){auto& expected=i==3?currentValue:input[i];Need(!std::memcmp(buffers[i].contents,expected.data(),buffers[i].length),"Readonly input changed");}Need(!std::memcmp(probabilities.contents,prob.data(),probabilities.length),"Probability parent changed");Need(!std::memcmp(slots.contents,slotsWords.data(),slots.length)&&!std::memcmp(active.contents,flagsWords.data(),active.length),"Controls changed");};
+   auto validate=[&](const std::vector<uint32_t>& a,const Case& c){for(size_t i=0;i<off;++i)Need(a[i]==guard,"Output prefix guard");for(size_t r=0;r<batch;++r)for(size_t t=0;t<4;++t){size_t base=off+(r*4+t)*p.oStride;for(size_t j=0;j<4096;++j){float v;std::memcpy(&v,a.data()+base+j,4);if(c.masks[r]&(1u<<t))Need(std::isfinite(v),"Nonfinite active context");else Need(a[base+j]==0,"Inactive context not positive zero");}for(size_t j=4096;j<p.oStride;++j)Need(a[base+j]==guard,"Output stride guard");}for(size_t i=off+batch*4*p.oStride;i<a.size();++i)Need(a[i]==guard,"Output suffix guard");};
+   std::vector<Case> cases;
+   for(size_t first:plan["firsts"].get<std::vector<size_t>>())for(unsigned mask:plan["all_uniform_masks"].get<std::vector<unsigned>>()){bool valid=true;for(size_t t=0;t<4;++t)if((mask&(1u<<t))&&first+t>=4096)valid=false;if(valid)cases.push_back({std::vector<size_t>(batch,first),std::vector<unsigned>(batch,mask)});}
+   if(batch==4)for(auto f:plan["mixed_firsts"])for(auto m:plan["mixed_masks"]){Case c{f.get<std::vector<size_t>>(),m.get<std::vector<unsigned>>()};bool valid=true;for(size_t r=0;r<batch;++r)for(size_t t=0;t<4;++t)if((c.masks[r]&(1u<<t))&&c.firsts[r]+t>=4096)valid=false;if(valid)cases.push_back(c);}
+   for(size_t index=0;index<cases.size();++index){const auto& c=cases[index];setCase(c);makeProb();std::vector<uint32_t> prob(probBlank.size());std::memcpy(prob.data(),probabilities.contents,probabilities.length);std::string id=stem+"-c"+std::to_string(index);Binary(out/(id+"-prob.u32"),prob.data(),probabilities.length);
+    std::array<std::vector<uint32_t>,4> results;J record={{"id",id},{"batch",batch},{"layout",layout},{"index",index},{"firsts",c.firsts},{"masks",c.masks},{"params",std::vector<uint64_t>((uint64_t*)&p,(uint64_t*)&p+17)},{"offset_words",off},{"parent_words",blank.size()},{"probability_words",prob.size()},{"probability_sha256",Sha(prob.data(),probabilities.length)},{"case_value_sha256",Sha(currentValue.data(),buffers[3].length)},{"outputs",J::array()}};
+    for(int order=0;order<4;++order){int method=cohort==1?order:3-order;std::memcpy(output.contents,blank.data(),output.length);encode(method);results[method].resize(blank.size());std::memcpy(results[method].data(),output.contents,output.length);validate(results[method],c);auto file=id+"-m"+std::to_string(method)+".u32";Binary(out/file,results[method].data(),output.length);record["outputs"].push_back({{"method",method},{"file",file},{"sha256",Sha(results[method].data(),output.length)}});readonly(prob);}
+    report["cases"].push_back(record);for(int m=1;m<4;++m){size_t mismatch=0;for(size_t i=0;i<blank.size();++i)if(results[0][i]!=results[m][i])++mismatch;if(mismatch){report["mismatch"]={{"id",id},{"method",m},{"words",mismatch}};Save(out/"result1.json",report);Need(false,"Shared value context differs from native bits");}pairs+=blank.size();}
+   }
+   Save(out/"result1.json",report);
+   // Prepared PSOs, inputs and expected outputs; no I/O, hashes or builds during timing.
+   if(layout==0)for(size_t first:plan["timed_firsts"].get<std::vector<size_t>>())for(unsigned mask:plan["timed_masks"].get<std::vector<unsigned>>()){
+    Case c{std::vector<size_t>(batch,first),std::vector<unsigned>(batch,mask)};setCase(c);makeProb();std::vector<uint32_t> prob(probBlank.size());std::memcpy(prob.data(),probabilities.contents,probabilities.length);std::memcpy(output.contents,blank.data(),output.length);encode(0);std::vector<uint32_t> expected(blank.size());std::memcpy(expected.data(),output.contents,output.length);
+    for(int round=-4;round<17;++round)for(int order=0;order<4;++order){int method=(order+(round+4)%4)%4;if(cohort==2)method=3-method;std::memcpy(output.contents,blank.data(),output.length);auto c=encode(method);Need(!std::memcmp(output.contents,expected.data(),output.length),"Timed context drift");if(round>=0)report["timing"].push_back({{"batch",batch},{"first",first},{"mask",mask},{"method",method},{"round",round},{"order",order},{"gpu_start_seconds",c.start},{"gpu_end_seconds",c.end},{"gpu_ms",(c.end-c.start)*1000},{"host_start_ns",c.hostStart},{"host_end_ns",c.hostEnd}});}
+    readonly(prob);
+   }
+   // Restore the per-case V tail mutations before the final before/after comparison.
+   std::memcpy(buffers[3].contents,input[3].data(),buffers[3].length);
+   for(size_t i=0;i<6;++i){Need(!std::memcmp(buffers[i].contents,input[i].data(),buffers[i].length),"Base readonly input changed");Binary(out/(stem+"-input"+std::to_string(i)+"-after.u32"),buffers[i].contents,buffers[i].length);}
+   report["parent_word_pairs"]=pairs;std::cout<<J{{"cohort",cohort},{"batch",batch},{"layout",layout},{"cases",report["cases"].size()},{"parent_word_pairs",pairs}}.dump()<<'\n'<<std::flush;
+  }}
+ }}
+ }}
+ report["close_allocated_bytes"]=device.currentAllocatedSize;Need(device.currentAllocatedSize<=baseline+4194304,"Resources retained");report["compiler_options"]=nullptr;report["all_pipelines_prepared_before_collection"]=true;report["readonly_guards_preserved"]=true;report["all_context_parent_bits_exact"]=true;report["no_runtime_integration"]=true;report["serving_speed_claim"]=false;report["goal_complete"]=false;report["completed"]=true;Save(out/"result1.json",report);return 0;
+}}catch(const std::exception& e){report["error"]=e.what();if(!out.empty()&&fs::exists(out))Save(out/"result1.json",report);std::cerr<<e.what()<<'\n';return 1;}}

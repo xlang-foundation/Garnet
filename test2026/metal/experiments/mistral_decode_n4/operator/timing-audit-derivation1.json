@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "base_sha256": "e8b380a1eb129aa28f40c5f34fc81761084b00d02b0085b9fe2a91dc60be4335",
+  "changes": [
+    {
+      "old": "for groups in [0,2,4,8]",
+      "new": "for groups in [0,4,9]"
+    },
+    {
+      "old": "==len(want)==64",
+      "new": "==len(want)==48"
+    },
+    {
+      "old": "len(samples)==1260",
+      "new": "len(samples)==840"
+    },
+    {
+      "old": "for position in range(3):",
+      "new": "for position in range(2):"
+    },
+    {
+      "old": "index=(position+(round_+5)%3)%3",
+      "new": "index=(position+(round_+5)%2)%2"
+    },
+    {
+      "old": "index=2-index",
+      "new": "index=1-index"
+    },
+    {
+      "old": "groups=[2,4,8][index]",
+      "new": "groups=[4,9][index]"
+    },
+    {
+      "old": "return dict(samples=1260,measured_cells=63",
+      "new": "return dict(samples=840,measured_cells=42"
+    }
+  ],
+  "additional_changes": [
+    "candidate loops2/8->9",
+    "groups key->variant; physical width stays four SIMD groups"
+  ]
+}

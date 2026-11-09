@@ -1,0 +1,129 @@
+--- a/cmake/GarnetMetal.cmake
++++ b/cmake/GarnetMetal.cmake
+@@ -1145,3 +1145,8 @@
+     target_link_libraries(garnet_value_profile_test PRIVATE garnet_metal)
+     add_test(NAME metal_value_profile_reference COMMAND garnet_value_profile_test)
+ endif()
++
++# Local research screen only.
++add_executable(garnet_silu_native_screen test2026/metal/silu_native_screen.cpp)
++target_include_directories(garnet_silu_native_screen PRIVATE third_party)
++target_link_libraries(garnet_silu_native_screen PRIVATE garnet_metal)
+--- a/src/backends/metal/metal_context.h
++++ b/src/backends/metal/metal_context.h
+@@ -349,6 +349,9 @@
+         const MetalMatrix& output, bool transposeRight = false);
+     void EncodeRMSNorm(const MetalMatrix& input, const MetalMatrix& weight,
+         const MetalMatrix& output, float epsilon, float weightOffset = 1.0f);
++    // Local research screen only; not exposed to XLang or production profiles.
++    void SetDiagnosticSilu32(bool enabled);
++    size_t LastDiagnosticSilu32Dispatches() const;
+     void EncodeSiluMul(const MetalMatrix& gate, const MetalMatrix& up,
+         const MetalMatrix& output);
+     void EncodeAdd(const MetalMatrix&, const MetalMatrix&, const MetalMatrix&);
+--- a/src/backends/metal/metal_context.mm
++++ b/src/backends/metal/metal_context.mm
+@@ -445,6 +445,7 @@
+     id<MTLComputePipelineState> residualNorm;
+     id<MTLComputePipelineState> packedPrefillNorm;
+     id<MTLComputePipelineState> silu;
++    id<MTLComputePipelineState> diagnosticSilu32;
+ #ifdef GARNET_METAL_JOINED_GLOBAL_MLP
+     id<MTLComputePipelineState> joinedGlobalSilu;
+ #endif
+@@ -665,6 +666,7 @@
+         counterEncoders.push_back({counterRegion,site,partialSubmissions});
+         return encoder;
+     }
++    bool diagnosticSilu32Enabled=false;size_t diagnosticSilu32Dispatches=0;
+     double gpuMs=0;
+     std::vector<std::shared_ptr<MetalMatrix::Impl>> outputs;
+     std::unordered_set<const MetalMatrix::Impl*> pendingOutputs;
+@@ -1749,6 +1751,7 @@
+ #ifdef GARNET_METAL_JOINED_PREFILL
+         source=[source stringByAppendingString:@"\nkernel void joined_split_rescale(device const float* input [[buffer(0)]],device const int* scales [[buffer(1)]],device float* first [[buffer(2)]],device float* second [[buffer(3)]],constant HalfRescaleParams& p [[buffer(4)]],uint id [[thread_position_in_grid]]) {if(id>=p.rows*p.columns*2)return;ulong row=id/(p.columns*2),col=id%(p.columns*2);float v=ldexp(input[row*p.iStride+col],-scales[col]);if(col<p.columns)first[row*p.oStride+col]=v;else second[row*p.oStride+col-p.columns]=v;}\n"];
+ #endif
++        source=[source stringByAppendingString:@"\nkernel void diagnostic_silu32(device const float* a [[buffer(0)]],device const float* b [[buffer(1)]],device float* c [[buffer(2)]],constant Params& p [[buffer(3)]],uint id [[thread_position_in_grid]]){if(id>=uint(p.rows)*uint(p.columns))return;uint row=id/uint(p.columns),col=id%uint(p.columns);float gate=a[row*uint(p.aStride)+col];c[row*uint(p.cStride)+col]=(gate/(1.0f+exp(-gate)))*b[row*uint(p.bStride)+col];}\n"];
+         MTLCompileOptions* compileOptions=nil;
+ #ifdef GARNET_METAL_NATIVE_BFLOAT_BODY
+         source=[source stringByAppendingString:[NSString stringWithUTF8String:R"METAL(
+@@ -2172,6 +2175,8 @@
+         if(!impl_->kernels->residualNorm)throw std::runtime_error("Cannot create residual normalization pipeline");
+ #endif
+         impl_->kernels->silu=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"silu_mul"] error:&error];
++        impl_->kernels->diagnosticSilu32=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"diagnostic_silu32"] error:&error];
++        if(!impl_->kernels->diagnosticSilu32||impl_->kernels->diagnosticSilu32.maxTotalThreadsPerThreadgroup<128)throw std::runtime_error("Diagnostic SiLU pipeline unavailable");
+ #ifdef GARNET_METAL_JOINED_GLOBAL_MLP
+         impl_->kernels->joinedGlobalSilu=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:@"joined_global_silu"] error:&error];
+         if(!impl_->kernels->joinedGlobalSilu)throw std::runtime_error("Cannot create joined global split-SiLU pipeline");
+@@ -4250,6 +4255,7 @@
+     impl_->packedDispatches=0;
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+     impl_->pairedPackedDispatches=0;
++    impl_->diagnosticSilu32Dispatches=0;
+ #endif
+ #endif
+ #endif
+@@ -4348,13 +4354,17 @@
+     struct Params {uint64_t rows,columns,aStride,bStride,cStride;float epsilon,offset;};
+     Params p{a.rows,a.columns,a.rowBytes/4,b.rowBytes/4,c.rowBytes/4,epsilon,offset};
+     auto pipeline=rms?impl_->kernels->rms:(operation==1?impl_->kernels->silu:((operation==2||bias)?impl_->kernels->add:impl_->kernels->mask));
++    const bool diagnostic=operation==1&&impl_->diagnosticSilu32Enabled&&p.rows<=512&&(p.columns==14336||p.columns==4096)&&
++        p.aStride>=p.columns&&p.bStride>=p.columns&&p.cStride>=p.columns&&
++        p.aStride<=UINT32_MAX/p.rows&&p.bStride<=UINT32_MAX/p.rows&&p.cStride<=UINT32_MAX/p.rows;
++    if(diagnostic){pipeline=impl_->kernels->diagnosticSilu32;++impl_->diagnosticSilu32Dispatches;}
+     id<MTLComputeCommandEncoder> encoder=impl_->ComputeEncoder(__func__);
+     if(!encoder)throw std::runtime_error("Cannot create Metal compute encoder");
+     [encoder setComputePipelineState:pipeline];
+     [encoder setBuffer:a.data offset:a.offset atIndex:0];[encoder setBuffer:b.data offset:b.offset atIndex:1];
+     [encoder setBuffer:c.data offset:c.offset atIndex:2];[encoder setBytes:&p length:sizeof(p) atIndex:3];
+     const size_t count=rms?a.rows:Elements(a.rows,a.columns);
+-    const size_t width=std::min(size_t(pipeline.maxTotalThreadsPerThreadgroup),count);
++    const size_t width=diagnostic?std::min(size_t(128),count):std::min(size_t(pipeline.maxTotalThreadsPerThreadgroup),count);
+     if(rms) {
+         if(pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+             throw std::runtime_error("Parallel RMS requires 32-lane SIMD groups");
+@@ -4451,6 +4461,8 @@
+     throw std::logic_error("Packed prefill normalization experiment is disabled");
+ #endif
+ }
++void MetalContext::SetDiagnosticSilu32(bool enabled){if(impl_->command||impl_->submitted.count)throw std::logic_error("Diagnostic policy requires drained commands");impl_->diagnosticSilu32Enabled=enabled;}
++size_t MetalContext::LastDiagnosticSilu32Dispatches() const{return impl_->diagnosticSilu32Dispatches;}
+ void MetalContext::EncodeSiluMul(const MetalMatrix& gate,const MetalMatrix& up,const MetalMatrix& output) {
+     EncodePointwise(gate,up,output,1,0,0);
+ }
+@@ -5843,6 +5855,7 @@
+     impl_->packedDispatches=0;
+ #ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+     impl_->pairedPackedDispatches=0;
++    impl_->diagnosticSilu32Dispatches=0;
+ #endif
+ #endif
+ #endif
+--- /dev/null
++++ b/test2026/metal/silu_native_screen.cpp
+@@ -0,0 +1,24 @@
++// SPDX-License-Identifier: Apache-2.0
++#include "metal_context.h"
++#include "nlohmann/json.hpp"
++#include <array>
++#include <algorithm>
++#include <cstring>
++#include <filesystem>
++#include <fstream>
++#include <iostream>
++#include <vector>
++using namespace Garnet;using JSON=nlohmann::json;
++void Need(bool v,const char* m){if(!v)throw std::runtime_error(m);}
++std::vector<float> Read(const std::filesystem::path& p,size_t count){std::vector<float> v(count);std::ifstream f(p,std::ios::binary);f.read((char*)v.data(),count*4);Need(bool(f)&&f.peek()==EOF,"Bad input extent");return v;}
++void Save(const std::filesystem::path& p,const std::vector<float>& v){std::ofstream f(p,std::ios::binary);f.write((char*)v.data(),v.size()*4);Need(bool(f),"Save failed");}
++int main(int argc,char** argv){try{Need(argc==4,"EDGE FINITE NEW_DIRECTORY required");std::filesystem::path out=argv[3];Need(std::filesystem::create_directory(out),"Fresh output required");JSON report={{"scope","Actual native in-context same-library SiLU32 screen; optional local C++ diagnostic, no model/serving admission"},{"parent","f61fb838437449095a1284fb81564f382dbb355b"},{"warmups",3},{"repetitions",9},{"cases",JSON::array()}};size_t index=0,words=0;
++for(size_t corpus=0;corpus<2;++corpus){std::filesystem::path src=argv[1+corpus];std::ifstream lines(src/"operator1.jsonl");std::string line;
++while(std::getline(lines,line)){auto entry=JSON::parse(line);if(entry["kind"]!="writer_check")continue;size_t cell=entry["index"],rows=entry["rows"],cols=entry["columns"],stride=entry["stride"];auto a=Read(src/"operator1"/("case-"+std::to_string(cell)+"-a.f32"),rows*stride),b=Read(src/"operator1"/("case-"+std::to_string(cell)+"-b.f32"),rows*stride);std::vector<float> la(rows*cols),lb(rows*cols);for(size_t row=0;row<rows;++row){std::copy_n(a.data()+row*stride,cols,la.data()+row*cols);std::copy_n(b.data()+row*stride,cols,lb.data()+row*cols);}
++JSON record={{"corpus",corpus?"finite":"edge"},{"source",src.string()},{"source_case",cell},{"rows",rows},{"columns",cols},{"source_stride",stride},{"gpu_ms",JSON::array()}};
++{MetalContext gpu;auto ma=gpu.Upload(la,rows,cols),mb=gpu.Upload(lb,rows,cols),mc=gpu.Allocate(rows,cols);auto owners=MetalContext::ProfileOwnerStats();std::array<std::vector<double>,2> times;std::array<std::vector<float>,2> first;
++for(int rep=-3;rep<9;++rep)for(size_t order=0;order<2;++order){size_t enabled=(order+size_t(rep+3))%2;gpu.SetDiagnosticSilu32(enabled);gpu.Begin();gpu.EncodeSiluMul(ma,mb,mc);gpu.SubmitAndWait();bool eligible=(cols==14336||cols==4096);Need(gpu.LastDiagnosticSilu32Dispatches()==size_t(enabled&&eligible),"Wrong in-context route");auto values=gpu.Download(mc);if(first[enabled].empty())first[enabled]=values;else Need(!std::memcmp(first[enabled].data(),values.data(),values.size()*4),"Unstable native output");if(rep>=0)times[enabled].push_back(gpu.LastGPUMs());words+=values.size();}
++Need(!std::memcmp(first[0].data(),first[1].data(),first[0].size()*4),"Native SiLU32 bits differ");auto original=Read(src/"operator1"/("case-"+std::to_string(cell)+"-actual-native.f32"),rows*cols);Need(!std::memcmp(first[0].data(),original.data(),original.size()*4),"Original native values differ");Save(out/("case-"+std::to_string(index)+"-off.f32"),first[0]);Save(out/("case-"+std::to_string(index)+"-on.f32"),first[1]);record["gpu_ms"]={times[0],times[1]};record["eligible"]=(cols==14336||cols==4096);record["bits_equal"]=true;record["actual_original_bits_equal"]=true;auto after=MetalContext::ProfileOwnerStats();Need(after.matrices==owners.matrices&&after.pipelineSets==owners.pipelineSets,"Request-time allocation");}
++report["cases"].push_back(record);std::cout<<"native_silu "<<index++<<" PASS\n"<<std::flush;
++}}
++auto owners=MetalContext::ProfileOwnerStats();Need(!owners.matrices&&!owners.pipelineSets&&!owners.affineWeights,"Retained owners");report["passed"]=true;report["checked_runtime_words"]=words;Need(index==20,"Missing cases");std::ofstream f(out/"results.json");f<<report.dump(2)<<'\n';Need(bool(f),"Save report");return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

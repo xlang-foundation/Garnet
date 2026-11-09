@@ -1,0 +1,89 @@
+{
+  "passed": true,
+  "source_headers_sha256": {
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_profile_shader.h": "dbaf2b94613564d2ac44f708307f7783970fd10652fbd5631321f154e8c9ffde",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_shader.h": "dc7298d270e8472c7373aa0ecff1209a088cd0b0bd6c7a29f59b1485812449ae",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_blocked_decode_shader.h": "be2541686a691294107d8db11ae2f1a9b58f627649ce38bed08c6d5ef3882521",
+    "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-prefill-completion-wide1/source2/src/backends/metal/affine_int4_indexed_decode_shader.h": "69de156174806e4496c61f5392f3a64ce31066ca3dcfaf22897c7ff50dbd37e3"
+  },
+  "shader_sha256": {
+    "ordinary1.metal": "03d1b78a04eb1a07fe52edfee0e69d2a75f665c196a635de160f607c1a1b03ae",
+    "indexed1.metal": "6be4845794c858bb975c1f560222aa038bcfa2d02cfabe2191522469a91b5a53"
+  },
+  "host_base_sha256": "0a28950bd40ae288aa4d3f979d3087b35fe3b171b079063e280d4c510c83877f",
+  "host_sha256": "c2b9c97f27c5722e4386f97efebfaf7eeb313cebaa36dd653bf510de73be69cc",
+  "changes": [
+    {
+      "old": "Need(argc==8,",
+      "new": "Need(argc==9,"
+    },
+    {
+      "old": "std::string mode=argv[5];bool correctness=",
+      "new": "bool padded=std::string(argv[8])==\"padded\";Need(padded||std::string(argv[8])==\"contiguous\",\"Bad layout\");std::string mode=argv[5];bool correctness="
+    },
+    {
+      "old": "for(int groups:{0,2,4,8})pipeline(indexed,shape.k,shape.n,shape.k,shape.n,active,groups);",
+      "new": "for(int groups:{0,4,9})pipeline(indexed,shape.k,shape.n,shape.k+(padded?3:0),shape.n+(padded?5:0),active,groups);"
+    },
+    {
+      "old": "aStride=k,oStride=n;",
+      "new": "aStride=k+(padded?3:0),oStride=n+(padded?5:0);"
+    },
+    {
+      "old": "for(int groups:{0,2,4,8})if(!ids.empty())",
+      "new": "for(int groups:{0,4,9})if(!ids.empty())"
+    },
+    {
+      "old": "for(int groups:{2,4,8}){",
+      "new": "for(int groups:{4,9}){"
+    },
+    {
+      "old": "at<3;at++",
+      "new": "at<2;at++"
+    },
+    {
+      "old": "int index=(at+(round+5)%3)%3;if(((round+5)+order)&1)index=2-index;int groups=std::array<int,3>{2,4,8}[index];",
+      "new": "int index=(at+(round+5)%2)%2;if(((round+5)+order)&1)index=1-index;int groups=std::array<int,2>{4,9}[index];"
+    },
+    {
+      "old": "groups==4?\"affine_q4_blocked\":\"affine_q4_groups\"+std::to_string(groups)",
+      "new": "groups==4?\"affine_q4_blocked\":\"affine_q4_interleaved4\""
+    },
+    {
+      "old": "p.maxTotalThreadsPerThreadgroup>=size_t(groups?groups:4)*32",
+      "new": "p.maxTotalThreadsPerThreadgroup>=128"
+    },
+    {
+      "old": "size_t width=groups?size_t(groups)*4:4,threads=groups?size_t(groups)*32:128;",
+      "new": "size_t width=groups?16:4,threads=128;"
+    },
+    {
+      "old": "{\"contiguous_layout\",true}",
+      "new": "{\"contiguous_layout\",!padded}"
+    },
+    {
+      "old": "auto upload=[&](const auto& v)",
+      "new": "auto pack=[&](const auto& source,size_t width){\n   using V=std::decay_t<decltype(source)>;V result(((n+3)/4)*width*4,0);\n   for(size_t col=0;col<n;col++)for(size_t word=0;word<width;word++)result[((col/4)*width+word)*4+col%4]=source[col*width+word];\n   for(size_t col=0;col<n;col++)for(size_t word=0;word<width;word++)Need(result[((col/4)*width+word)*4+col%4]==source[col*width+word],\"Packed word roundtrip failed\");\n   for(size_t col=n;col<(n+3)/4*4;col++)for(size_t word=0;word<width;word++)Need(result[((col/4)*width+word)*4+col%4]==0,\"Packed tail padding nonzero\");\n   return result;\n  };\n  auto packedW=pack(w,k/8);auto packedS=pack(sc,k/64),packedB=pack(bi,k/64);\n  auto upload=[&](const auto& v)"
+    },
+    {
+      "old": "auto x=buffer(xWords*4),y=buffer(yWords*4);",
+      "new": "auto x=buffer(xWords*4),y=buffer(yWords*4);\n  auto guarded=[&](const auto& data){auto b=buffer(data.size()*sizeof(data[0])+128);std::fill_n((uint32_t*)b.contents,b.length/4,G);std::memcpy((char*)b.contents+64,data.data(),data.size()*sizeof(data[0]));return b;};\n  auto packedWeights=guarded(packedW),packedScales=guarded(packedS),packedBiases=guarded(packedB);\n  const std::string pwSha=correctness?Sha(packedWeights.contents,packedWeights.length):\"\",psSha=correctness?Sha(packedScales.contents,packedScales.length):\"\",pbSha=correctness?Sha(packedBiases.contents,packedBiases.length):\"\";\n  if(correctness){\n   auto metadata=[&](const auto& source,const auto& packed,id<MTLBuffer> b,const char* kind){\n    std::string name=\"layer\"+std::to_string(layer)+\"-\"+shape.name+\"-n\"+std::to_string(n)+\"-\"+kind+\".bin\";\n    J row={{\"layer\",layer},{\"shape\",shape.name},{\"inner\",k},{\"columns\",n},{\"padded_columns\",(n+3)/4*4},{\"kind\",kind},{\"element_bytes\",sizeof(source[0])},{\"source_elements\",source.size()},{\"packed_elements\",packed.size()},{\"source_sha256\",Sha(source.data(),source.size()*sizeof(source[0]))},{\"packed_sha256\",Sha(packed.data(),packed.size()*sizeof(packed[0]))},{\"allocated_bytes\",b.length},{\"roundtrip_exact\",true},{\"tail_padding_zero\",true}};\n    if(layer==0&&n==7){Save(dest/name,packed.data(),packed.size()*sizeof(packed[0]));row[\"raw_packed\"]=name;}\n    report[\"prepared_weights\"].push_back(row);\n   };metadata(w,packedW,packedWeights,\"weight\");metadata(sc,packedS,packedScales,\"scale\");metadata(bi,packedB,packedBiases,\"bias\");\n  }"
+    },
+    {
+      "old": "[e setBuffer:weights offset:0 atIndex:1];[e setBuffer:scales offset:0 atIndex:2];[e setBuffer:biases offset:0 atIndex:3];",
+      "new": "[e setBuffer:(groups==9?packedWeights:weights) offset:(groups==9?64:0) atIndex:1];[e setBuffer:(groups==9?packedScales:scales) offset:(groups==9?64:0) atIndex:2];[e setBuffer:(groups==9?packedBiases:biases) offset:(groups==9?64:0) atIndex:3];"
+    },
+    {
+      "old": "Need(Sha(x.contents,x.length)==xSha&&Sha(weights.contents,weights.length)==wSha&&Sha(scales.contents,scales.length)==sSha&&Sha(biases.contents,biases.length)==bSha,\"Read-only input or weights changed\");",
+      "new": "Need(Sha(x.contents,x.length)==xSha&&Sha(weights.contents,weights.length)==wSha&&Sha(scales.contents,scales.length)==sSha&&Sha(biases.contents,biases.length)==bSha&&Sha(packedWeights.contents,packedWeights.length)==pwSha&&Sha(packedScales.contents,packedScales.length)==psSha&&Sha(packedBiases.contents,packedBiases.length)==pbSha,\"Read-only input/weight parents or guards changed\");"
+    },
+    {
+      "old": "#include <tuple>",
+      "new": "#include <tuple>\n#include <type_traits>"
+    }
+  ],
+  "final_identifier_rename": "groups->variant; IDs0/4/9 identify legacy/native-blocked/N4, all use four SIMD groups.",
+  "all_pipelines_prepared_before_collection": true,
+  "no_native_runtime_integration": true,
+  "goal_complete": false
+}

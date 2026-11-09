@@ -1,0 +1,45 @@
+--- a/worker-capture1.py
++++ b/worker-capture1.py
+@@ -305,6 +305,25 @@
+         elif bulk_chunks:
+             decoder.session.configure_token_tracking(profile['prefix_identity'])
+             emit(dict(event='native_tracking_only_prepared',retention_enabled=False,stats=json.loads(decoder.session.token_prefix_stats_json())))
++        capture_graphs=[]
++        def expect_capture_rejection(label,action):
++            rejected=False
++            try:action()
++            except Exception:rejected=True
++            if not rejected:raise ValueError('Native MLP capture accepted invalid action: '+label)
++            emit(dict(event='diagnostic_mlp_rejection',label=label))
++        if profile.get('diagnostic_mlp_capture',False):
++            originals=decoder._resident_prefill_graphs(chunk)
++            expect_capture_rejection('unarmed-save',lambda:originals[0].diagnostic_mlp_capture_save(profile['diagnostic_mlp_capture_root']+'/must-not-exist-unarmed'))
++            expect_capture_rejection('wrong-invocation',lambda:originals[0].diagnostic_mlp_capture_prepare(15))
++            expect_capture_rejection('wrong-layer',lambda:originals[1].diagnostic_mlp_capture_prepare(16))
++            for index in [0,15,31]:
++                graph=originals[index]
++                if not graph.diagnostic_mlp_capture_prepare(16):raise ValueError('Capture preparation failed')
++                capture_graphs.append([index,graph])
++            expect_capture_rejection('duplicate-prepare',lambda:originals[0].diagnostic_mlp_capture_prepare(16))
++            expect_capture_rejection('not-yet-complete-save',lambda:originals[0].diagnostic_mlp_capture_save(profile['diagnostic_mlp_capture_root']+'/must-not-exist-incomplete'))
++            emit(dict(event='diagnostic_mlp_armed',layers=[0,15,31],invocation=16,diagnostic_only=True))
+         graphs=decoder._resident_prefill_graphs(chunk)
+         if alias_groups:
+             alias_layout=[dict(groups=graph.shared_prefill_alias_groups,slots=graph.shared_prefill_alias_slots,
+@@ -597,6 +616,16 @@
+             half_count=decoder.session.chunk_half_attention_dispatches
+             if half_count!=(32 if len(ids)>batch and half_policy else 0):raise ValueError('Diagnostic half-prefill route differs')
+             emit(dict(event='diagnostic_half_attention',invocation=diagnostic_forward[0],dispatches=half_count,scratch_bytes=decoder.session.chunk_half_attention_scratch_bytes))
++            if diagnostic_forward[0]==16 and capture_graphs:
++                if len(ids)!=512 or slots.tolist()!=[float(1920+t) for row in range(4) for t in range(128)] or active.tolist()!=[1.0]*512:
++                    raise ValueError('MLP capture does not correspond to frozen full-prefix call16')
++                expect_capture_rejection('relative-save',lambda:capture_graphs[0][1].diagnostic_mlp_capture_save('invalid-relative'))
++                expect_capture_rejection('existing-folder-save',lambda:capture_graphs[0][1].diagnostic_mlp_capture_save(profile['diagnostic_mlp_capture_root']))
++                for index,graph in capture_graphs:
++                    path=profile['diagnostic_mlp_capture_root']+'/layer-'+str(index)
++                    metadata=json.loads(graph.diagnostic_mlp_capture_save(path))
++                    emit(dict(event='diagnostic_mlp_saved',layer=index,path=path,metadata=metadata,invocation=diagnostic_forward[0]))
++                expect_capture_rejection('duplicate-save',lambda:capture_graphs[0][1].diagnostic_mlp_capture_save(profile['diagnostic_mlp_capture_root']+'/must-not-exist-duplicate'))
+             if diagnostic_forward[0] in [1,16,18,25]:
+                 hashes=[]
+                 for layer in range(32):

@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "original_worker_sha256": "ac051a80352634699df89c14ce572136143153d32d13565332a735859ab98aea",
+  "observer_source_sha256": "e27bf1f999ae9b351988c2c94dfd76458e28f80be83d08ad5b4ceec1436ce86a",
+  "worker_sha256": "b9e358b99730b7fce94625d5c2b17b8c002bb72b36a5f5bd6e1b2b452e343d55",
+  "changes": [
+    {
+      "old": "decoder=None;policy=None;jobs={};keys=set()",
+      "new": "decoder=None;policy=None;jobs={};keys=set();observed_leases={}"
+    },
+    {
+      "old": "        def deliver(request,token,stage):",
+      "new": "        def capture_target_state(request,phase):\n            row=request['row'];epoch=request['epoch'];kv=[]\n            for layer in range(32):\n                pair=decoder.session.snapshot(layer)\n                kv.append([decoder.io.verification_f32_sha256(decoder.io.rows(value,row,1)) for value in pair])\n            hidden=decoder.session.diagnostic_final_hidden()\n            row_hidden=decoder.io.rows(hidden,row,1)\n            state=dict(kv=kv,hidden=decoder.io.verification_f32_sha256(row_hidden),hidden_values=row_hidden.tolist(),consumed_tokens=request['context_length'])\n            emit(dict(event='native_request_state_witness',id=jobs[request['id']]['id'],native_request=request['id'],row=row,epoch=epoch,phase=phase,state=state))\n        def deliver(request,token,stage):"
+    },
+    {
+      "old": "            finished=token in stops or len(job['generated'])>=job['limit']",
+      "new": "            finished=token in stops or len(job['generated'])>=job['limit']\n            if stage=='prefill':capture_target_state(request,'prefill')\n            if finished:capture_target_state(request,'final')"
+    },
+    {
+      "old": "        while not shutdown.is_set():\n            if not jobs:",
+      "new": "        def survivor_state():\n            current={identity:lease for identity,lease in observed_leases.items() if identity in jobs}\n            result={str(identity):dict(row=lease[0],epoch=lease[1],kv=[],hidden=None) for identity,lease in current.items()}\n            for layer in range(32):\n                pair=decoder.session.snapshot(layer)\n                for identity,lease in current.items():\n                    result[str(identity)]['kv'].append([decoder.io.verification_f32_sha256(decoder.io.rows(v,lease[0],1)) for v in pair])\n            hidden=decoder.session.diagnostic_final_hidden()\n            for identity,lease in current.items():\n                result[str(identity)]['hidden']=decoder.io.verification_f32_sha256(decoder.io.rows(hidden,lease[0],1))\n                if tracked_rows:\n                    result[str(identity)]['tokens']=decoder.session.diagnostic_tracked_token_count(lease[0],lease[1])\n                    result[str(identity)]['prefill_tokens']=decoder.session.tracked_prefill_prefix_tokens(lease[0],lease[1])\n            return result\n        while not shutdown.is_set():\n            if not jobs:"
+    },
+    {
+      "old": "            tick=json.loads(policy.next_json());plans=tick['batches']",
+      "new": "            live={identity:lease for identity,lease in observed_leases.items() if identity in jobs}\n            pending=[identity for identity in jobs if identity not in observed_leases]\n            observe=bool(live) and len(live)<batch and bool(pending)\n            before=survivor_state() if observe else None\n            tick=json.loads(policy.next_json());plans=tick['batches']\n            if observe:\n                after=survivor_state()\n                if before!=after:raise ValueError('New lease/restore changed a live native survivor')\n                emit(dict(event='native_survivor_restore_witness',pending_requests=pending,before=before,after=after))\n            for plan in plans:\n                for request in plan['requests']:observed_leases[request['id']]=(request['row'],request['epoch'])"
+    }
+  ],
+  "native_source_changed": false,
+  "new_compilation_required": false,
+  "independent_tokenizer_matched_frozen_prompts": true,
+  "three_survivors_prefilled_before_A": true,
+  "prefix_host_budget_bytes": 2684354560,
+  "performance_measurement": false,
+  "goal_complete": false
+}

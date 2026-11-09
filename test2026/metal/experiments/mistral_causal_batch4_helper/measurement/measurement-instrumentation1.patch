@@ -1,0 +1,162 @@
+--- a/productive_worker1.py
++++ b/worker1.py
+@@ -1,4 +1,4 @@
+-"""Untimed native C4 scheduler with real batched helper drafts and exact target verification."""
++"""Native C4 burst timing; cold plus two warm waves; all helper/target work included."""
+ import sys,json,os,time
+ sys.path.insert(0,sys.argv[1]);sys.path.insert(0,sys.argv[2])
+ import garnet,tensor
+@@ -8,22 +8,13 @@
+ output=sys.argv[4];mode=sys.argv[5];assert mode in ('ordinary','productive') and not os.path.exists(output)
+ def val(a,shape):return tensor.tensor(a,shape=shape,dtype=tensor.float32)
+ decoder=None;draft=None;policy=None;jobs={};all_jobs={};ticks=[];snapshots=[];prepared=None;cleanup=None;helper_leases={};helper_calls=[];helper_rounds=[]
++wave_records=[]
+ target_tokenizer=garnet.tokenizer();target_tokenizer.open(inputs['target_model'])
+ draft_tokenizer=garnet.tokenizer();draft_tokenizer.open(inputs['draft_model'])
+ def save(done):
+- with open(output,'w') as f:json.dump(dict(completed=done,mode=mode,inputs=inputs,backend=garnet.backend_info(),library=garnet.native_library_path(),prepared=prepared,jobs=list(all_jobs.values()),ticks=ticks,snapshots=snapshots,helper_calls=helper_calls,helper_rounds=helper_rounds,cleanup=cleanup,scope=__doc__),f,indent=2)
+-def capture(stage):
+- states=[]
+- for layer in range(32):
+-  pair=decoder.session.snapshot(layer);states.append([[decoder.io.verification_f32_sha256(decoder.io.rows(part,row,1)) for part in pair] for row in range(4)])
+- bank=decoder.session.diagnostic_final_hidden();hidden=[decoder.io.verification_f32_sha256(decoder.io.rows(bank,row,1)) for row in range(4)]
+- owners=[dict(id=j['native_request'],label=j['label'],row=j['row'],epoch=j['epoch'],generated_ids=list(j['generated']),prefilled=j['prefilled'],finished=j['finished']) for j in all_jobs.values() if 'row' in j]
+- snapshots.append(dict(stage=stage,states=states,hidden=hidden,owners=owners,status=json.loads(policy.status_json())))
+-def helper_state():
+- states=[]
+- for layer in range(24):
+-  pair=draft.session.snapshot(layer);states.append([[draft.io.verification_f32_sha256(draft.io.rows(part,row,1)) for part in pair] for row in range(4)])
+- return states
++ with open(output,'w') as f:json.dump(dict(completed=done,mode=mode,inputs=inputs,backend=garnet.backend_info(),library=garnet.native_library_path(),prepared=prepared,waves=wave_records,cleanup=cleanup,scope=__doc__),f,indent=2)
++def capture(stage):pass
++def helper_state():return None
+ def helper_epochs(labels):
+  epochs=[0]*4
+  for label in labels:epochs[helper_leases[label][0]]=helper_leases[label][1]
+@@ -82,65 +73,73 @@
+   with open(inputs['draft_model']+'/config.json') as f:dconfig=json.load(f)
+   draft=DenseMetalDecoder(inputs['draft_model']+'/model.safetensors',dconfig,4,512);draft.enable_prefill(16);draft.prefill_compile_ms=0;draft_graphs=draft._resident_prefill_graphs(16);draft.prefill_compile_ms=0;draft_base=[l['graph'] for l in draft.layers]
+   assert draft.session.configure_token_tracking([inputs['draft_revision'],draft.io.checkpoint_format,inputs['draft_tokenizer_sha256'],'text_zero_based_3axis_v1','helper-B4-D512-T16-profile-v1','text'])
+-  for number,item in enumerate(inputs['jobs']):
+-   lease=draft.session.claim_request_row(number+1);assert lease[0]==number;helper_leases[item['label']]=lease
+  prepared=dict(memory=json.loads(garnet.memory_stats_json()),target_graphs=len(decoder.prefill_graphs),helper_graphs=len(draft.prefill_graphs) if draft else 0)
+  assert prepared['memory']['metal_allocated_bytes']<=prepared['memory']['metal_recommended_working_set_bytes']-536870912
+  print('productive4_ready',mode,prepared['memory']['metal_allocated_bytes'],flush=True)
+- for item in inputs['jobs']:
+-  assert target_tokenizer.encode(item['rendered'])==item['prompt_ids'];identity=policy.submit_tokens(item['prompt_ids'],item['limit'],0);assert identity>0
+-  job=dict(item,native_request=identity,generated=[],prefilled=0,finished=False);jobs[identity]=job;all_jobs[identity]=job
+- while jobs:
+-  tick=json.loads(policy.next_json());assert tick['batches'];record=dict(plan=tick,executions=[]);ticks.append(record)
+-  for plan in tick['batches']:
+-   for q in plan['requests']:jobs[q['id']].update(row=q['row'],epoch=q['epoch'])
+-   if plan['stage']=='prefill':
+-    width=plan.get('prefill_chunk',128);byrow={q['row']:q for q in plan['requests']};ids=[];slots=[];active=[];final=[0]*4
+-    for row in range(4):
+-     q=byrow.get(row)
+-     if q is not None and q['prefill_offset']+q['prefill_tokens']==len(jobs[q['id']]['prompt_ids']):final[row]=q['epoch']
+-     for t in range(width):
+-      on=q is not None and t<q['prefill_tokens'];position=q['prefill_offset']+t if on else 0
+-      ids.append(jobs[q['id']]['prompt_ids'][position] if on else 0);slots.append(float(position));active.append(float(on))
+-    hidden=decoder.io.stack_tokens([decoder.io.embedding([ids[row*width+t] for row in range(4)]) for t in range(width)])
+-    decoder.session.run_tokens(decoder.prefill_profile_graphs(width),hidden,val([s for s in slots for a in range(3)],[4,width,3]),val(slots,[4,width]),val(active,[4,width]),-1,plan['epochs'],ids)
+-    predicted=decoder.session.predict_rows(final) if any(final) else None;completed=[]
+-    for q in plan['requests']:
+-     job=jobs[q['id']];job['prefilled']=q['prefill_offset']+q['prefill_tokens']
+-     if final[q['row']]:
+-      token=predicted[q['row']];job['generated'].append(token);job['finished']=token in inputs['stops'] or len(job['generated'])==job['limit'];assert policy.complete_prefill(q['id'],token,job['finished'])==(3 if job['finished'] else 2);completed.append(dict(id=q['id'],token=token,finished=job['finished']))
+-      if job['finished']:del jobs[q['id']]
+-     else:assert policy.complete_prefill_chunk(q['id'],q['prefill_tokens'])
+-    record['executions'].append(dict(stage='prefill',completed=completed));capture('prefill')
+-   else:
+-    assert plan['stage']=='decode'
+-    if mode=='ordinary':
+-     ids=[0]*4;slots=[0.]*4
+-     for q in plan['requests']:ids[q['row']]=q['token_id'];slots[q['row']]=float(q['slot']);assert ids[q['row']]==jobs[q['id']]['generated'][-1]
+-     predicted=decoder.session.run_tokens(base,decoder.io.embedding(ids),val([s for s in slots for a in range(3)],[4,3]),val(slots,[4]),val([float(x) for x in plan['active_rows']],[4]),0,plan['epochs'],ids);completed=[]
++ for item in inputs['jobs']:assert target_tokenizer.encode(item['rendered'])==item['prompt_ids']
++ for wave in range(3):
++  jobs={};all_jobs={};ticks=[];snapshots=[];helper_calls=[];helper_rounds=[]
++  if draft:
++   for number,item in enumerate(inputs['jobs']):
++    lease=draft.session.claim_request_row(wave*4+number+1);assert lease[0]==number;helper_leases[item['label']]=lease
++  began=time.monotonic()
++  for item in inputs['jobs']:
++   identity=policy.submit_tokens(item['prompt_ids'],item['limit'],0);assert identity>0
++   job=dict(item,native_request=identity,generated=[],prefilled=0,finished=False);jobs[identity]=job;all_jobs[identity]=job
++  while jobs:
++   tick=json.loads(policy.next_json());assert tick['batches'];record=dict(plan=tick,executions=[]);ticks.append(record)
++   for plan in tick['batches']:
++    for q in plan['requests']:jobs[q['id']].update(row=q['row'],epoch=q['epoch'])
++    if plan['stage']=='prefill':
++     width=plan.get('prefill_chunk',128);byrow={q['row']:q for q in plan['requests']};ids=[];slots=[];active=[];final=[0]*4
++     for row in range(4):
++      q=byrow.get(row)
++      if q is not None and q['prefill_offset']+q['prefill_tokens']==len(jobs[q['id']]['prompt_ids']):final[row]=q['epoch']
++      for t in range(width):
++       on=q is not None and t<q['prefill_tokens'];position=q['prefill_offset']+t if on else 0
++       ids.append(jobs[q['id']]['prompt_ids'][position] if on else 0);slots.append(float(position));active.append(float(on))
++     hidden=decoder.io.stack_tokens([decoder.io.embedding([ids[row*width+t] for row in range(4)]) for t in range(width)])
++     decoder.session.run_tokens(decoder.prefill_profile_graphs(width),hidden,val([s for s in slots for a in range(3)],[4,width,3]),val(slots,[4,width]),val(active,[4,width]),-1,plan['epochs'],ids)
++     predicted=decoder.session.predict_rows(final) if any(final) else None;completed=[]
+      for q in plan['requests']:
+-      job=jobs[q['id']];token=predicted[q['row']];job['generated'].append(token);job['finished']=token in inputs['stops'] or len(job['generated'])==job['limit'];assert policy.complete_decode(q['id'],token,job['finished'])==(3 if job['finished'] else 2);completed.append(dict(id=q['id'],row=q['row'],epoch=q['epoch'],emitted=[token],finished=job['finished']))
+-     record['executions'].append(dict(stage='decode',completed=completed,native=None))
++      job=jobs[q['id']];job['prefilled']=q['prefill_offset']+q['prefill_tokens']
++      if final[q['row']]:
++       token=predicted[q['row']];job['generated'].append(token);job['first_token_monotonic']=time.monotonic();job['finished']=token in inputs['stops'] or len(job['generated'])==job['limit'];assert policy.complete_prefill(q['id'],token,job['finished'])==(3 if job['finished'] else 2);completed.append(dict(id=q['id'],token=token,finished=job['finished']))
++       if job['finished']:job['finished_monotonic']=time.monotonic();del jobs[q['id']]
++      else:assert policy.complete_prefill_chunk(q['id'],q['prefill_tokens'])
++     record['executions'].append(dict(stage='prefill',completed=completed));capture('prefill')
+     else:
+-     proposals=propose(plan['requests']);byrow={q['row']:q for q in plan['requests']};ids=[];slots=[];active=[]
+-     for row in range(4):
+-      q=byrow.get(row);tokens=[q['token_id']]+proposals[q['id']] if q else []
+-      for t in range(4):
+-       on=t<len(tokens);ids.append(tokens[t] if on else 0);slots.append(float(q['slot']+t) if on else 0.);active.append(float(on))
+-     native=json.loads(policy.verify_decode_json(decoder.io.stack_tokens([decoder.io.embedding([ids[row*4+t] for row in range(4)]) for t in range(4)]),val([s for s in slots for a in range(3)],[4,4,3]),val(slots,[4,4]),val(active,[4,4]),ids,inputs['stops']));completed=native['requests']
++     assert plan['stage']=='decode'
++     if mode=='ordinary':
++      ids=[0]*4;slots=[0.]*4
++      for q in plan['requests']:ids[q['row']]=q['token_id'];slots[q['row']]=float(q['slot']);assert ids[q['row']]==jobs[q['id']]['generated'][-1]
++      predicted=decoder.session.run_tokens(base,decoder.io.embedding(ids),val([s for s in slots for a in range(3)],[4,3]),val(slots,[4]),val([float(x) for x in plan['active_rows']],[4]),0,plan['epochs'],ids);completed=[]
++      for q in plan['requests']:
++       job=jobs[q['id']];token=predicted[q['row']];job['generated'].append(token);job['finished']=token in inputs['stops'] or len(job['generated'])==job['limit'];assert policy.complete_decode(q['id'],token,job['finished'])==(3 if job['finished'] else 2);completed.append(dict(id=q['id'],row=q['row'],epoch=q['epoch'],emitted=[token],finished=job['finished']))
++      record['executions'].append(dict(stage='decode',completed=completed,native=None))
++     else:
++      proposals=propose(plan['requests']);byrow={q['row']:q for q in plan['requests']};ids=[];slots=[];active=[]
++      for row in range(4):
++       q=byrow.get(row);tokens=[q['token_id']]+proposals[q['id']] if q else []
++       for t in range(4):
++        on=t<len(tokens);ids.append(tokens[t] if on else 0);slots.append(float(q['slot']+t) if on else 0.);active.append(float(on))
++      native=json.loads(policy.verify_decode_json(decoder.io.stack_tokens([decoder.io.embedding([ids[row*4+t] for row in range(4)]) for t in range(4)]),val([s for s in slots for a in range(3)],[4,4,3]),val(slots,[4,4]),val(active,[4,4]),ids,inputs['stops']));completed=native['requests']
++      for q in completed:
++       job=jobs[q['id']];assert q['row']==job['row'] and q['epoch']==job['epoch'] and q['remaining_before']==job['limit']-len(job['generated']);job['generated'].extend(q['emitted']);job['finished']=q['finished'];assert job['finished']==(q['eos'] or len(job['generated'])==job['limit'])
++      record['executions'].append(dict(stage='decode',completed=completed,native=native,submitted_ids=ids,submitted_slots=slots,submitted_active=active,proposals=proposals))
++     capture('decode')
+      for q in completed:
+-      job=jobs[q['id']];assert q['row']==job['row'] and q['epoch']==job['epoch'] and q['remaining_before']==job['limit']-len(job['generated']);job['generated'].extend(q['emitted']);job['finished']=q['finished'];assert job['finished']==(q['eos'] or len(job['generated'])==job['limit'])
+-     record['executions'].append(dict(stage='decode',completed=completed,native=native,submitted_ids=ids,submitted_slots=slots,submitted_active=active,proposals=proposals))
+-    capture('decode')
+-    for q in completed:
+-     if q['finished']:
+-      job=jobs.pop(q['id'])
+-      if draft:
+-       lease=helper_leases.pop(job['label']);assert draft.session.release_request_row(lease[0],lease[1])
+-    print('productive4_decode',mode,[len(j['generated']) for j in all_jobs.values()],flush=True)
+-  save(False);assert len(ticks)<100
+- assert decoder.prefill_compile_ms==0 and (not draft or draft.prefill_compile_ms==0)
+- assert json.loads(policy.status_json())['active']==json.loads(policy.status_json())['tracked']==0 and not helper_leases
++      if q['finished']:
++       job=jobs.pop(q['id']);job['finished_monotonic']=time.monotonic()
++       if draft:
++        lease=helper_leases.pop(job['label']);assert draft.session.release_request_row(lease[0],lease[1])
++
++   assert len(ticks)<256
++  assert decoder.prefill_compile_ms==0 and (not draft or draft.prefill_compile_ms==0)
++  assert json.loads(policy.status_json())['active']==json.loads(policy.status_json())['tracked']==0 and not helper_leases
++  ended=time.monotonic();wave_records.append(dict(wave=wave,phase='cold' if wave==0 else 'warm',began_monotonic=began,ended_monotonic=ended,jobs=list(all_jobs.values()),ticks=ticks,helper_calls=helper_calls,helper_rounds=helper_rounds,aggregate_tokens_per_second=sum(len(j['generated']) for j in all_jobs.values())/(ended-began),per_request=[dict(label=j['label'],native_ttft_seconds=j['first_token_monotonic']-began,decode_tokens_per_second=(len(j['generated'])-1)/(j['finished_monotonic']-j['first_token_monotonic'])) for j in all_jobs.values()]))
++  print('native4_wave',mode,wave,round(wave_records[-1]['aggregate_tokens_per_second'],3),flush=True)
++
+ finally:
+  if policy is not None:policy.close()
+  if draft is not None:draft.close()

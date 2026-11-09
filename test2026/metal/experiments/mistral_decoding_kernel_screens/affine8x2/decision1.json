@@ -1,0 +1,54 @@
+{
+  "decision": "reject8x2_keep_current4x4",
+  "correctness_passed": true,
+  "reason": "In both fresh reversed cohorts the8x2 tile regresses against current4x4 at8 and16 selected rows. Register pressure is a hypothesis, not a measured cause.",
+  "candidate_summary": [
+    {
+      "cohort": 1,
+      "selected_rows": 4,
+      "median_ratio_vs_current4x4": 0.94338956361934,
+      "minimum": 0.9001576675786455,
+      "maximum": 1.3332968116577188
+    },
+    {
+      "cohort": 1,
+      "selected_rows": 8,
+      "median_ratio_vs_current4x4": 0.9223496849832589,
+      "minimum": 0.6185676062319062,
+      "maximum": 1.0468872784423295
+    },
+    {
+      "cohort": 1,
+      "selected_rows": 16,
+      "median_ratio_vs_current4x4": 0.7403293945086016,
+      "minimum": 0.558855194302467,
+      "maximum": 0.9657593639356482
+    },
+    {
+      "cohort": 2,
+      "selected_rows": 4,
+      "median_ratio_vs_current4x4": 0.9440631691069332,
+      "minimum": 0.902599586003226,
+      "maximum": 1.350847956082737
+    },
+    {
+      "cohort": 2,
+      "selected_rows": 8,
+      "median_ratio_vs_current4x4": 0.9236953335343328,
+      "minimum": 0.6031528698026718,
+      "maximum": 1.0
+    },
+    {
+      "cohort": 2,
+      "selected_rows": 16,
+      "median_ratio_vs_current4x4": 0.754679722262143,
+      "minimum": 0.5402771783629858,
+      "maximum": 1.056351330080277
+    }
+  ],
+  "all_parent_bits_exact": true,
+  "parent_word_pairs": 619158144,
+  "native_runtime_changed": false,
+  "serving_speed_claim": false,
+  "goal_complete": false
+}

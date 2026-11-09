@@ -7,7 +7,17 @@
 #include <stdexcept>
 #include <atomic>
 #include <limits>
+#include <set>
 namespace Garnet {
+bool MetalDecoderSession::PrepareGpuCounters() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_)throw std::logic_error("Prepare diagnostic GPU counters on a ready session");
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+    if(managedRows_)throw std::logic_error("Prepare diagnostic GPU counters before claiming request rows");
+#endif
+    gpu_->PrepareGpuCounters();return true;
+}
+
 namespace {
 MetalCompiledGraph* Graph(const X::Value& value,X3PackageHost* host) {
     if(value.runtime()!=host->runtime)throw std::invalid_argument("Metal session graph runtime mismatch");
@@ -20,7 +30,86 @@ X::Value TensorValue(X3PackageHost* host,MetalContext& gpu,const MetalMatrix& ma
     return X::Tensor::Create(host,X3_TENSOR_FLOAT32,shape,data.data(),data.size()*sizeof(float));
 }
 }
+#ifdef GARNET_METAL_AFFINE_WEIGHT_RESIDENCY
+bool MetalDecoderSession::PrepareAffineResidency(int64_t budget) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_||budget<=0)throw std::invalid_argument("Prepare affine residency on a ready engine with positive budget");
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+    if(managedRows_)throw std::logic_error("Prepare affine residency before attaching a request scheduler");
+#endif
+    std::vector<MetalAffineInt4Weight> weights;
+    for(const auto& owner:owners_){
+        auto graph=Graph(owner,Host());std::lock_guard<std::mutex> graphLock(graph->mutex_);
+        if(!graph->ready_)throw std::logic_error("Residency graph is not ready");
+        for(const auto& slot:graph->slots_)if(slot.affineInt4.Valid())weights.push_back(slot.affineInt4);
+    }
+    gpu_->PrepareAffineResidency(weights,size_t(budget));return true;
+}
+std::string MetalDecoderSession::AffineResidencyStatsJson() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return gpu_?gpu_->AffineResidencyStatsJson():"{\"enabled\":false,\"allocation_count\":0,\"payload_bytes\":0,\"committed_charge_bytes\":0,\"budget_bytes\":0,\"renewals\":0}";
+}
+#endif
+#ifdef GARNET_METAL_SPLIT_DECODE_SCORES
+#ifdef GARNET_METAL_SPLIT_SCORE_PROFILE32
+bool MetalDecoderSession::SetProfile32ScoresEnabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_)throw std::logic_error("Configure profile32 scores on a ready engine");
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+    if(managedRows_)throw std::logic_error("Configure profile32 scores before attaching the request scheduler");
+#endif
+    gpu_->SetProfile32ScoresEnabled(enabled);return true;
+}
+#endif
+bool MetalDecoderSession::SetSplitScoresEnabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_)throw std::logic_error("Configure split scores on a ready engine");
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+    if(managedRows_)throw std::logic_error("Configure split scores before attaching the request scheduler");
+#endif
+    gpu_->SetSplitScoresEnabled(enabled);return true;
+}
+#endif
+#ifdef GARNET_METAL_VALUE_PROFILE32
+bool MetalDecoderSession::SetValueProfile32Enabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_)throw std::logic_error("Configure value profile on a ready engine");
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+    if(managedRows_)throw std::logic_error("Configure value profile before attaching the request scheduler");
+#endif
+    gpu_->SetValueProfile32Enabled(enabled);return true;
+}
+#endif
+#ifdef GARNET_METAL_PAIRED_PACKED_PREFILL
+bool MetalDecoderSession::SetPairedPackedPrefillEnabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_)throw std::logic_error("Configure paired prefill on a ready engine");
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+    if(managedRows_)throw std::logic_error("Configure paired prefill before attaching the request scheduler");
+#endif
+    gpu_->SetPairedPackedPrefillEnabled(enabled);return true;
+}
+#endif
+#ifdef GARNET_METAL_SILU_PROFILE32
+bool MetalDecoderSession::SetSiluProfile32Enabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!gpu_||poisoned_)throw std::logic_error("Configure SiLU32 on a ready engine");
+#ifdef GARNET_METAL_CONTINUOUS_ROWS
+    if(managedRows_)throw std::logic_error("Configure SiLU32 before claiming request rows");
+#endif
+    gpu_->SetSiluProfile32Enabled(enabled);return true;
+}
+#endif
 void MetalDecoderSession::Clear() {
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+    lookahead_.reset();
+#endif
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+    wideVerificationPreparationClosed_=false;
+#endif
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+    diagnosticLayerBulk_.reset();diagnosticLayerBulkStats_="{}";
+#endif
 #ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
     compactFamilies_.clear();compactDecodeHidden_=MetalMatrix();compactRunning_=nullptr;compactFirst_=compactLastRows_=0;compactLastFirst_=4;compactSealed_=false;
 #endif
@@ -35,10 +124,18 @@ void MetalDecoderSession::Clear() {
 #endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     verification_.reset();verificationStats_="{}";
+#ifdef GARNET_METAL_TARGET_JACOBI
+    targetJacobi_.Clear();targetJacobiEnabled_=false;
+#endif
 #endif
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
-    tokenCache_.reset();tokenIdentity_={};tokenCacheBudget_=tokenCapacity_=0;rowTokens_.clear();rowTokensValid_.clear();
+    tokenCache_.reset();tokenIdentity_={};tokenCacheBudget_=tokenCapacity_=tokenVocabulary_=0;rowTokens_.clear();rowTokensValid_.clear();
+#ifdef GARNET_METAL_PREFIX_PREFILL_ONLY
+    tokenPrecisionHistory_.clear();tokenPrefillSkippedMixed_=0;
+#endif
     tokenGraphs_.clear();tokenGraphOwners_.clear();
+    reconcileCalls_=reconcileOld_=reconcileLCP_=reconcileKept_=reconcileZeroBytes_=0;
+    reconcileReplay_=reconcileHiddenPending_=false;reconcileGpuMs_=0;
 #endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     rowFinalHidden_=MetalMatrix();rowFinalWidth_=0;finalHiddenReady_.clear();
@@ -64,13 +161,23 @@ void MetalDecoderSession::Clear() {
     dirtyPrefixResetBytes_=dirtyPrefixResetStates_=dirtyPrefixResetFallbackStates_=0;
     joinedPrefillPairs_=0;
     constantHeadDispatches_=0;singleCoderHeadDispatches_=0;residualNormDispatches_=0;packedPrefillNormDispatches_=0;globalHalfAlphaDispatches_=0;wideBatchPrefillDispatches_=0;interleavedBodyDispatches_=0;coalescedBlockDispatches_=0;mlpGraphDispatches_=0;joinedGlobalMlpBlocks_=0;
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+    confidence_=MetalMatrix();
+#endif
     hidden_=MetalMatrix();prediction_=MetalMatrix();hiddenShape_.clear();states_.clear();owners_.clear();head_=nullptr;
     gpu_.reset();kvInplaceUpdates_=0;poisoned_=false;inferenceMs_=0;prepareMs_=encodeMs_=gpuMs_=waitMs_=0;
 }
 void MetalDecoderSession::Close() {std::lock_guard<std::mutex> lock(mutex_);Clear();}
 void MetalDecoderSession::ResetUnlocked() {
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+    if(lookahead_)for(size_t row=0;row<lookahead_->layout.Batch();++row)ResetLookaheadRow(row);
+#endif
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    reconcileHiddenPending_=false;
     rowTokens_.assign(states_.empty()?0:states_[0].rows,{});rowTokensValid_.assign(rowTokens_.size(),1);
+#ifdef GARNET_METAL_PREFIX_PREFILL_ONLY
+    tokenPrecisionHistory_.assign(rowTokens_.size(),{});
+#endif
 #endif
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
 #ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
@@ -141,6 +248,18 @@ void MetalDecoderSession::ResetUnlocked() {
 #ifdef GARNET_METAL_MTP_BRIDGE
     ResetMTP();
 #endif
+#ifdef GARNET_METAL_TARGET_JACOBI
+    targetJacobi_.Reset();
+#endif
+#ifdef GARNET_METAL_DIAGNOSTIC_LAYER_BULK
+    if(diagnosticLayerBulk_) {
+        std::set<uintptr_t> restored;
+        auto zero=[&](const MetalMatrix& m){auto b=MetalContext::MatrixBufferInfo(m);if(b.identity&&restored.insert(b.identity).second)gpu_->Zero(m);};
+        auto& p=*diagnosticLayerBulk_;for(const auto& m:p.tape)zero(m);
+        for(const auto& m:{p.residual,p.norm,p.gate,p.up,p.down,p.hidden,p.lastHidden,p.key,p.value})zero(m);
+        for(const auto& m:gpu_->DiagnosticBulkScratch())zero(m);
+    }
+#endif
     hidden_=MetalMatrix();hiddenShape_.clear();kvInplaceUpdates_=0;poisoned_=false;inferenceMs_=0;prepareMs_=encodeMs_=gpuMs_=waitMs_=0;
 #ifdef GARNET_METAL_DENSE_PREFIX_CACHE
     prefixFreshReset_=true;
@@ -194,9 +313,18 @@ void MetalDecoderSession::ResetRowUnlocked(int64_t row) {
 #endif
 #ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
     rowTokens_[size_t(row)].clear();rowTokensValid_[size_t(row)]=1;
+#ifdef GARNET_METAL_PREFIX_PREFILL_ONLY
+    tokenPrecisionHistory_.at(size_t(row)).Reset();
+#endif
 #endif
 #ifdef GARNET_METAL_MTP_BRIDGE
     ResetMTPRow(size_t(row));
+#endif
+#ifdef GARNET_METAL_TARGET_JACOBI
+    if(targetJacobiEnabled_)targetJacobi_.ResetRow(size_t(row));
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+    ResetLookaheadRow(size_t(row));
 #endif
     rowResetBytes_=bytes;poisoned_=false;
 }
@@ -210,7 +338,11 @@ X::Value MetalDecoderSession::ClaimRequestRow(int64_t request) {
     try {
         auto result=X::Value::List(Host());
         result.Append(X::Value(int64_t(lease.row)));result.Append(X::Value(int64_t(lease.epoch)));
-        ResetRowUnlocked(int64_t(lease.row));managedRows_=true;return result;
+        ResetRowUnlocked(int64_t(lease.row));managedRows_=true;
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+        wideVerificationPreparationClosed_=true;
+#endif
+        return result;
     }
     catch(...) {requestRows_->Release(lease.row,lease.epoch);poisoned_=true;throw;}
 }
@@ -242,6 +374,18 @@ std::pair<size_t,size_t> MetalDecoderSession::RequestRowLayout() {
     }
     if(capacity==SIZE_MAX)throw std::logic_error("Native scheduler requires a proved bounded KV layout");
     return {rows,capacity};
+}
+#endif
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+void MetalDecoderSession::PrepareFusedDecodeProfiles(const MetalCompiledGraph& graph) {
+    // Caller holds the session and graph locks; execution uses this session GPU.
+    for(size_t i=0;i<graph.fusedDecodeSites_.size();++i)if(graph.fusedDecodeSites_[i]) {
+        if(i+2>=graph.ops_.size())throw std::logic_error("Invalid native decode use proof");
+        const auto& gate=graph.ops_[i];const auto& up=graph.ops_[i+1];const auto& silu=graph.ops_[i+2];
+        if(!gpu_->PrepareFusedMistralDecode(graph.slots_[gate.a].matrix,graph.slots_[gate.b].affineInt4,
+            graph.slots_[up.b].affineInt4,graph.slots_[silu.out].matrix))
+            throw std::invalid_argument("Native fused decode profile unsupported on this session device/layout");
+    }
 }
 #endif
 bool MetalDecoderSession::Build(X::Value graphs,X::Value head) {
@@ -283,6 +427,9 @@ bool MetalDecoderSession::Build(X::Value graphs,X::Value head) {
             state.tokenOwnerGeneration=graph->generation_;
             for(size_t part=0;part<2;++part)state.tokenCompact[part]=graph->CanResetKVPrefix(part+1);
             tokenGraphs_[graph]={size_t(i),graph->generation_};
+#endif
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+            PrepareFusedDecodeProfiles(*graph);
 #endif
             states_.push_back(std::move(state));owners_.push_back(std::move(owner));
         }
@@ -332,6 +479,9 @@ bool MetalDecoderSession::PreparePrefill(X::Value value,int64_t layer) {
     std::lock_guard<std::mutex> lock(mutex_);
     if(!gpu_||poisoned_||layer<0||uint64_t(layer)>=states_.size())
         throw std::invalid_argument("Prefill preparation requires a ready resident layer");
+#if defined(GARNET_METAL_MISTRAL_STREAMED_PREFILL)||defined(GARNET_METAL_MISTRAL_PACKED_PREFILL)
+    if(managedRows_)throw std::logic_error("Prepare affine prefill before request leases");
+#endif
     auto graph=Graph(value,Host()),original=Graph(owners_[size_t(layer)],Host());
     std::vector<MetalCompiledGraph*> ordered={graph,original};
     std::sort(ordered.begin(),ordered.end(),std::less<MetalCompiledGraph*>());
@@ -385,6 +535,18 @@ bool MetalDecoderSession::PreparePrefill(X::Value value,int64_t layer) {
     if(!tokenGraphs_.count(graph))tokenGraphOwners_.push_back(value);
     tokenGraphs_[graph]={size_t(layer),graph->generation_};
 #endif
+#ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+    for(const auto& op:graph->ops_)if(op.kind==MetalCompiledGraph::Kind::MatMul&&graph->slots_[op.b].affineInt4.Valid()) {
+        const auto& input=graph->slots_[op.a];const auto& weight=graph->slots_[op.b];const auto& output=graph->slots_[op.out];
+        gpu_->PrepareStreamedAffineProfile(input.matrix,weight.affineInt4,output.matrix,input.rows);
+    }
+#endif
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+    for(const auto& op:graph->ops_)if(op.kind==MetalCompiledGraph::Kind::MatMul&&graph->slots_[op.b].affineInt4.Valid()) {
+        const auto& input=graph->slots_[op.a];const auto& weight=graph->slots_[op.b];const auto& output=graph->slots_[op.out];
+        gpu_->PreparePackedAffineProfile(input.matrix,weight.affineInt4,output.matrix,input.rows);
+    }
+#endif
     graph->RetireResidentDefaults();
 #ifdef GARNET_METAL_PREFILL_HIDDEN_POOL
     PrepareHiddenPool(*graph);
@@ -421,7 +583,11 @@ X::Value MetalDecoderSession::RunLeased(X::Value graphs,X::Value hidden,X::Value
 #endif
 X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Value positions,
     X::Value slots,X::Value active,int64_t predictionToken,const std::vector<uint64_t>* epochs,const std::vector<int64_t>* tokenIds,
-    VerificationRun* verification) {
+    VerificationRun* verification
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+    ,bool confidence
+#endif
+    ) {
 #ifdef GARNET_METAL_COMPACT_OWNER_PREFILL
     if(!compactRunning_) {
         compactSealed_=true;compactLastRows_=0;compactLastFirst_=4;
@@ -499,6 +665,11 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
     const auto& inputShape=layers[0]->inputShapes_;
     if(inputShape.empty()||(inputShape[0].size()!=2&&inputShape[0].size()!=3))throw std::invalid_argument("Metal session hidden profile missing");
     const size_t chunk=inputShape[0].size()==3?size_t(inputShape[0][1]):1;
+#ifdef GARNET_METAL_PREFIX_PREFILL_ONLY
+    // Verification is rank3 too, but its explicit graph policy is distinct.
+    const bool trackedPrefillProducer=inputShape[0].size()==3&&!verification&&
+        std::all_of(layers.begin(),layers.end(),[](const auto* graph){return graph->verificationTokens_==0;});
+#endif
 #ifdef GARNET_METAL_MTP_BRIDGE
     if(mtp_)ValidateMTPTarget(chunk);
     std::vector<float> mtpRunFlags;
@@ -574,6 +745,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             const auto* positionData=static_cast<const float*>(positionInfo.data);
             for(size_t row=0;row<states_[0].rows;++row) {
                 size_t next=rowTokens_[RunPhysicalRow(row)].size();
+#ifdef GARNET_METAL_PREFIX_PREFILL_ONLY
+                tokenPrecisionHistory_.at(RunPhysicalRow(row)).Validate(next);
+#endif
                 for(size_t token=0;token<chunk;++token)if(data[row*chunk+token]!=0) {
                     if(!rowTokensValid_[RunPhysicalRow(row)]||slotData[row*chunk+token]!=float(next))
                         throw std::invalid_argument("Tracked tokens require a contiguous native history");
@@ -663,6 +837,12 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
         }
         gpu_->Update(mtp_->captures.at(chunk).active,mtpRunFlags);
     }
+#endif
+#ifdef GARNET_METAL_WIDE_DENSE_VERIFICATION
+    wideVerificationPreparationClosed_=true;
+#endif
+#ifdef GARNET_METAL_LOOKAHEAD_RUNTIME
+    if(lookahead_)for(size_t row=0;row<rowWillUpdate.size();++row)if(rowWillUpdate[row])ResetLookaheadRow(RunPhysicalRow(row));
 #endif
     kvInplaceUpdates_=0;constantHeadDispatches_=0;singleCoderHeadDispatches_=0;residualNormDispatches_=0;packedPrefillNormDispatches_=0;globalHalfAlphaDispatches_=0;wideBatchPrefillDispatches_=0;interleavedBodyDispatches_=0;coalescedBlockDispatches_=0;mlpGraphDispatches_=0;joinedGlobalMlpBlocks_=0;poisoned_=true;gpu_->Begin();
     try {
@@ -774,6 +954,15 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             auto& headInput=head_->slots_[head_->inputs_[0]];
             gpu_->EncodeSliceGroups(current,headInput.matrix,1,chunk*headInput.columns,
                 size_t(predictionToken)*headInput.columns,headInput.columns);
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+            if(confidence) {
+#if defined(GARNET_METAL_INDEXED_TOKEN_PROJECTIONS)||defined(GARNET_METAL_ACTIVE_DECODE_PROJECTIONS)
+                EncodePredictionConfidence(selectProjectionRows?&selectedTokenRows:nullptr);
+#else
+                EncodePredictionConfidence(nullptr);
+#endif
+            } else
+#endif
 #ifdef GARNET_METAL_FUSED_HEAD_DECODE_ONLY
             if(chunk>1) {
                 head_->Encode(*gpu_);
@@ -807,6 +996,10 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
 #endif
     auto result=X::Value::List(Host());
     if(predictionToken>=0) {
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+        if(confidence)result=PredictionConfidenceValues(gpu_->Download(confidence_),rowWillUpdate);
+        else {
+#endif
 #ifdef GARNET_METAL_REQUEST_ROWS
         predictionInitialized_=true;
 #endif
@@ -815,6 +1008,9 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             if(prediction[row*2+1]!=0)throw std::runtime_error("Nonfinite Metal session logits");
             result.Append(X::Value(int64_t(prediction[row*2])));
         }
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+        }
+#endif
     }
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     for(size_t row=0;row<rowWillUpdate.size();++row)if(rowWillUpdate[row])finalHiddenReady_[RunPhysicalRow(row)]=1;
@@ -827,7 +1023,12 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
             verification?verification->accepted[row*chunk+token]!=0:
 #endif
             data[row*chunk+token]!=0) {
-            if(tokenIds)rowTokens_[RunPhysicalRow(row)].push_back((*tokenIds)[row*chunk+token]);
+            if(tokenIds){
+#ifdef GARNET_METAL_PREFIX_PREFILL_ONLY
+                tokenPrecisionHistory_.at(RunPhysicalRow(row)).Append(rowTokens_[RunPhysicalRow(row)].size(),1,trackedPrefillProducer);
+#endif
+                rowTokens_[RunPhysicalRow(row)].push_back((*tokenIds)[row*chunk+token]);
+            }
             else rowTokensValid_[RunPhysicalRow(row)]=0;
         }
     }
@@ -850,14 +1051,75 @@ X::Value MetalDecoderSession::RunUnlocked(X::Value graphs,X::Value hidden,X::Val
         mtp_->currentCapture=chunk;
     }
 #endif
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    reconcileHiddenPending_=false;
+#endif
+#ifdef GARNET_METAL_TARGET_JACOBI
+    // A successful ordinary run may replace the prefix independently of this
+    // proposal trajectory (including compact prefill's recursive run).
+    if(targetJacobiEnabled_&&!verification)targetJacobi_.Invalidate();
+#endif
     poisoned_=false;return result;
 }
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+bool MetalDecoderSession::ConfigurePredictionConfidence() {
+    std::lock_guard<std::mutex> lock(mutex_);
+#ifdef GARNET_METAL_MTP_BRIDGE
+    if(mtp_)throw std::invalid_argument("Prediction confidence excludes MTP auxiliary sessions");
+#endif
+    if(!gpu_||poisoned_||!head_||!tokenCache_||!requestRows_||confidence_.Valid()||states_.empty()||states_[0].rows>4)
+        throw std::invalid_argument("Prepare prediction confidence once on a ready tracked session");
+    for(size_t row=0;row<states_[0].rows;++row)
+        if(requestRows_->Owned(row)||!rowTokens_[row].empty()||(finalHiddenReady_.size()>row&&finalHiddenReady_[row]))
+            throw std::invalid_argument("Prepare prediction confidence before requests or inference");
+    std::vector<std::unique_lock<std::mutex>> locks;ValidateTokenOwners(locks);
+    const auto& output=head_->slots_.at(head_->output_);
+    if(output.rows!=states_[0].rows||output.columns<2||output.columns>16777216||output.shape.size()!=2)
+        throw std::invalid_argument("Prediction confidence requires bounded full vocabulary rows");
+    auto prepared=gpu_->Allocate(output.rows,4);gpu_->Zero(prepared);confidence_=std::move(prepared);
+    return true;
+}
+void MetalDecoderSession::EncodePredictionConfidence(const std::vector<size_t>* selectedRows) {
+    if(!confidence_.Valid())throw std::logic_error("Prediction confidence was not prepared");
+    // Capture in the head owner's locked command, before shared graph storage
+    // can be reused by another session. Never alter the two-word argmax ABI.
+    head_->Encode(*gpu_,true,nullptr,selectedRows);
+    gpu_->EncodePredictionConfidence(head_->slots_.at(head_->output_).matrix,confidence_);
+}
+X::Value MetalDecoderSession::PredictionConfidenceValues(const std::vector<float>& values,const std::vector<uint8_t>& selected) {
+    if(values.size()!=4*selected.size())throw std::logic_error("Prediction confidence output shape mismatch");
+    auto result=X::Value::List(Host());
+    const size_t vocabulary=head_->slots_.at(head_->output_).columns;
+    for(size_t row=0;row<selected.size();++row) {
+        auto entry=X::Value::List(Host());
+        if(selected[row]) {
+            const auto* p=values.data()+4*row;
+            if(p[1]!=0||!std::isfinite(p[0])||p[0]<0||p[0]>=vocabulary||std::floor(p[0])!=p[0]||
+               !std::isfinite(p[2])||!std::isfinite(p[3])||p[2]<p[3])
+                throw std::runtime_error("Nonfinite or inconsistent prediction confidence logits");
+            entry.Append(X::Value(int64_t(p[0])));entry.Append(X::Value(double(p[2])));entry.Append(X::Value(double(p[3])));
+            entry.Append(X::Value(double(p[2])-double(p[3])));
+        }
+        result.Append(entry);
+    }
+    return result;
+}
+X::Value MetalDecoderSession::PredictRowsConfidence(X::Value epochs) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(!confidence_.Valid()||!tokenCache_)throw std::invalid_argument("Prediction confidence was not prepared");
+    return PredictRowsUnlocked(epochs,true);
+}
+#endif
 X::Value MetalDecoderSession::PredictRows(X::Value epochs) {
     std::lock_guard<std::mutex> lock(mutex_);
     return PredictRowsUnlocked(epochs);
 }
-X::Value MetalDecoderSession::PredictRowsUnlocked(X::Value epochs) {
+X::Value MetalDecoderSession::PredictRowsUnlocked(X::Value epochs
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+    ,bool confidence
+#endif
+    ) {
     if(!gpu_||poisoned_||!head_||!requestRows_||!rowFinalHidden_.Valid()||
        epochs.runtime()!=Host()->runtime||!epochs.IsList()||epochs.Size()!=states_[0].rows)
         throw std::invalid_argument("Row prediction requires completed hidden states and request epochs");
@@ -886,11 +1148,24 @@ X::Value MetalDecoderSession::PredictRowsUnlocked(X::Value epochs) {
 #ifdef GARNET_METAL_ACTIVE_DECODE_PROJECTIONS
         std::vector<size_t> selectedRows;
         for(size_t row=0;row<selected.size();++row)if(selected[row])selectedRows.push_back(row);
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+        if(confidence)EncodePredictionConfidence(&selectedRows);else
+#endif
         head_->EncodeGreedy(*gpu_,prediction_,&selectedRows);
 #else
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+        if(confidence)EncodePredictionConfidence(nullptr);else
+#endif
         head_->EncodeGreedy(*gpu_,prediction_);
 #endif
         gpu_->SubmitAndWait();
+        gpuMs_=gpu_->LastGPUMs();
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+        if(confidence) {
+            auto result=PredictionConfidenceValues(gpu_->Download(confidence_),std::vector<uint8_t>(selected.begin(),selected.end()));
+            poisoned_=false;return result;
+        }
+#endif
         auto values=gpu_->Download(prediction_);auto result=X::Value::List(Host());
         predictionInitialized_=true;
         for(size_t row=0;row<selected.size();++row) {
@@ -911,8 +1186,18 @@ X::Value MetalDecoderSession::Snapshot(int64_t layer) {
     for(size_t k=0;k<2;++k)result.Append(TensorValue(Host(),*gpu_,state.matrix[k],state.shape[k]));
     return result;
 }
+#if defined(GARNET_METAL_DIAGNOSTIC_LAYER_BULK) && defined(GARNET_METAL_TOKEN_PREFIX_CACHE) && defined(GARNET_METAL_CONTINUOUS_ROWS)
+X::Value MetalDecoderSession::DiagnosticFinalHidden() {
+ std::lock_guard<std::mutex> lock(mutex_);
+ if(!gpu_||poisoned_||!rowFinalHidden_.Valid()||states_.empty()||!rowFinalWidth_)throw std::logic_error("No completed diagnostic row-hidden bank");
+ return TensorValue(Host(),*gpu_,rowFinalHidden_,{int64_t(states_[0].rows),int64_t(rowFinalWidth_)});
+}
+#endif
 X::Value MetalDecoderSession::Hidden() {
     std::lock_guard<std::mutex> lock(mutex_);
+#ifdef GARNET_METAL_TOKEN_PREFIX_CACHE
+    if(reconcileHiddenPending_)throw std::logic_error("Run inference after dense reconciliation before reading hidden state");
+#endif
     if(!gpu_||poisoned_||hiddenShape_.empty())throw std::logic_error("Metal session hidden unavailable");
     return TensorValue(Host(),*gpu_,hidden_,hiddenShape_);
 }
@@ -1041,7 +1326,26 @@ std::vector<MetalResourceReference> MetalDecoderSession::MemoryReferences() {
 #ifdef GARNET_METAL_ROW_FINAL_HIDDEN
     if(rowFinalHidden_.Valid())append(rowFinalHidden_,SIZE_MAX,"last_active_hidden",{int64_t(states_[0].rows),int64_t(rowFinalWidth_)});
 #endif
+#ifdef GARNET_METAL_MISTRAL_STREAMED_PREFILL
+    {const auto scratch=gpu_->StreamedAffineScratch();const char* roles[]{"streamed_prefill_half_weight","streamed_prefill_half_input","streamed_prefill_float_output"};
+     for(size_t i=0;i<scratch.size();++i)append(scratch[i],SIZE_MAX,roles[i],{});}
+#endif
+#ifdef GARNET_METAL_MISTRAL_PACKED_PREFILL
+    append(gpu_->PackedAffineScratch(),SIZE_MAX,"packed_prefill_half_input",{});
+#ifdef GARNET_METAL_FUSED_MISTRAL_MLP
+    append(gpu_->FusedMistralMlpScratch(),SIZE_MAX,"fused_mlp_half_input",{});
+#endif
+#endif
+#ifdef GARNET_METAL_FUSED_Q4_DECODE
+    append(gpu_->FusedMistralDecodeScratch(),SIZE_MAX,"fused_decode_fp32_input",{});
+#ifdef GARNET_METAL_FUSED_Q4_WIDE_SELECTION
+    append(gpu_->FusedMistralWideDecodeScratch(),SIZE_MAX,"fused_decode_wide_fp32_input",{});
+#endif
+#endif
     append(hidden_,SIZE_MAX,"hidden",hiddenShape_);append(prediction_,SIZE_MAX,"prediction",{});
+#ifdef GARNET_METAL_PREDICTION_CONFIDENCE
+    append(confidence_,SIZE_MAX,"prediction_confidence",{});
+#endif
 #ifdef GARNET_METAL_VERIFY_ATTENTION
     if(verification_) {
         const auto& p=*verification_;

@@ -114,11 +114,14 @@ class MistralMetalDecoder(DenseMetalDecoder):
         # target verification; it does not create a trained proposal model.
         if self.session is None or 'native_greedy_dense_verification' not in garnet.backend_info():
             raise ValueError('Prepared native dense verification extension required')
-        if type(tokens) is not int or tokens<1 or self.batch*tokens>4:
+        wide=self.batch==4 and tokens==4 and 'native_dense_verify_b4t4_optional_v1' in garnet.backend_info()
+        if type(tokens) is not int or tokens<1 or (self.batch*tokens>4 and not wide):
             raise ValueError('Mistral verification supports up to four physical token rows')
         if self.verification_tokens:
             if self.verification_tokens!=tokens:raise ValueError('Verification profile already prepared')
             return True
+        if wide and 'native_wide_verify_preparation_lifetime_v1' in garnet.backend_info() and not self.session.wide_verification_preparation_open:
+            raise ValueError('Prepare wide verification before the first claim or inference; reset does not reopen engine preparation')
         import tensor
         from xModel.qwen.metal_dense.layers import T,DensePrefillLayer,norm
         staged=[];head=None

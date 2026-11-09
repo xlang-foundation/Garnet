@@ -1,0 +1,342 @@
+{
+  "scope": "Native half-prefill experiment; new numerical policy. No serving, full-model numerical oracle, coding-quality or 2x target qualification.",
+  "native_tests": {
+    "on": 52,
+    "off": 50
+  },
+  "trained_component": {
+    "passed": true,
+    "scope": "Independently audit saved native outputs against frozen trained inputs.",
+    "cases": [
+      {
+        "layer": 0,
+        "full_output_words": 2097152,
+        "FP64_values": 6144,
+        "full_half_policy_max_fraction": 0.13796307578072628,
+        "FP64_half_policy_max_fraction": 0.18614601203636325,
+        "original_control_vs_frozen_native_max_fraction": 0.0,
+        "old_FP32_contract_failure_words": 10670,
+        "guard_parent_words": 2097184
+      },
+      {
+        "layer": 15,
+        "full_output_words": 2097152,
+        "FP64_values": 6144,
+        "full_half_policy_max_fraction": 0.20914715030015626,
+        "FP64_half_policy_max_fraction": 0.30920587994450255,
+        "original_control_vs_frozen_native_max_fraction": 0.0,
+        "old_FP32_contract_failure_words": 1213822,
+        "guard_parent_words": 2097184
+      },
+      {
+        "layer": 31,
+        "full_output_words": 2097152,
+        "FP64_values": 6144,
+        "full_half_policy_max_fraction": 0.21381567485597688,
+        "FP64_half_policy_max_fraction": 0.25262463862398066,
+        "original_control_vs_frozen_native_max_fraction": 0.0,
+        "old_FP32_contract_failure_words": 1290619,
+        "guard_parent_words": 2097184
+      }
+    ],
+    "full_output_words": 6291456,
+    "FP64_values": 18432,
+    "fixed_budget_sha256": "6ec2fb97d4438446a551c8968d5d4e8840968d99ff19ff987a95ba8ae7816217",
+    "trained_fixture_binding_sha256": "c91eb97edc0bd801249e10d5a05146bb8f1e5db3669a1a04491e738bc7c31256",
+    "candidate_binding_sha256": "02ebdbe9037523c3a1ee57221dc7f20b1ec41e9e51941b1efe7da7ea03d5ac44",
+    "payloads_sha256": {
+      "case0-native-output.f32": "14fc06dee77b785cebfe5621ccd7231a71a64162ac9d5cfcd2909f0093973a07",
+      "case0-original-control.f32": "1ae78f45e4c28f9342b1cbddb3128446e50f97abd6f4f51472ae28c724809ca0",
+      "case0-output-parent.f32": "2c717ac6b38450474ca64487efbc6d5e7018f42f4661ec04ed355aa1be6ab89f",
+      "case0-rounded-control.f32": "34993503542b0e2c01b5ad9a839d433d7586762591bee4ee19e8bd5a8fa8ceb5",
+      "case1-native-output.f32": "be62dda9c84efbf74637914fe8b6225bbf90fa2767e5ae3d54512b3df1af63eb",
+      "case1-original-control.f32": "7182323bcd7058a6e85cf9ca43186a10719137197e6c1e11922ed81694723452",
+      "case1-output-parent.f32": "aea51a6a1e3fbea8ca1c0ca7bcd0cf0fccf5e35203a0ec1d1bd08541b69c5e20",
+      "case1-rounded-control.f32": "e648db81b4a0ba04e82684500701807fa90ad05bd33f7bf7c4930ddb349a917c",
+      "case2-native-output.f32": "59c7e4ef457a7d058d8b41d9071534e2225d6c8e5477887cc3b9eb058a82671f",
+      "case2-original-control.f32": "0eb8278405a9c3d845792e692f0788e13424024d24639d4f284e36e4fede5f4b",
+      "case2-output-parent.f32": "311fb64e9c7cebefd8d7c338cc4c94443aee76693a5e64ebb7b2e1f3f3d03c72",
+      "case2-rounded-control.f32": "21c0ce89576f4f8bfc10a46edf6b71895c4e4fc932baba88816f0e3efaa58dbf"
+    },
+    "native_status_sha256": "74fc1f1cce0d52cc21b962c5b4e23df32761793592d2fd67993d42c6803645d3",
+    "negative_controls_rejected": [
+      "nonfinite",
+      "over_budget",
+      "guard_mutation"
+    ],
+    "old_FP32_contract_qualified": false,
+    "full_model_quality_qualified": false,
+    "prefix_reuse_qualified": false,
+    "serving_speed_claim": false,
+    "goal_complete": false
+  },
+  "model_regression": {
+    "postclose_metal_bytes": {
+      "off": 1900544,
+      "on": 851968
+    },
+    "half_prefill_dispatches": {
+      "off": 0,
+      "on": 544
+    },
+    "actual_mps_products": {
+      "off": 65536,
+      "on": 0
+    },
+    "hidden_errors_descriptive_only": {
+      "1": {
+        "words": 16384,
+        "max_absolute_error": 0.009525775909423828,
+        "rms_error": 0.000438075741095023,
+        "max_control_magnitude": 3.752206802368164
+      },
+      "16": {
+        "words": 16384,
+        "max_absolute_error": 0.0033327341079711914,
+        "rms_error": 0.0006217724277986718,
+        "max_control_magnitude": 4.9602813720703125
+      },
+      "18": {
+        "words": 16384,
+        "max_absolute_error": 0.0043267011642456055,
+        "rms_error": 0.0004256637534227125,
+        "max_control_magnitude": 2.144517660140991
+      },
+      "25": {
+        "words": 16384,
+        "max_absolute_error": 0.0020689666271209717,
+        "rms_error": 0.0003499386617165023,
+        "max_control_magnitude": 5.444649696350098
+      }
+    },
+    "whole_state_bit_identity_descriptive_only": {
+      "1": {
+        "equal_digest_pairs": 2,
+        "total_pairs": 65
+      },
+      "16": {
+        "equal_digest_pairs": 2,
+        "total_pairs": 65
+      },
+      "18": {
+        "equal_digest_pairs": 2,
+        "total_pairs": 65
+      },
+      "25": {
+        "equal_digest_pairs": 2,
+        "total_pairs": 65
+      }
+    },
+    "passed": true,
+    "scope": "Untimed serial fresh FP32 control, then all-half-prefill candidate. Four frozen long prompts,8outputs each; native route and full physical state witnesses. No comparator inference or serving/quality admission.",
+    "completed_requests_per_engine": 4,
+    "generated_tokens_per_engine": 32,
+    "all_ids_and_text_match_frozen_control": true,
+    "full_state_witnesses_per_engine": 260,
+    "original_off_state_exact_to_prior": true,
+    "negative_controls_rejected": [
+      "missing_half_route",
+      "wrong_half_route",
+      "wrong_decode_half",
+      "wrong_mps_products",
+      "wrong_ids",
+      "wrong_epoch",
+      "hidden_nan",
+      "owner_leak",
+      "device_leak",
+      "off_state_drift",
+      "extra_error"
+    ],
+    "model_binding_sha256": "4bb0e01fd4728111b1b7f5efabd1015211b38fa2d03dbbc4ba812429496bb77d",
+    "stdout_sha256": {
+      "off": "2b4cf1dbf9a1cb8750892ff1ed15cf707b12182df115ee7e92fbba93419bb905",
+      "on": "84434665bc750efd3fa8857ca6844ae1ed8fcd66cb55284e06e4884a921eb975"
+    },
+    "full_model_numerical_oracle": false,
+    "coding_quality_qualified": false,
+    "prefix_reuse_qualified": false,
+    "serving_speed_measured": false,
+    "goal_complete": false,
+    "warning": "CoreAnalytics context-leak warnings retained in both logs; bounded native owners do not explain them."
+  },
+  "body_comparison": {
+    "passed": true,
+    "scope": "Two opposite-order cohorts;8 fresh serial native engines,1/4 owners,15 actual prefix chunks,3warmups and9measurements of the same offset1920 32-layer body. Excludes embedding/head/state hashing/scheduling/HTTP. New half policy versus FP32; no serving/quality claim.",
+    "comparisons": [
+      {
+        "owners": 1,
+        "cohort": 0,
+        "control_body_wall_s": 0.27345429197885096,
+        "candidate_body_wall_s": 0.2301148329861462,
+        "wall_control_over_candidate": 1.18833839796548,
+        "control_body_gpu_ms": 270.1427082065493,
+        "candidate_body_gpu_ms": 228.80112496204674,
+        "gpu_control_over_candidate": 1.1806878495521393,
+        "predictions_equal": true,
+        "full_hidden_max_absolute_difference": 0.1823495626449585,
+        "full_hidden_rms_difference": 0.0018628506467704951
+      },
+      {
+        "owners": 1,
+        "cohort": 1,
+        "control_body_wall_s": 0.3074991670437157,
+        "candidate_body_wall_s": 0.2546376248355955,
+        "wall_control_over_candidate": 1.2075951746810778,
+        "control_body_gpu_ms": 304.17874990962446,
+        "candidate_body_gpu_ms": 253.43174999579787,
+        "gpu_control_over_candidate": 1.2002393145873318,
+        "predictions_equal": true,
+        "full_hidden_max_absolute_difference": 0.1823495626449585,
+        "full_hidden_rms_difference": 0.0018628506467704951
+      },
+      {
+        "owners": 4,
+        "cohort": 0,
+        "control_body_wall_s": 1.134399666916579,
+        "candidate_body_wall_s": 0.9632970411330462,
+        "wall_control_over_candidate": 1.1776218741233535,
+        "control_body_gpu_ms": 1130.8717499487102,
+        "candidate_body_gpu_ms": 961.3252917770296,
+        "gpu_control_over_candidate": 1.1763674165466618,
+        "predictions_equal": true,
+        "full_hidden_max_absolute_difference": 0.1823495626449585,
+        "full_hidden_rms_difference": 0.003725701293530584
+      },
+      {
+        "owners": 4,
+        "cohort": 1,
+        "control_body_wall_s": 1.1897188751026988,
+        "candidate_body_wall_s": 0.9763214169070125,
+        "wall_control_over_candidate": 1.2185729560985457,
+        "control_body_gpu_ms": 1186.0755833331496,
+        "candidate_body_gpu_ms": 974.4609168265015,
+        "gpu_control_over_candidate": 1.2171607530405708,
+        "predictions_equal": true,
+        "full_hidden_max_absolute_difference": 0.1823495626449585,
+        "full_hidden_rms_difference": 0.003725701293530584
+      }
+    ],
+    "measured_body_calls": 72,
+    "warmup_body_calls": 24,
+    "fresh_serial_engines": 8,
+    "same_policy_cross_cohort_full_state_and_predictions_exact": true,
+    "cross_policy_next_predictions_equal": true,
+    "negative_controls_rejected": [
+      "missing_repeat",
+      "duplicate_repeat",
+      "wrong_half_route",
+      "wrong_mps_route",
+      "nonfinite_wall",
+      "zero_gpu",
+      "gpu_exceeds_wall",
+      "device_growth",
+      "owner_leak",
+      "close_limit",
+      "missing_seed"
+    ],
+    "postflight_payload_sha256": {
+      "cohort0-owners1-off.json": "aca6e880f2ac892d4a8b9adc106eb30b2b7a519314af7a59ba5fddc23a15b930",
+      "cohort0-owners1-on.json": "7e5abd8ec49c3cbe13bd598001c399d01a1312c210e766ffd67655b0442ce24c",
+      "cohort0-owners4-off.json": "87e03eac9e1c54851254fbff1a380033c42fdd49aa47edd7c17bdd42efa59fa0",
+      "cohort0-owners4-on.json": "cf82d9a86129568f141d5b9e2fa3c16ea938885b7d5e77519a88109dec8e5832",
+      "cohort1-owners4-on.json": "7cb7dd94c476dd79510b939b59abda329d83f4b3a0ca2f329a29beda2714c830",
+      "cohort1-owners4-off.json": "ea3908b88c0bd0eacd842cadf033dfc22860559e51d4129db029949adb691782",
+      "cohort1-owners1-on.json": "cc112fdf5327c0b471d7172d237b50f3ad38ac72e3c00bcd322102efcdc72192",
+      "cohort1-owners1-off.json": "9ed09fcf025de665f675cba50f26ce7f5f53a0783c3e5d149717cbccb25e7b40"
+    },
+    "preflight_hashes_sha256": "45324ce153dd839eb1ed3beff60e28d9582c91a138ce153bf25a4bd81afb2c4d",
+    "new_native_default": false,
+    "full_model_numerical_oracle": false,
+    "coding_quality_qualified": false,
+    "prefix_reuse_qualified": false,
+    "serving_speed_claim": false,
+    "goal_complete": false
+  },
+  "frozen_body_control_audit": {
+    "passed": true,
+    "scope": "Compare new FP32 body state with already-frozen original body controls.",
+    "controls": [
+      {
+        "file": "cohort0-owners1-off.json",
+        "old_sha256": "df701b569904bb2d59c27c9516bb0a4a557ab90b4194a3aa1e19185cbd98daf8",
+        "new_sha256": "aca6e880f2ac892d4a8b9adc106eb30b2b7a519314af7a59ba5fddc23a15b930",
+        "equal_full_state_digests": 65,
+        "complete_hidden_values": 2097152,
+        "predictions_exact": true
+      },
+      {
+        "file": "cohort0-owners4-off.json",
+        "old_sha256": "66d49b8586e461375df9d57a4086c8c2e4544d7c9e5e021d093fc69992a5f34c",
+        "new_sha256": "87e03eac9e1c54851254fbff1a380033c42fdd49aa47edd7c17bdd42efa59fa0",
+        "equal_full_state_digests": 65,
+        "complete_hidden_values": 2097152,
+        "predictions_exact": true
+      },
+      {
+        "file": "cohort1-owners1-off.json",
+        "old_sha256": "1031d4ed0c50aee6653c04120929156ca2d3801fc8ceea97fc886ce3fbd443b8",
+        "new_sha256": "9ed09fcf025de665f675cba50f26ce7f5f53a0783c3e5d149717cbccb25e7b40",
+        "equal_full_state_digests": 65,
+        "complete_hidden_values": 2097152,
+        "predictions_exact": true
+      },
+      {
+        "file": "cohort1-owners4-off.json",
+        "old_sha256": "8b94a19aa7a4a3952764beb32a782011cc16afebdd1b0b2a438ed6ba30147d1b",
+        "new_sha256": "ea3908b88c0bd0eacd842cadf033dfc22860559e51d4129db029949adb691782",
+        "equal_full_state_digests": 65,
+        "complete_hidden_values": 2097152,
+        "predictions_exact": true
+      }
+    ],
+    "frozen_control_provenance_sha256": "c268e65ef0b3e32eb7702db912545eb338bc2adc738ae6cbad0fbf502ac9df12",
+    "serving_speed_claim": false,
+    "quality_qualified": false,
+    "goal_complete": false
+  },
+  "source_audit": {
+    "passed": true,
+    "source": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-half-attention-native1/source7",
+    "foundation": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-half-attention-native1/source-base1",
+    "candidate_owned_files_sha256": {
+      "src/backends/metal/chunk_half_attention_shader.h": "c0e25bb436b828bc6bb8d1b47b93420b3eb5476ba9d1a89eef82e92080b430ec",
+      "cmake/GarnetMetal.cmake": "648ac66d302c2bb33138eb538c3651fc5576f7705cd54d49ebb71abc6429f2e8",
+      "src/backends/metal/metal_context.h": "9693649fa949ccebecae9f44dde2d99efd95c2bb19f2c25520b1c8b552b03839",
+      "src/backends/metal/metal_context.mm": "a2d1fe5f0ceb902a866a6a8230e7e753d32d342eb0bf071bbcc0fb02ef3f013d",
+      "src/backends/metal/compiled_graph.cpp": "adab1406d9fe48763bac84517af9b68c8fa0f2138011b7b522001d2c09d37147",
+      "src/backends/metal/decoder_session.h": "700fc9f2b3de9f4d1b41423d10c32143023e46d3d0bd731503d9a18591d1724f",
+      "src/backends/metal/token_prefix_session.cpp": "938ca49df1b6fc145a7b96ece6aeb2449df9b403197df2b7a71b2d903806aef3",
+      "src/entry/metal_main.cpp": "f5680df7088a0f9db9c37c09294168f32bd4a7c792917187a6ff0314c0afb5cd",
+      "test2026/metal/half_chunk_attention_test.cpp": "4521298e4d0b01ae193f7f4e835281a6d18ccbc39f9c0b05584fa884c57f83e9"
+    },
+    "unchanged_base_files": 26283,
+    "added_files": [
+      "src/backends/metal/chunk_half_attention_shader.h",
+      "test2026/metal/half_chunk_attention_test.cpp"
+    ],
+    "unchanged_xmodel_files": 137,
+    "unchanged_original_shader_headers": 40,
+    "unchanged_embedded_metal_sources": 3,
+    "original_dirty_sha256": {
+      "cmake/GarnetMetal.cmake": "48eb7980cdc1ce36dca3f4dae9f2e352443891bb1f30a3c2a2cdc3e495fbf650",
+      "src/backends/metal/affine_int4_indexed_shader.h": "abedb230da0e0051d7b73cf20dc7ec56ca266a67b529240f21f6f33d0fa940a2",
+      "src/backends/metal/metal_context.mm": "e32887bf609e1b32d765062bfb5d14c6c41e3f4a6e45e41de3a8d687f6e7f134",
+      "src/entry/metal_main.cpp": "75d0128e35e25df718270f63dfe12959b5e244ef330e5960efa57ca2653eea80",
+      "test2026/metal/audit_scheduled_mtp_coding.py": "4c396a054e3bb26f8a2501a24b482e730b8fb6984579564d8b59a1ae8af34ad6",
+      "test2026/metal/local_coder_batch_worker.py": "dfd07452ce66e47d7f7d8aa7113fd676776606eda9f4753f58278ca51f6dfd6b",
+      "test2026/metal/run_scheduled_mtp_coding.py": "00aebd50ef7a4f61a37533d964506a4fd883a2f4b1d5116b15bd217741ccfd9d",
+      "test2026/metal/test_scheduled_mtp_coding_audit.py": "dca33e2fd4ee3769cf140294987ff0e673bc4be1970543a220495e300ae98de0",
+      "test2026/metal/verification_affine_test.cpp": "73b93b077d4e4c0710a779ca9f9f89f9676931c3100e8165c376dd6d2b662035",
+      "test2026/metal/affine_decode_block_benchmark.cpp": "191b22a411a68c33c2deb8400bdd758a5f648da0b8ef7e873ed8088e92bfa9fa",
+      "test2026/metal/audit_affine_decode_block_benchmark.py": "4d71ecabdf60ddedd52d5e545db23f404e7128c27ce6d54e1dc0d6c7a0ff1457"
+    },
+    "frozen_comparison_sha256": "3ad871b986ee58880bac59771c55671af44bc7e2e56eab937e7cdba744e64566",
+    "candidate_binding_sha256": "02ebdbe9037523c3a1ee57221dc7f20b1ec41e9e51941b1efe7da7ea03d5ac44",
+    "default_option": "OFF",
+    "native_integration_qualified": false,
+    "full_model_quality_qualified": false,
+    "serving_speed_claim": false,
+    "goal_complete": false
+  },
+  "goal_complete": false
+}

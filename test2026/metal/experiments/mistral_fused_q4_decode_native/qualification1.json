@@ -1,0 +1,194 @@
+{
+  "scope": "Default-off native four-actual-row FP32 gate/up/SiLU fusion: full-model, rollback and diagnostic serving qualification.",
+  "native_study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-native1",
+  "operator_study": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-screen1",
+  "base_engine_provenance_sha256": "3dd125f8f9ed9bef0a944cdb14eca7ff0f7af3b0bc19f818fc884763d99a9411",
+  "base_source_binding_sha256": "55e0e4ab22321f54860254aaa7d1e117980c157648aa7cedec430917db5c0c61",
+  "new_native_files": [
+    "src/backends/metal/fused_q4_decode_shader.h",
+    "src/backends/metal/fused_q4_decode_context.inc",
+    "test2026/metal/fused_q4_decode_test.cpp"
+  ],
+  "native_source_changes_sha256": {
+    "cmake/GarnetMetal.cmake": "5e4f2ae38d3afb45cdf0ef7ada7f5f59fd015231efff3202813495a5c377ce4b",
+    "src/backends/metal/compiled_graph.cpp": "a6a73950475e43fdd81541509cf889a53337081231783ebd628a89d5a8d49512",
+    "src/backends/metal/compiled_graph.h": "4567b03199ad875b426b693bf2cea61b7b551b1f04cb22455224b20a6a631f3b",
+    "src/backends/metal/decoder_session.cpp": "087968786bf68b131034ee0c2f608f997c798caaf46c566c0a3b6063abc45e5b",
+    "src/backends/metal/decoder_session.h": "7a27c6e38ca72504987672311d8376684a5d846d72816557e7ea37a4789f719a",
+    "src/backends/metal/metal_context.h": "8ce0a9c2b46852bddb07adb67067eac9d4bb545054bd08cb3ae6d037dfa752a7",
+    "src/backends/metal/metal_context.mm": "0e7dd0d0db85490ed82927ddfc120af282a425e300687a4e3c426e80560d165e",
+    "src/backends/metal/token_prefix_session.cpp": "4c9f808e44a4978898034a6c0fbb80e5d39ff21793164fedcc9668c33b4874fb",
+    "src/backends/metal/verification_session.cpp": "c9a20a82a4dee890c0c38fea14a29d0f65b21d11038c58d473ed70a6e6ba7b0f",
+    "src/entry/metal_main.cpp": "71ee14e8be1b8d3189484bfbb8bc4ab518e1760b6512b70b2aed264a14dbcfda",
+    "src/backends/metal/fused_q4_decode_shader.h": "cc7294a157cf884d1a9e152bbe796f0578f25b6bb2e6955d3e02de86394c7d27",
+    "src/backends/metal/fused_q4_decode_context.inc": "c22e71fc8db6f286cefb46805535228b46ef136df1ffa282e21edcec22339222",
+    "test2026/metal/fused_q4_decode_test.cpp": "47f47dd441ac3373f96d7ca3276f16575b878d2e3f9f38117cd18f5b575f9e46"
+  },
+  "native_source_content_sha256": "d4409645b563964a3ad2ce926ada954656e3a09b7427e852a74723d9ad89dff3",
+  "source_file_count": 26298,
+  "native_build": {
+    "passed": true,
+    "source_bindings_sha256": "8681c5f2f13ccdb5a29347318ae97d9b25ddf84d3d33d456b1333dbdf3e3b39e",
+    "library_sha256": "0ee500c3d407135ff7e115218a6159a05cf2b8431dba7dd932ff1812c2585f3e",
+    "tests_enabled": 53,
+    "tests_default_off": 52,
+    "trained_native_checks": 457,
+    "trained_native_parent_words": 4180320,
+    "private_fp32_input_bytes": 65536,
+    "extra_weight_cache_bytes": 0,
+    "native_option_default_on": false,
+    "model_or_serving_measured": false,
+    "goal_complete": false
+  },
+  "native_model": {
+    "output_tokens": 32,
+    "whole_state_digest_pairs": 260,
+    "request_state_digest_pairs": 520,
+    "whole_hidden_values": 65536,
+    "request_hidden_values": 32768,
+    "four_row_decode_frames": 6,
+    "native_fused_blocks": 192,
+    "native_input_copy_calls": 0,
+    "prepared_profiles": 1,
+    "extra_private_input_bytes": 65536,
+    "extra_weight_cache_bytes": 0,
+    "ready_metal_allocated_bytes": 10040639488,
+    "close_metal_allocated_bytes": 1900544
+  },
+  "verification": {
+    "256": {
+      "cases": 11,
+      "target_reference_kv_hidden_digest_pairs": 715,
+      "native_fused_blocks": 224,
+      "native_input_copies": 0,
+      "kv_plane_restore_dispatches": 320,
+      "prepared_metal_bytes": 4155555840,
+      "close_metal_bytes": 720896
+    },
+    "4096": {
+      "cases": 13,
+      "target_reference_kv_hidden_digest_pairs": 845,
+      "native_fused_blocks": 288,
+      "native_input_copies": 0,
+      "kv_plane_restore_dispatches": 384,
+      "prepared_metal_bytes": 6186516480,
+      "close_metal_bytes": 720896
+    }
+  },
+  "serving_decode": {
+    "frames": 549,
+    "actual_four_request_decode_frames": 303,
+    "partial_decode_frames": 156,
+    "native_fused_blocks": 9696,
+    "native_input_copies": 0,
+    "prepared_profiles": 1,
+    "private_scratch_bytes": 65536,
+    "extra_weight_bytes": 0
+  },
+  "admission_metrics": {
+    "cold": {
+      "ttft_median_seconds": 8.829876666422933,
+      "decode_median_tps": 9.327026772174648,
+      "aggregate_tps": 21.817288131217552,
+      "ranked_ttft_seconds": [
+        3.2143031659070402,
+        6.894090082962066,
+        10.7656632498838,
+        14.760281207971275
+      ],
+      "worst_request_ttft_seconds": 14.760281207971275,
+      "observed_token_delivery_gap_p95_seconds": 0.4665806251578033,
+      "observed_token_delivery_gap_max_seconds": 0.511576458113268
+    },
+    "warm1": {
+      "ttft_median_seconds": 9.129157604533248,
+      "decode_median_tps": 8.990144469069559,
+      "aggregate_tps": 21.07816635780481,
+      "ranked_ttft_seconds": [
+        3.325913750100881,
+        7.120349542004988,
+        11.137965667061508,
+        15.274796500103548
+      ],
+      "worst_request_ttft_seconds": 15.274796500103548,
+      "observed_token_delivery_gap_p95_seconds": 0.4843976669944823,
+      "observed_token_delivery_gap_max_seconds": 0.5151500408537686
+    },
+    "warm2": {
+      "ttft_median_seconds": 9.688576958491467,
+      "decode_median_tps": 8.78302862262369,
+      "aggregate_tps": 20.36230013607659,
+      "ranked_ttft_seconds": [
+        3.505529166897759,
+        7.610942792147398,
+        11.766211124835536,
+        15.860679083969444
+      ],
+      "worst_request_ttft_seconds": 15.860679083969444,
+      "observed_token_delivery_gap_p95_seconds": 0.5012847089674324,
+      "observed_token_delivery_gap_max_seconds": 0.5310751248616725
+    }
+  },
+  "reports_sha256": {
+    "build-audit3.json": "e3f4bf3df0317ff95f70f1659faa9befb897ed8eba9254feefc409a74f769ebf",
+    "model-audit2.json": "9a375a4377ffa8190f97e6c1241e0c76f6df563a45a1e0f5a1ebe46c2677f127",
+    "verification-audit3.json": "c384e7dbaf0d003f4b4438994f60e15510da85785fef0bb1f7f658e636a1d672",
+    "admission-audit1.json": "7b1211b631d3f88fe981650453c1463b1f3e155c72a4f4b52c7bacfbf90e6b00"
+  },
+  "new_option_default_on": false,
+  "prefix_cache_lineage_qualified": false,
+  "coding_quality_qualified": false,
+  "matched_serving_campaign_collected": false,
+  "production_runtime_integrated": false,
+  "serving_speed_claim": false,
+  "goal_complete": false,
+  "packaged_native_files_sha256": {
+    "admission-plan1.json": "3b58afa0811b211b49b93a372c1d8c081ddaa49fa0147ce0f1b237b7e59dbd73",
+    "admission-preparation1.json": "1262356c2f85d4c5d0d42337dcb88641e06d932dc25f125fd46d8d60baddb608",
+    "audit-tools1/audit_half_transport1.py": "760809f372078ba599713cc4f83407a2921f6de560cefc4cf0d4853546595f2f",
+    "audit-tools1/audit_policies1.py": "a4753bb4386086adab92c10dfe133038c116dadfe19d279dd98ca0cb65bf7774",
+    "audit_admission1.py": "34b603e92dbdec974f7eed7731c807c4f3fa240ac38f29b7304f68df5f55db1d",
+    "audit_model2.py": "2e40e048ec95a1f397b22826994fd91164c2fb00825212927126e533ea3678a3",
+    "audit_verification3.py": "71f6570e1a839da5c8fc080a37143df742cc5706c3979648b09a11a5b692a2a0",
+    "build_native3.py": "458034c8b261e6910de57b07f131a25001047673c58a8e314c692a0fd5c88354",
+    "engine-admission1.json": "1ed6215bcfeb22212bf7a114b7081a799851a910fbdf74129a2c18e3963a8358",
+    "native-complete3.patch": "d64e7eba7aa65f1d16381ad04d4e5fc594caa1df800aef0597250be861a003d7",
+    "native-edits3.json": "fdf13f74e6d67ac2aa48462446cb74466bbd00dcbd6971bcca52e36aef54b770",
+    "new-files/src/backends/metal/fused_q4_decode_context.inc": "c22e71fc8db6f286cefb46805535228b46ef136df1ffa282e21edcec22339222",
+    "new-files/src/backends/metal/fused_q4_decode_shader.h": "cc7294a157cf884d1a9e152bbe796f0578f25b6bb2e6955d3e02de86394c7d27",
+    "new-files/test2026/metal/fused_q4_decode_test.cpp": "47f47dd441ac3373f96d7ca3276f16575b878d2e3f9f38117cd18f5b575f9e46",
+    "profile-admission1.json": "f47fc2e921c59031f148e75d8147d53fccffa9f87aa021377dcd95d068a6fc9c",
+    "profile-model2.json": "628952e762448b9be754c4f5ccd33a850d5f4da2b09f66f35ca9542b8b7b0b9f",
+    "run_admission1.py": "0f835476433ee34dd676f6a1c6956d7acd85a50ccd1b369ac6f630353e902285",
+    "run_model2.py": "bcac48c1e22aa52f1aff582363fd0d42d71699a6cf60ff6216094b599bb20c13",
+    "run_verification3.py": "d0e929e9549877ade6147549534967818fca6ebef61acb4a9bbcdc662d97b6dd",
+    "tools1/local_coder_batch_http.py": "7db9ffd2c2fb1c5b543fea54bab79f6cc6c82ae2743186a1919cc4d2ee56317d",
+    "tools1/local_coder_batch_transport.py": "aef7322b39c9aa5b4575dd740dad4108f91347f2cc86f332187c5e80c4bb9449",
+    "tools1/local_coder_batch_worker.py": "a767d3a2786fe2c39e2d78c13440f88dd57441f97e895d9c81e1296d5836f52e",
+    "tools1/local_coder_stream_benchmark.py": "51cc079b621efa2bb6e3232a6bdf4834679a258f7786133cc301180adea603ce",
+    "tools1/native_http_bridge.py": "c404c9aabd550c665ceb0d06b1cc54e992e7bea21833c50aa3fd629a03103ba3",
+    "tools1/run_local_coder_baseline.py": "0448d0d3f3e6d5c100feffabbd535f822ab2d3d73b2cccfb0e323b86c6e50a1c",
+    "tools1/run_mistral_cold_prefix.py": "8531acaedcfd4005366a67c1754705c502cef8fd736212fb9c5fd25a99e5f6eb",
+    "tools1/sample_local_coder_memory.py": "5a1aa4528239cf789d8506679f94c4014ae512de5bb463758bea26c32ecce1b9",
+    "verification-preparation3.json": "e5d3792f3d6b2d62e8f8774b2c4d1238e5a27918f1de3b2b9caa0ef57d3706c0",
+    "worker-model2.py": "42c7280857de151de7b5677ba01d0b2bd9ad480ae592683e7d8cec642ba20016",
+    "worker-verification3.py": "a909ab842747818746ee4ca100fcfca1bcb0a5bc979e08de6e0b30d6f8d08d4d"
+  },
+  "frozen_evidence": [
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-native-source-replay1",
+      "files": 26327,
+      "provenance_sha256": "675a9923f95a205ff50ee2e9cd50fca8aedf9cfa6127a2f1f0fdceb58475ac56"
+    },
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-native-audit-replay1",
+      "files": 4,
+      "provenance_sha256": "903a9612ee62aa534baf19e672be917b5f85e2d0401f7aef13a25c8a1d579015"
+    },
+    {
+      "root": "/Users/shawn/CantorAI/out/research/mistral7b-local-coder/mistral-fused-q4-decode-native1",
+      "files": 82922,
+      "provenance_sha256": "a24b9df29897b392cf94556ecf38fee8eb112424e491c3e46fe2cad82f340c3c"
+    }
+  ]
+}
