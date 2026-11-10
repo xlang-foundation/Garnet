@@ -300,6 +300,27 @@ if(GARNET_METAL_MLX_STEEL_ATTENTION)
     target_include_directories(garnet_metal PRIVATE "${CMAKE_CURRENT_LIST_DIR}/../src/backends/metal")
     target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_MLX_STEEL_ATTENTION=1)
 endif()
+option(GARNET_METAL_MLX_AFFINE_QMM
+    "Use MLX's affine quantized GEMM (qmm_t) for BF16-coefficient INT4 prefill projections" OFF)
+if(GARNET_METAL_MLX_AFFINE_QMM)
+    if(NOT GARNET_METAL_MLX_AFFINE_INT4 OR NOT GARNET_METAL_MLX_STEEL_ATTENTION)
+        message(FATAL_ERROR "MLX affine QMM requires GARNET_METAL_MLX_AFFINE_INT4 and the MLX source tree from GARNET_METAL_MLX_STEEL_ATTENTION")
+    endif()
+    if(GARNET_METAL_AFFINE_FP16_COEFFICIENTS)
+        message(FATAL_ERROR "MLX affine QMM reads BF16 coefficients")
+    endif()
+    set(GARNET_MLX_QMM_KERNEL "${CMAKE_CURRENT_LIST_DIR}/../src/backends/metal/mlx_affine_qmm_kernel.metal")
+    set(GARNET_MLX_QMM_GENERATED "${CMAKE_CURRENT_BINARY_DIR}/generated/mlx_affine_qmm_source.cpp")
+    add_custom_command(
+        OUTPUT "${GARNET_MLX_QMM_GENERATED}"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+        COMMAND "${CMAKE_COMMAND}" "-DMLX_SOURCE_DIR=${GARNET_MLX_STEEL_SOURCE}" "-DKERNEL=${GARNET_MLX_QMM_KERNEL}"
+            "-DOUTPUT=${GARNET_MLX_QMM_GENERATED}" -P "${CMAKE_CURRENT_LIST_DIR}/embed_mlx_affine_qmm.cmake"
+        DEPENDS "${CMAKE_CURRENT_LIST_DIR}/embed_mlx_affine_qmm.cmake" "${GARNET_MLX_QMM_KERNEL}" ${GARNET_MLX_STEEL_HEADERS}
+        VERBATIM)
+    target_sources(garnet_metal PRIVATE "${GARNET_MLX_QMM_GENERATED}")
+    target_compile_definitions(garnet_metal PUBLIC GARNET_METAL_MLX_AFFINE_QMM=1)
+endif()
 option(GARNET_METAL_PREFIX_SHARED_BLOCKS "Immutable shared dense-KV host blocks with exact checkpoint states" OFF)
 if(GARNET_METAL_PREFIX_SHARED_BLOCKS)
     if(NOT GARNET_METAL_TOKEN_PREFIX_CACHE OR NOT DEFINED GARNET_METAL_TOKEN_PREFIX_HOST_MIB OR GARNET_METAL_TOKEN_PREFIX_HOST_MIB STREQUAL "512")

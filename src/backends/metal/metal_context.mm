@@ -161,6 +161,9 @@
 #ifdef GARNET_METAL_AFFINE_PROFILE
 #include <atomic>
 #endif
+#ifdef GARNET_METAL_MLX_AFFINE_QMM
+#include "mlx_affine_qmm_source.h"
+#endif
 #ifdef GARNET_METAL_MLX_STEEL_ATTENTION
 #include "mlx_steel_attention_source.h"
 #endif
@@ -403,6 +406,10 @@ struct MetalPipelines {
 #ifdef GARNET_METAL_MLX_STEEL_ATTENTION
     id<MTLLibrary> steelAttentionLibrary=nil;
     id<MTLComputePipelineState> steelAttention=nil;
+#endif
+#ifdef GARNET_METAL_MLX_AFFINE_QMM
+    id<MTLLibrary> mlxQmmLibrary=nil;
+    std::array<id<MTLComputePipelineState>,2> mlxQmm{};
 #endif
 #ifdef GARNET_METAL_LOOKAHEAD_PROJECTIONS
     id<MTLLibrary> lookaheadProjectionLibrary=nil;
@@ -2084,6 +2091,26 @@ kernel void bf16_native_dot_t128(device const float* a [[buffer(0)]],device cons
             impl_->kernels->steelAttention=pipeline;
         }
 #endif
+#ifdef GARNET_METAL_MLX_AFFINE_QMM
+        {
+            auto qmmOptions=[MTLCompileOptions new];
+            qmmOptions.languageVersion=MTLLanguageVersion3_1;
+            auto qmmLibrary=[impl_->device newLibraryWithSource:[NSString stringWithUTF8String:MLXAffineQmmSource()]
+                options:qmmOptions error:&error];
+            if(!qmmLibrary)throw std::runtime_error(std::string("Cannot compile MLX affine QMM: ")+error.localizedDescription.UTF8String);
+            NSArray<NSString*>* names=@[@"garnet_affine_qmm_bf16_gs64_b4_bm32_bk32_bn32",@"garnet_affine_qmm_bf16_gs64_b4_bm64_bk32_bn64"];
+            for(NSUInteger i=0;i<names.count;++i) {
+                auto function=[qmmLibrary newFunctionWithName:names[i]];
+                if(!function)throw std::runtime_error("Cannot find MLX affine QMM entry point");
+                auto pipeline=[impl_->device newComputePipelineStateWithFunction:function error:&error];
+                if(!pipeline||pipeline.threadExecutionWidth!=32||pipeline.maxTotalThreadsPerThreadgroup<128)
+                    throw std::runtime_error(std::string("Cannot create MLX affine QMM pipeline: ")+
+                        (error?error.localizedDescription.UTF8String:"invalid pipeline geometry"));
+                impl_->kernels->mlxQmm[i]=pipeline;
+            }
+            impl_->kernels->mlxQmmLibrary=qmmLibrary;
+        }
+#endif
 #ifdef GARNET_METAL_CHUNK_ATTENTION_MPS
         auto mpsChunkPipeline=[&](NSString* name) {
             auto pipeline=[impl_->device newComputePipelineStateWithFunction:[library newFunctionWithName:name] error:&error];
@@ -3401,6 +3428,15 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
             ++impl_->mppAffineDispatches;
         }
 #endif
+        size_t tileColumns=32;
+#ifdef GARNET_METAL_MLX_AFFINE_QMM
+        if(a.rows>4&&impl_->kernels->mlxQmm[0]&&a.columns%64==0&&a.offset%16==0&&a.rowBytes%16==0) {
+            // 64x64 output tiles halve dequantization per row; fastest measured tile from 64 to 1024 rows.
+            const size_t chosen=a.rows>=64?1:0;
+            const size_t bm[2]={32,64},bn[2]={32,64};
+            pipeline=impl_->kernels->mlxQmm[chosen];tileRows=bm[chosen];tileColumns=bn[chosen];
+        }
+#endif
         size_t decodeColumns=1;
 #ifdef GARNET_METAL_AFFINE_PROFILE
         pipeline=SelectAffineProfile(*impl_->kernels,a.rows<=4?AffineProfileRoute::Decode:AffineProfileRoute::MPP,
@@ -3413,7 +3449,8 @@ void MetalContext::EncodeAffineInt4MatMul(const MetalMatrix& input,const MetalAf
         [encoder setBuffer:w->scales offset:0 atIndex:2];[encoder setBuffer:w->biases offset:0 atIndex:3];
         [encoder setBuffer:o.data offset:o.offset atIndex:4];[encoder setBytes:&params length:sizeof(params) atIndex:5];
         const size_t decodeOutputs=4*decodeColumns;
-        const auto groups=a.rows<=4?MTLSizeMake((o.columns+decodeOutputs-1)/decodeOutputs,1,1):MTLSizeMake((o.columns+31)/32,(a.rows+tileRows-1)/tileRows,1);
+        const auto groups=a.rows<=4?MTLSizeMake((o.columns+decodeOutputs-1)/decodeOutputs,1,1):
+            MTLSizeMake((o.columns+tileColumns-1)/tileColumns,(a.rows+tileRows-1)/tileRows,1);
         [encoder dispatchThreadgroups:groups threadsPerThreadgroup:MTLSizeMake(128,1,1)];[encoder endEncoding];
         output.impl_->ValidateSpanWrite(impl_->pendingOutputs.count(output.impl_->PendingKey()));output.impl_->ready=false;output.impl_->pending=true;
         if(impl_->pendingOutputs.insert(output.impl_->PendingKey()).second)impl_->outputs.push_back(output.impl_);

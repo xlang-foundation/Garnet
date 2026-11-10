@@ -486,6 +486,9 @@ public:
 #ifdef GARNET_METAL_MLX_STEEL_ATTENTION
         info+="; mlx_steel_attention";
 #endif
+#ifdef GARNET_METAL_MLX_AFFINE_QMM
+        info+="; mlx_affine_qmm";
+#endif
 #ifdef GARNET_METAL_SCREENED_HEAD
         info+="; screened_head";
 #endif
